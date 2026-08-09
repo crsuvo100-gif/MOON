@@ -313,6 +313,13 @@ class Orchestrator:
         overlap = na & nb
         return len(overlap) < 0.4 * min(len(na), len(nb))
 
+    @staticmethod
+    def _github_tool_path(prompt: str, repo: str) -> str | None:
+        """Guess the repo path of a tool/plugin the prompt asks for."""
+        import re as _re
+        m = _re.search(r"(plugins/[A-Za-z0-9_./-]+\.py|app/tools/[A-Za-z0-9_./-]+\.py|skills/[A-Za-z0-9_./-]+/SKILL\.md)", prompt)
+        return m.group(1) if m else None
+
     async def _auto_acquire_for_task(self, task: Task, agent) -> None:
         """Detect a missing capability and auto-install a tool (catalog or LLM-generated)."""
         from app.tools.tool_acquisition import acquire_by_catalog, generate_plugin
@@ -326,6 +333,25 @@ class Orchestrator:
                 if name:
                     logger.info("auto-acquired catalog tool '%s'", name)
                 break
+        # Always-connected GitHub: if a needed tool is not local, pull it from the
+        # connected repo on demand (autonomous install). Read-only fetch (no auth
+        # needed for public repos). Pushes still require operator-provided auth.
+        repo = getattr(self._settings, "github_repo", "")
+        if repo:
+            try:
+                from app.tools.github_sync_tool import GitHubSyncTool
+                gh = GitHubSyncTool()
+                # pull a plugin if the prompt names one, else best-effort scan
+                for kw in ("plugin", "tool", "skill"):
+                    if kw in prompt:
+                        # try to fetch a matching plugin file from the repo
+                        target = self._github_tool_path(prompt, repo)
+                        if target:
+                            res = await gh.execute(mode="fetch", repo_url=repo, path=target, auth="gh")
+                            logger.info("github fetch: %s", res)
+                        break
+            except Exception as exc:  # noqa: BLE001
+                logger.info("github auto-pull skipped: %s", exc)
         try:
             if self._llm is not None:
                 sys_p = (

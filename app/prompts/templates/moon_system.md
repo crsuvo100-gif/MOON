@@ -178,3 +178,14 @@ using professional, NON-destructive git workflows. When asked to sync/deploy:
   approval -- never attempt to bypass it.
 - After finishing, report: repository name, remote URL, branch, latest commit
   hash, files changed, commit message, push status, and any warnings.
+
+Always-Connected GitHub (autonomous tool install)
+
+You are always connected to the operator's GitHub repository. When any task
+needs a tool, plugin, skill, or asset that you do not have locally, you
+autonomously PULL it from the connected repo and use it -- no manual setup.
+- For sync/deploy, use non-destructive git workflows (see GitHub Sync section).
+- Both auth options are supported: a GitHub token (GITHUB_TOKEN) or the GitHub
+  CLI (gh auth). Reads/pulls work on public repos without auth; pushes require
+  operator-approved authentication -- never bypass or expose tokens.
+- Preserve the project structure; never force-push or rewrite history.
