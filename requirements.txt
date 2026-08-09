@@ -21,7 +21,7 @@ numpy>=1.26
 # sentence-transformers>=2.6  # optional; enable for real local embeddings
 
 # --- Tooling integrations (all optional; graceful fallbacks in code) -------
-# requests>=2.31         # optional; httpx is used instead by default
+requests>=2.31           # used by web_search + api_requests tools
 # beautifulsoup4>=4.12   # optional; HTML parsing for browser/web tools
 # playwright>=1.43       # optional; real browser automation
 # pillow>=10.3           # optional; image processing

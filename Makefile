@@ -13,7 +13,7 @@ run:
 	$(PY) main.py run "$(TASK)" --agent $(AGENT)
 
 serve:
-	$(PY) main.py serve
+	$(PY) main.py start
 
 terminal:
 	@echo "The Textual TUI was removed. Use the web UI instead:"
