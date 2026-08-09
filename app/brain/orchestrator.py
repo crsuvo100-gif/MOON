@@ -204,7 +204,7 @@ class Orchestrator:
             registry.register(tool)
 
         try:
-            from app.plugins.loader import load_plugins
+            from plugins.loader import load_plugins
 
             plugin_summary = load_plugins(registry)
             if any(plugin_summary.values()):

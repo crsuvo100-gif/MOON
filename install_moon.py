@@ -13,17 +13,24 @@ ROOT = Path(__file__).resolve().parent
 _PKG = "pip"
 
 
-def _run(cmd):
+def _run(cmd, env=None):
     print("+", " ".join(cmd))
-    subprocess.run(cmd, check=False)
+    # Drop PYTHONPATH so pip/venv never target a foreign venv (e.g. Hermes agent).
+    import os
+    e = dict(os.environ)
+    e.pop("PYTHONPATH", None)
+    if env:
+        e.update(env)
+    subprocess.run(cmd, check=False, env=e)
 
 
 def smoke_import():
+    py = ROOT / ".venv" / "bin" / "python"
     try:
         subprocess.run(
-            [sys.executable, "-c",
+            [str(py), "-c",
              "import app.voice, app.brain.orchestrator, app.brain.agent_brain, app.brain.memory_manager"],
-            cwd=str(ROOT), check=True,
+            cwd=str(ROOT), check=True, env={**__import__("os").environ, "PYTHONPATH": ""},
         )
         return True
     except Exception:
@@ -46,7 +53,7 @@ def main():
     ap.add_argument("--no-voice", action="store_true", help="skip voice stack install")
     args = ap.parse_args()
     if not args.no_env:
-        _run([sys.executable, "-m", "venv", ".venv"])
+        _run([sys.executable, "-m", "venv", ".venv"])  # _run already drops PYTHONPATH
         py = ROOT / ".venv" / "bin" / "python"
         _run([str(py), "-m", _PKG, "install", "--upgrade", _PKG])
         _run([str(py), "-m", _PKG, "install", "-r", "requirements.txt"])
