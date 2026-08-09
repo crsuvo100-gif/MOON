@@ -22,6 +22,7 @@ from app.brain.memory_manager import MemoryManager
 from app.brain.output_formatter import OutputFormatter
 from app.brain.planner import Planner
 from app.brain.prompt_manager import PromptManager
+from app.brain.intent_detector import detect_intent
 from app.brain.reasoning import ReasoningEngine
 from app.brain.self_reflection import SelfReflection
 from app.brain.tool_manager import ToolManager
@@ -456,6 +457,33 @@ class Orchestrator:
         results = await asyncio.gather(*[_one(s) for s in subtasks])
         return "Complex goal decomposed and executed in parallel:\n\n" + "\n\n".join(results)
 
+    def _route_intent(self, task: Task) -> None:
+        """Intent detection: when no explicit agent is set, pick one from the
+        classified intent. Maps intent -> agent name; unknown -> coordinator."""
+        if task.agent_name and task.agent_name != "auto":
+            return
+        intent, conf = detect_intent(task.prompt)
+        mapping = {
+            "code": "coding", "research": "research", "web": "browser",
+            "writing": "writing", "vision": "vision", "planning": "planning",
+            "math": "math", "science": "science", "security": "security",
+            "cyber": "cyber", "red_team": "red_team", "blue_team": "blue_team",
+            "forensics": "forensics", "reverse_eng": "reverse_eng",
+            "threat_hunt": "threat_hunt", "siem": "siem",
+            "data_science": "data_science", "translation": "translation",
+            "audio": "audio", "qa": "qa", "infra": "infra", "finance": "finance",
+            "legal": "legal", "medical": "medical", "design": "design",
+            "summarizer": "summarizer", "fact_check": "fact_checker",
+            "strategy": "strategist", "tools": "toolsmith",
+            "github_sync": "github_sync", "voice": "audio", "system": "infra",
+            "chat": "manager",
+        }
+        agent = mapping.get(intent, "coordinator")
+        if agent not in self._agents:
+            agent = "coordinator"
+        task.agent_name = agent
+        logger.info("intent='%s' (conf=%.2f) -> agent='%s'", intent, conf, agent)
+
     async def run_task(self, task: Task) -> Task:
         if self._llm is None or self._tools is None or self._context is None:
             raise RuntimeError("Orchestrator.setup() must be called first")
@@ -468,6 +496,7 @@ class Orchestrator:
 
         task.mark_running()
         self._history.clear()
+        self._route_intent(task)
         agent = self._agents.get(task.agent_name, self._agents["planning"])
         agent_brain = self._agent_brains.get(agent.name)
 
@@ -477,6 +506,13 @@ class Orchestrator:
             logger.info("auto-acquire skipped: %s", exc)
 
         # --- Advanced: parallel fan-out for coordinator on multi-part goals ---
+        if agent.name == "coordinator":
+            try:
+                planned = await self._planner.plan(task.prompt)
+                if planned:
+                    task._decomposition = planned  # store for transparency
+            except Exception:  # noqa: BLE001
+                pass
         if agent.name == "coordinator" and len(self._split_subtasks(task.prompt)) > 1:
             try:
                 merged = await self._run_parallel(self._split_subtasks(task.prompt), agent.name)
