@@ -1,4 +1,4 @@
-"""Tests for per-agent brains + galaxy wiring (reconstruction scan fixes)."""
+"""Tests for expanded agent roster + per-agent brains + advanced workflow."""
 
 import asyncio
 
@@ -18,12 +18,37 @@ def test_per_agent_brains_connected():
     o = asyncio.new_event_loop()
     try:
         orch = o.run_until_complete(_make_orch())
-        # 11 agents, each with its own connected AgentBrain
-        assert len(orch._agents) == 11
-        assert len(orch._agent_brains) == 11
-        # each brain is wired to the main brain for two-phase validation
+        assert len(orch._agents) >= 22
+        assert len(orch._agent_brains) == len(orch._agents)
         for brain in orch._agent_brains.values():
             assert brain.main_brain is orch
+        for name in ("coding", "math", "security", "fact_checker", "router", "coordinator"):
+            assert name in orch._agents
+        o.run_until_complete(orch.teardown())
+    finally:
+        o.close()
+
+
+def test_agent_registry_personas_present():
+    from app.brain.agent_registry import persona_for, build_agents
+
+    tools = ["web_search", "browser", "api_requests", "file_manager", "ocr", "pdf_reader", "image_processing"]
+    agents = build_agents(tools)
+    assert len(agents) >= 22
+    for name in agents:
+        assert len(persona_for(name)) > 20
+    assert agents["research"].allowed_tools
+    assert agents["review"].allowed_tools == []
+
+
+def test_fast_path_and_parallel_helpers():
+    o = asyncio.new_event_loop()
+    try:
+        orch = o.run_until_complete(_make_orch())
+        assert orch._is_simple_query("What is the capital of France?")
+        assert not orch._is_simple_query("write a 500 line program that does x and y and z and also compiles")
+        subs = orch._split_subtasks("Summarize the report and also translate it to Spanish")
+        assert len(subs) == 2
         o.run_until_complete(orch.teardown())
     finally:
         o.close()
@@ -39,7 +64,6 @@ def test_agent_brain_persists_episode():
         before = len(brain._store.episodes())
         o.run_until_complete(brain.remember({"goal": "g", "outcome": "o", "success": True}))
         after = len(brain._store.episodes())
-        # remember must have added exactly one durable episode to the agent's own brain
         assert after == before + 1
     finally:
         o.close()

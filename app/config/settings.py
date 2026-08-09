@@ -58,6 +58,14 @@ class Settings(BaseSettings):
     enable_agent_validation: bool = True
     enable_auto_learning: bool = True
 
+    # --- Advanced workflow / speed / accuracy ------------------------------
+    # Fast-path: for simple chat / single factual questions, skip the heavy
+    # tool-call loop and two-phase validation and answer in one model call.
+    # Dramatically reduces latency on CPU-only hosts for ordinary queries.
+    enable_fast_path: bool = True
+    # Max sub-agents to run concurrently when a complex goal is fanned out.
+    max_parallel_agents: int = 4
+
     @property
     def cors_origins_list(self) -> list[str]:
         if self.api_cors_origins.strip() == "*":

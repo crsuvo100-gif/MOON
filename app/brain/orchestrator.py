@@ -8,6 +8,7 @@ Autonomous self-learning consolidates every interaction into the durable brain.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -194,25 +195,63 @@ class Orchestrator:
         logger.info("Orchestrator setup complete (model=%s)", cfg.model_name)
 
     def _register_agents(self, registry: ToolRegistry) -> None:
-        all_tools = [t.name for t in registry.all()]
-        self._agents = {
-            "coding": AgentCard("coding", "Write and refactor code", allowed_tools=all_tools),
-            "research": AgentCard("research", "Gather and synthesize facts", allowed_tools=["web_search", "browser", "api_requests", "file_manager"]),
-            "browser": AgentCard("browser", "Navigate and read web pages", allowed_tools=["browser", "web_search"]),
-            "writing": AgentCard("writing", "Produce written content", allowed_tools=["file_manager"]),
-            "vision": AgentCard("vision", "Process images", allowed_tools=["image_processing", "ocr", "file_manager"]),
-            "planning": AgentCard("planning", "Coordinate sub-tasks", allowed_tools=all_tools),
-            "memory": AgentCard("memory", "Index and recall knowledge", allowed_tools=["file_manager", "pdf_reader"]),
-            "review": AgentCard("review", "Critique outputs", allowed_tools=[]),
-            "debug": AgentCard("debug", "Diagnose and fix failures", allowed_tools=all_tools),
-            "coordinator": AgentCard("coordinator", "Route a complex goal to specialist agents", allowed_tools=all_tools),
-            "manager": AgentCard("manager", "Supervise and quality-gate multi-agent work", allowed_tools=all_tools),
-        }
+        from app.brain.agent_registry import build_agents
+
+        tool_names = [t.name for t in registry.all()]
+        self._agents = build_agents(tool_names)
+        self._agent_order = list(self._agents.keys())
 
     async def teardown(self) -> None:
         if self._llm is not None:
             await self._llm.teardown()
         logger.info("Orchestrator torn down")
+
+    # ------------------------------------------------------------------
+    # Advanced workflow helpers (speed + accuracy)
+    # ------------------------------------------------------------------
+    def _is_simple_query(self, text: str) -> bool:
+        """Heuristic: a short factual/chat question that needs no tools."""
+        t = text.strip()
+        if len(t) > 240:
+            return False
+        if any(k in t.lower() for k in ("http://", "https://", "file:", "/home", "write", "create", "generate", "run ", "execute", "open ")):
+            return False
+        return True
+
+    def _split_subtasks(self, text: str) -> list[str]:
+        """Split a complex goal into parallel subtasks on ' and also ' / ';' / numbered lists."""
+        parts = [p.strip() for p in text.split(" and also ") if p.strip()]
+        if len(parts) <= 1:
+            parts = [p.strip() for p in text.split(";") if p.strip()]
+        if len(parts) <= 1:
+            import re as _re
+            numbered = _re.findall(r"(?m)^\s*\d+[.)]\s*(.+)$", text)
+            if len(numbered) > 1:
+                parts = [p.strip() for p in numbered]
+        return parts[: self._settings.max_parallel_agents]
+
+    async def _fast_answer(self, task: Task, agent) -> tuple[str, int]:
+        """Single-call answer for simple queries (no tool loop, no two-phase refine)."""
+        persona = self._agent_persona(task.agent_name)
+        sys_p = f"{persona}\n\nAnswer concisely and accurately."
+        ctx = await self._context.build(task=task, history=self._history, system_override=sys_p)
+        text, tokens = await self._llm.complete(ctx.prompt, max_tokens=self._settings.model_max_tokens, temperature=self._settings.model_temperature)
+        return text.strip(), tokens
+
+    def _agent_persona(self, name: str) -> str:
+        from app.brain.agent_registry import persona_for
+        return persona_for(name)
+
+    async def _run_parallel(self, subtasks: list[str], agent_name: str) -> str:
+        """Fan out subtasks to concurrent agent runs and merge their results."""
+        async def _one(sub: str) -> str:
+            sub_task = Task.create(sub, agent_name=agent_name)
+            sub_task.mark_running()
+            self._history.clear()
+            txt, _ = await self._run_cognition_loop(sub_task, self._agents.get(agent_name, self._agents["planning"]))
+            return f"- {sub}\n  {txt}"
+        results = await asyncio.gather(*[_one(s) for s in subtasks])
+        return "Complex goal decomposed and executed in parallel:\n\n" + "\n\n".join(results)
 
     async def run_task(self, task: Task) -> Task:
         if self._llm is None or self._tools is None or self._context is None:
@@ -229,6 +268,25 @@ class Orchestrator:
         agent = self._agents.get(task.agent_name, self._agents["planning"])
         agent_brain = self._agent_brains.get(agent.name)
 
+        # --- Advanced: parallel fan-out for coordinator on multi-part goals ---
+        if agent.name == "coordinator" and len(self._split_subtasks(task.prompt)) > 1:
+            try:
+                merged = await self._run_parallel(self._split_subtasks(task.prompt), agent.name)
+                task.complete(merged, data={"agent": agent.name, "parallel": True})
+                task.mark_done()
+                return task
+            except Exception as exc:  # noqa: BLE001
+                logger.info("parallel fan-out fell back to standard loop: %s", exc)
+
+        # --- Advanced: fast-path for simple queries (speed) ---
+        if self._settings.enable_fast_path and self._is_simple_query(task.prompt) and task.agent_name != "auto":
+            try:
+                text, tokens = await self._fast_answer(task, agent)
+                task.complete(text, data={"agent": agent.name, "fast_path": True, "tokens": tokens})
+                task.mark_done()
+                return task
+            except Exception as exc:  # noqa: BLE001
+                logger.info("fast-path fell back to full loop: %s", exc)
         try:
             final_text, tokens = await self._run_cognition_loop(task, agent)
             validation = await self._validator.validate(task.prompt, final_text)
@@ -291,7 +349,7 @@ class Orchestrator:
                         retrieved.append({"content": f"[past lesson] goal: {ep.goal} | lesson: {ep.lesson}", "score": 0.6})
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Episodic recall failed (skipped): %s", exc)
-        messages = await self._context.build(task=task, history=self._history, retrieved=retrieved)
+        messages = await self._context.build(task=task, history=self._history, retrieved=retrieved, agent=agent)
         tool_specs = self._tools.available_specs()
         total_tokens = 0
         final_text = ""

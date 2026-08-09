@@ -7,17 +7,15 @@ Brain Command Center at `http://localhost:8000/brain`.
 ## Features
 - **Main brain (LongTermMemory + KnowledgeBase)** -- durable, survives restarts.
 - **Per-agent brains** -- 39 specialist agents, each with its own isolated memory connected to the main brain.
-- **Autonomous self-learning** -- every interaction's facts, tool outcomes, and
-  lessons are consolidated into the durable brain (`enable_auto_learning`).
-- **Neural Brain Command Center** -- Three.js visualization of the brain mesh,
-  connected-agent mesh, and live cognition channel over WebSocket.
+- **Autonomous self-learning** -- every interaction's facts, tool outcomes, and lessons are consolidated into the durable brain (`enable_auto_learning`).
+- **Neural Brain Command Center** -- Three.js visualization of the brain mesh, connected-agent mesh, and live cognition channel over WebSocket.
 - **Always-connected GitHub** -- MOON autonomously pulls needed tools/plugins/skills from the connected repo on demand.
 
 ## Quick start
 ```bash
 python -m venv .venv && .venv/bin/pip install -r requirements.txt
-cp .env.example .env        # point MODEL_BASE_URL at your local model (e.g. Ollama)
-make serve                  # opens http://localhost:8000/brain
+cp .env.example .env
+make serve
 ```
 
 ## Configuration (`.env`)
