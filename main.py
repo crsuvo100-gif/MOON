@@ -74,6 +74,17 @@ async def _run_dashboard():
         await o.teardown()
 
 
+def _run_terminal() -> None:
+    import subprocess
+    import sys
+
+    print("🌙 MOON Terminal starting at http://127.0.0.1:8777")
+    subprocess.run([
+        sys.executable, "-m", "uvicorn", "app.terminal_interface:app",
+        "--host", "127.0.0.1", "--port", "8777", "--log-level", "info",
+    ])
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(prog="moon", description="Standalone AI Agent")
     sub = ap.add_subparsers(dest="cmd")
@@ -83,6 +94,7 @@ def main() -> None:
     run_p.add_argument("--agent", default="auto")
     sub.add_parser("models", help="Pre-pull all per-agent preferred models so agents are ready")
     sub.add_parser("dashboard", help="Launch the MOON web dashboard (Flask+SocketIO UI)")
+    sub.add_parser("terminal", help="Launch MOON's own terminal interface (animated avatar UI)")
     args = ap.parse_args()
     if args.cmd == "start":
         _start_http()
@@ -92,6 +104,8 @@ def main() -> None:
         asyncio.run(_prefetch_models())
     elif args.cmd == "dashboard":
         asyncio.run(_run_dashboard())
+    elif args.cmd == "terminal":
+        _run_terminal()
     else:
         ap.print_help()
 

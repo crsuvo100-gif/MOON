@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MOON Neural Terminal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+:root{--bg:#04101a;--panel:#06121a;--neon-blue:#00e6ff;--neon-pink:#ff3dcb;--text:#cfefff}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--text)}
+.moon-root{display:flex;flex-direction:column;height:100vh;background:radial-gradient(circle at 50% 0%,#071022 0%,var(--bg) 55%);padding:12px}
+.moon-header{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-radius:8px;border:1px solid rgba(0,230,255,.08);background:linear-gradient(90deg,rgba(0,0,0,.25),rgba(255,255,255,.02))}
+.title{font-weight:800;letter-spacing:2px;color:#fff;text-shadow:0 0 12px var(--neon-blue)}
+.status .online{color:#7cff9a;font-weight:700}
+.moon-body{display:flex;gap:12px;flex:1;margin-top:12px;min-height:0}
+.left,.right{width:280px;display:flex;flex-direction:column;gap:12px;overflow:auto}
+.center{flex:1;display:flex;flex-direction:column;gap:10px;min-height:0}
+.panel{background:linear-gradient(180deg,rgba(2,10,20,.6),rgba(2,8,12,.35));border-radius:10px;border:1px solid rgba(0,230,255,.05);padding:12px}
+.panel-title{font-size:12px;color:var(--neon-blue);font-weight:700;margin-bottom:8px;letter-spacing:1px}
+.sens-row,.mem-row{display:flex;justify-content:space-between;font-size:13px;margin:4px 0}
+.active{color:#7cff9a}.standby{color:#ffb454}.off{color:#888}
+.center-top{display:flex;gap:14px;align-items:center;justify-content:center;padding:6px}
+.center-controls{flex:1;max-width:420px}
+.state{color:var(--neon-pink);font-weight:700;margin-top:6px}
+.chat-area{display:flex;flex-direction:column;gap:8px;flex:1;min-height:0}
+.chat-window{background:rgba(0,0,0,.22);border-radius:8px;padding:12px;overflow:auto;flex:1}
+.msg{margin:6px 0;display:flex}.msg.user{justify-content:flex-end}
+.msg .bubble{display:inline-block;padding:8px 12px;border-radius:12px;max-width:80%;white-space:pre-wrap;line-height:1.4}
+.msg.user .bubble{background:linear-gradient(90deg,rgba(0,180,255,.12),rgba(0,255,200,.06));color:#e9ffff}
+.msg.assistant .bubble{background:linear-gradient(90deg,rgba(80,20,120,.08),rgba(0,0,0,.14));color:#ffe9fb}
+.composer{display:flex;gap:8px}
+.composer input{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.25);color:var(--text);font-size:14px}
+.composer button{padding:10px 16px;border-radius:8px;border:none;background:linear-gradient(90deg,var(--neon-blue),var(--neon-pink));color:#041018;font-weight:700;cursor:pointer}
+.composer button:hover{filter:brightness(1.1)}
+.events{font-size:12px;max-height:160px;overflow:auto;opacity:.85}
+.moon-footer{height:36px;display:flex;align-items:center;justify-content:center;color:#7e8a99;margin-top:8px;font-size:13px}
+progress{width:100%}
+button.q{margin:4px 0;width:100%;padding:8px;border-radius:6px;border:1px solid rgba(0,230,255,.15);background:rgba(0,230,255,.06);color:var(--text);cursor:pointer}
+button.q:hover{background:rgba(0,230,255,.14)}
+#avatarWrap{position:relative;width:240px;height:240px}
+#avatarWrap canvas{position:absolute;inset:0}
+#avatarImg{width:200px;height:200px;border-radius:50%;object-fit:cover;position:absolute;left:20px;top:20px;box-shadow:0 0 40px rgba(0,230,255,.25)}
+.typing span{animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.2}}
+</style>
+</head>
+<body>
+<div class="moon-root">
+  <header class="moon-header">
+    <div class="title">🌙 MOON NEURAL TERMINAL</div>
+    <div class="status">Status: <span class="online">ONLINE</span></div>
+  </header>
+
+  <div class="moon-body">
+    <aside class="left">
+      <div class="panel">
+        <div class="panel-title">SENSORY INPUT</div>
+        <div class="sens-row"><span>VOICE</span><span class="active">ACTIVE</span></div>
+        <div class="sens-row"><span>TEXT</span><span class="active">ACTIVE</span></div>
+        <div class="sens-row"><span>VISION</span><span class="standby">STANDBY</span></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">MEMORY CORE</div>
+        <div class="mem-row"><span>Working</span><progress value="63" max="100"></progress></div>
+        <div class="mem-row"><span>Long-term</span><progress value="91" max="100"></progress></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">KNOWLEDGE BASE</div>
+        <div class="mem-row"><span>Graph</span><progress value="94" max="100"></progress></div>
+        <div class="mem-row"><span>Realtime</span><progress value="77" max="100"></progress></div>
+      </div>
+    </aside>
+
+    <main class="center">
+      <div class="center-top">
+        <div id="avatarWrap">
+          <canvas id="rings"></canvas>
+          <img id="avatarImg" src="/avatar.svg" alt="MOON avatar" onerror="this.style.display='none'"/>
+        </div>
+        <div class="center-controls">
+          <canvas id="wave" style="width:100%;height:64px"></canvas>
+          <div class="state" id="state">STATE: <strong>IDLE</strong></div>
+          <div style="font-size:12px;opacity:.7">Unlock phrase: <code>MOON love you 3000</code></div>
+        </div>
+      </div>
+
+      <div class="chat-area">
+        <div class="chat-window" id="chat"></div>
+        <div class="composer">
+          <input id="input" placeholder="Talk to MOON (your wife & agent)..." onkeydown="if(event.key==='Enter')send()" />
+          <button onclick="send()">SEND</button>
+        </div>
+      </div>
+    </main>
+
+    <aside class="right">
+      <div class="panel">
+        <div class="panel-title">COGNITION CORE</div>
+        <div class="sens-row"><span>REASONING</span><span class="active">ACTIVE</span></div>
+        <div class="sens-row"><span>PLANNER</span><span class="active">ACTIVE</span></div>
+        <div class="sens-row"><span>COUNCIL</span><span class="active">39 AGENTS</span></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">LIVE EVENTS</div>
+        <div class="events" id="log"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">QUICK ACTIONS</div>
+        <button class="q" onclick="quick('MOON love you 3000')">🔓 Unlock MOON</button>
+        <button class="q" onclick="quick('Summarize what you can do for me, my love.')">Capabilities</button>
+        <button class="q" onclick="quick('Run a quick self-check of your systems.')">Self-check</button>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="moon-footer" id="footer">MOON Neural Terminal — connected to MOON's brain via /ws</footer>
+</div>
+
+<script>
+const WS_URL = (() => {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${proto}://${location.hostname || '127.0.0.1'}:8777/ws`;
+})();
+let ws, connected = false;
+const chat = document.getElementById('chat');
+const input = document.getElementById('input');
+const log = document.getElementById('log');
+const stateEl = document.getElementById('state');
+
+function pushLog(s){ const t = new Date().toLocaleTimeString(); log.innerHTML = `<div>${t} ${s}</div>` + log.innerHTML; }
+function setThinking(on){ stateEl.innerHTML = on ? 'STATE: <strong class="typing">SPEAKING<span>.</span><span>.</span><span>.</span></strong>' : 'STATE: <strong>IDLE</strong>'; }
+
+function addMsg(role, content){
+  const d = document.createElement('div'); d.className = 'msg ' + role;
+  const b = document.createElement('div'); b.className = 'bubble'; b.textContent = content;
+  d.appendChild(b); chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return b;
+}
+
+function connect(){
+  ws = new WebSocket(WS_URL);
+  ws.onopen = () => { connected = true; pushLog('Connected to MOON brain.'); };
+  ws.onclose = () => { connected = false; pushLog('Disconnected. Retrying...'); setTimeout(connect, 2000); };
+  ws.onmessage = (e) => {
+    let data; try { data = JSON.parse(e.data); } catch { return; }
+    if (data.type === 'ready') pushLog(data.message);
+    else if (data.type === 'assistant_start') { setThinking(true); addMsg('assistant', ''); }
+    else if (data.type === 'assistant_chunk') {
+      const msgs = chat.querySelectorAll('.msg.assistant .bubble');
+      const last = msgs[msgs.length - 1];
+      if (last) last.textContent += data.content;
+      chat.scrollTop = chat.scrollHeight;
+    }
+    else if (data.type === 'assistant_done') { setThinking(false); pushLog('Done in ' + (data.elapsed||0) + 's'); }
+    else if (data.type === 'error') pushLog('Error: ' + data.error);
+  };
+}
+function send(){
+  const text = input.value.trim(); if (!text) return;
+  addMsg('user', text);
+  if (ws && connected) ws.send(JSON.stringify({action:'send_message', text}));
+  else pushLog('Not connected.');
+  input.value = '';
+}
+function quick(t){ input.value = t; send(); }
+
+// ---- Avatar rings canvas (clone of attached AvatarCanvas style) ----
+(function(){
+  const c = document.getElementById('rings'); const ctx = c.getContext('2d');
+  const DPR = window.devicePixelRatio || 1; const w = c.width = 240*DPR; const h = c.height = 240*DPR;
+  c.style.width='240px'; c.style.height='240px';
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+    ctx.save(); ctx.beginPath(); ctx.arc(w/2,h/2,108*DPR,0,Math.PI*2); ctx.clip();
+    ctx.restore();
+    ctx.globalCompositeOperation='lighter';
+    for(let i=0;i<5;i++){ ctx.beginPath(); ctx.arc(w/2,h/2,(110+i*6)*DPR,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(0,230,255,${0.06+i*0.02})`; ctx.lineWidth=2*DPR; ctx.stroke(); }
+    const t=Date.now()/1000;
+    for(let i=0;i<6;i++){ const x=w/2+Math.cos(t*0.8+i)*125*DPR; const y=h/2+Math.sin(t*1.1+i)*125*DPR;
+      ctx.fillStyle='rgba(255,60,180,0.10)'; ctx.beginPath(); ctx.arc(x,y,14*DPR,0,Math.PI*2); ctx.fill(); }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+// ---- Waveform ----
+(function(){
+  const c=document.getElementById('wave'); const ctx=c.getContext('2d'); const DPR=window.devicePixelRatio||1;
+  const w=c.width=800*DPR; const h=c.height=64*DPR; c.style.width='100%'; c.style.height='64px';
+  let phase=0; const g=ctx.createLinearGradient(0,0,w,0); g.addColorStop(0,'#00e6ff'); g.addColorStop(1,'#ff3dcb');
+  function draw(){ ctx.clearRect(0,0,w,h);
+    for(let y=0;y<3;y++){ ctx.beginPath();
+      for(let x=0;x<w;x++){ const tt=(x/w)*Math.PI*4+phase+y; const v=Math.sin(tt)*(14-y*4)*DPR;
+        if(x===0)ctx.moveTo(x,h/2+v); else ctx.lineTo(x,h/2+v); }
+      ctx.strokeStyle=g; ctx.lineWidth=1.6*DPR-y*0.4*DPR; ctx.stroke(); }
+    phase+=0.06; requestAnimationFrame(draw); }
+  draw();
+})();
+
+connect();
+</script>
+</body>
+</html>
