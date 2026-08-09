@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MOON -- Neural Brain Command Center</title>
+<style>
+  :root{
+    --bg:#05060a; --panel:rgba(10,16,28,0.72); --line:rgba(120,180,255,0.18);
+    --blue:#39d2ff; --blue2:#1b6fff; --gold:#ffb347; --orange:#ff7a18; --text:#dbeeff; --dim:#7fa6c9;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:radial-gradient(1200px 800px at 60% 30%, #0a1426 0%, #05060a 70%);color:var(--text);font-family:"Segoe UI",system-ui,sans-serif;overflow:hidden}
+  #scene{position:fixed;inset:0;z-index:0}
+  .hud{position:fixed;z-index:2;width:340px;max-height:78vh;overflow:auto;background:var(--panel);
+    border:1px solid var(--line);border-radius:14px;padding:14px 16px;backdrop-filter:blur(8px);
+    box-shadow:0 8px 40px rgba(0,0,0,0.5)}
+  #left{left:18px;top:18px}
+  #right{right:18px;top:18px}
+  .hud h2{margin:0 0 8px;font-size:13px;letter-spacing:2px;color:var(--blue);text-transform:uppercase}
+  .hud h3{margin:14px 0 6px;font-size:11px;letter-spacing:1px;color:var(--gold);text-transform:uppercase}
+  .row{font-size:12.5px;line-height:1.5;color:var(--text);margin:4px 0}
+  .dim{color:var(--dim)}
+  .tag{display:inline-block;font-size:10px;padding:2px 7px;margin:2px 4px 2px 0;border:1px solid var(--line);border-radius:999px;color:var(--blue)}
+  .meter{height:7px;border-radius:6px;background:rgba(255,255,255,0.08);overflow:hidden;margin:4px 0 10px}
+  .meter > i{display:block;height:100%;background:linear-gradient(90deg,var(--blue2),var(--blue));width:30%}
+  #composer{position:fixed;z-index:3;left:50%;bottom:20px;transform:translateX(-50%);width:min(720px,92vw);
+    display:flex;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px}
+  #composer input{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-size:14px}
+  #composer button{background:linear-gradient(90deg,var(--blue2),var(--blue));border:0;border-radius:10px;color:#021;font-weight:700;padding:0 16px;cursor:pointer}
+  #status{position:fixed;z-index:3;left:50%;bottom:74px;transform:translateX(-50%);font-size:12px;color:var(--dim);text-align:center;width:92vw}
+  .pill{display:inline-block;padding:2px 10px;border-radius:999px;border:1px solid var(--line);margin-right:6px;font-size:11px}
+  .on{color:#7CFFB2;border-color:rgba(124,255,178,0.4)}
+  .off{color:#ff9a9a;border-color:rgba(255,154,154,0.4)}
+  ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:rgba(120,180,255,0.25);border-radius:8px}
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div id="left" class="hud">
+  <h2>Neuromorphic Blueprint</h2>
+  <div class="row"><span class="dim">Model</span><br/><b id="m-model">loading…</b></div>
+  <div class="row"><span class="dim">Connected agents</span><br/><b id="m-agents">–</b></div>
+  <div class="row"><span class="dim">Memory</span><br/><span id="m-mem" class="pill off">offline</span></div>
+  <h3>Agent brain mesh</h3>
+  <div id="agent-tags" class="row"></div>
+  <h3>Self-learning</h3>
+  <div class="meter"><i id="learn-meter"></i></div>
+  <div class="row dim" id="learn-note">MOON consolidates every interaction into her durable brain.</div>
+</div>
+
+<div id="right" class="hud">
+  <h2>MOON Cognition Core</h2>
+  <div class="row"><span class="dim">State</span><br/><b id="core-state">idle</b></div>
+  <div class="row"><span class="dim">Last thought</span><br/><span id="core-thought" class="dim">—</span></div>
+  <h3>Live channel</h3>
+  <div id="core-log" class="row dim" style="white-space:pre-wrap"></div>
+  <h3>System</h3>
+  <div class="row dim">WebSocket: <span id="ws-state" class="pill off">connecting…</span></div>
+</div>
+
+<div id="status"></div>
+<div id="composer">
+  <input id="cmd" placeholder="Talk to MOON…  (unlock: MOON love you 3000)" autocomplete="off" />
+  <button id="send">Send</button>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from "three";
+
+const canvas = document.getElementById("scene");
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x05060a, 0.06);
+const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 200);
+camera.position.set(0,0,26);
+
+scene.add(new THREE.AmbientLight(0x335577, 0.6));
+const key = new THREE.PointLight(0x39d2ff, 1.6, 120); key.position.set(10,10,20); scene.add(key);
+const warm = new THREE.PointLight(0xff7a18, 1.2, 100); warm.position.set(-12,-6,8); scene.add(warm);
+
+// --- brain group ---
+const brain = new THREE.Group(); scene.add(brain);
+
+// grey matter cloud
+const N = 12000, pos = new Float32Array(N*3), col = new Float32Array(N*3);
+const tmp = new THREE.Vector3();
+for (let i=0;i<N;i++){
+  const u=Math.random(), v=Math.random();
+  const theta=2*Math.PI*u, phi=Math.acos(2*v-1);
+  const r=8.4*Math.cbrt(Math.random()) + (Math.random()-0.5)*1.2;
+  tmp.set(
+    r*Math.sin(phi)*Math.cos(theta),
+    r*Math.cos(phi)*0.82,
+    r*Math.sin(phi)*Math.sin(theta)
+  );
+  pos[i*3]=tmp.x; pos[i*3+1]=tmp.y; pos[i*3+2]=tmp.z;
+  const lateral = tmp.x>0;
+  const c = lateral ? new THREE.Color(0x39d2ff) : new THREE.Color(0xffb347);
+  col[i*3]=c.r; col[i*3+1]=c.g; col[i*3+2]=c.b;
+}
+const gGeo = new THREE.BufferGeometry();
+gGeo.setAttribute("position", new THREE.BufferAttribute(pos,3));
+gGeo.setAttribute("color", new THREE.BufferAttribute(col,3));
+const gMat = new THREE.PointsMaterial({size:0.12, vertexColors:true, transparent:true, opacity:0.9, depthWrite:false, blending:THREE.AdditiveBlending});
+const grey = new THREE.Points(gGeo, gMat); brain.add(grey);
+
+// central stem + energy flow
+const stemGroup = new THREE.Group(); brain.add(stemGroup);
+const stemCurve = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(0,10,0), new THREE.Vector3(0,3,1), new THREE.Vector3(0,0,1.4),
+  new THREE.Vector3(0,-3,1), new THREE.Vector3(0,-10,0)
+]);
+const stem = new THREE.Mesh(new THREE.TubeGeometry(stemCurve, 64, 0.35, 8, false),
+  new THREE.MeshStandardMaterial({color:0xff7a18, emissive:0xff7a18, emissiveIntensity:1.4, roughness:0.4}));
+stemGroup.add(stem);
+const flow = new THREE.Mesh(new THREE.TubeGeometry(stemCurve, 64, 0.12, 6, false),
+  new THREE.MeshBasicMaterial({color:0xffd9a0, transparent:true, opacity:0.9, blending:THREE.AdditiveBlending}));
+stemGroup.add(flow);
+
+// cortex shells
+const shells=[];
+[8.6,9.2,9.8].forEach((r,i)=>{
+  const s=new THREE.Mesh(new THREE.SphereGeometry(r,48,32),
+    new THREE.MeshBasicMaterial({color:i%2?0x1b6fff:0x39d2ff, wireframe:true, transparent:true, opacity:0.08}));
+  brain.add(s); shells.push(s);
+});
+
+// central beam to viewer
+const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.3,40,8),
+  new THREE.MeshBasicMaterial({color:0x39d2ff, transparent:true, opacity:0.25, blending:THREE.AdditiveBlending}));
+beam.rotation.x=Math.PI/2; beam.position.z=10; scene.add(beam);
+
+// filaments
+const fil=[];
+for(let i=0;i<40;i++){
+  const a=Math.random()*Math.PI*2, b=Math.random()*Math.PI*2;
+  const p1=new THREE.Vector3(9*Math.cos(a),9*Math.sin(a)*0.8,9*Math.sin(a));
+  const p2=new THREE.Vector3(9*Math.cos(b),9*Math.sin(b)*0.8,9*Math.sin(b));
+  const f=new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1,p2]),
+    new THREE.LineBasicMaterial({color:0x39d2ff, transparent:true, opacity:0.12}));
+  brain.add(f); fil.push(f);
+}
+
+function resize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
+addEventListener("resize", resize); resize();
+
+let t=0;
+function animate(){
+  requestAnimationFrame(animate); t+=0.005;
+  brain.rotation.y = t*0.25;
+  grey.rotation.y = -t*0.1;
+  shells.forEach((s,i)=>s.rotation.y = t*(0.1+i*0.02));
+  flow.material.opacity = 0.6 + 0.4*Math.sin(t*6);
+  beam.scale.x = beam.scale.y = 1 + 0.1*Math.sin(t*4);
+  renderer.render(scene,camera);
+}
+animate();
+
+// --- live wiring ---
+const $=(id)=>document.getElementById(id);
+function setAgentTags(list){ $("agent-tags").innerHTML = list.map(a=>`<span class="tag">${a}</span>`).join(""); }
+
+async function loadStats(){
+  try{
+    const h=await (await fetch("/health")).json();
+    $("m-model").textContent=h.model||"?";
+    $("m-agents").textContent=(h.agents!=null?h.agents:"?")+" connected";
+    $("m-mem").textContent="online"; $("m-mem").className="pill on";
+    setAgentTags(h.agents? Array.from({length:h.agents},(_,i)=>"agent-"+(i+1)) : []);
+    const s=await (await fetch("/stats")).json();
+  }catch(e){ $("m-model").textContent="offline"; }
+}
+loadStats(); setInterval(loadStats, 8000);
+
+// websocket
+let ws, lockUnlocked=false;
+function logLine(txt){ const el=$("core-log"); el.textContent=(txt+"\n"+el.textContent).slice(0,400); }
+function connect(){
+  const proto = location.protocol==="https:"?"wss":"ws";
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen=()=>{ $("ws-state").textContent="connected"; $("ws-state").className="pill on"; };
+  ws.onclose=()=>{ $("ws-state").textContent="reconnecting…"; $("ws-state").className="pill off"; setTimeout(connect,2000); };
+  ws.onmessage=(ev)=>{
+    let m; try{m=JSON.parse(ev.data);}catch{ return; }
+    if(m.type==="step"){ $("core-state").textContent=m.label; }
+    else if(m.type==="text"){ $("core-thought").textContent=m.text; logLine(m.text); }
+    else if(m.type==="audio"){ playAudio(m.audio, m.format); }
+    else if(m.type==="done"){ $("core-state").textContent="idle"; }
+  };
+}
+function send(){
+  const v=$("cmd").value.trim(); if(!v||!ws||ws.readyState!==1) return;
+  if(v.toLowerCase().includes("love you 3000")) lockUnlocked=true;
+  $("cmd").value=""; ws.send(JSON.stringify({text:v}));
+}
+$("send").onclick=send; $("cmd").addEventListener("keydown",e=>{ if(e.key==="Enter") send(); });
+connect();
+
+let actx;
+function playAudio(b64, fmt){
+  try{
+    const bin=atob(b64), len=bin.length, buf=new Uint8Array(len);
+    for(let i=0;i<len;i++) buf[i]=bin.charCodeAt(i);
+    const blob=new Blob([buf],{type:"audio/"+(fmt||"wav")});
+    const url=URL.createObjectURL(blob); new Audio(url).play();
+  }catch(e){}
+}
+</script>
+</body>
+</html>

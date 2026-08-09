@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "moon-ai-agent"
+version = "0.1.0"
+description = "MOON -- self-hosted autonomous AI agent with its own brain, connected agent brains, and a Neural Brain Command Center UI."
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.setuptools]
+packages = ["app", "plugins", "scripts"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+lint.ignore = ["E501", "B008"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true

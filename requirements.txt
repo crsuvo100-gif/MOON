@@ -1,0 +1,53 @@
+# ---------------------------------------------------------------------------
+# Production dependency list for the Standalone AI Agent (local / self-hosted).
+# Versions are lower-bounds; the project is tested on the versions noted.
+# ---------------------------------------------------------------------------
+# --- Web framework / API ----------------------------------------------------
+fastapi>=0.141
+uvicorn[standard]>=0.52
+pydantic>=2.13
+pydantic-settings>=2.15
+
+# --- Async runtime ----------------------------------------------------------
+anyio>=4.3
+httpx>=0.27
+
+# --- Model providers (OpenAI-compatible; points at your LOCAL model) -------
+openai>=2.53          # used only as an OpenAI-compatible client -> local endpoint
+
+# --- Embeddings / vector store (optional; pure-python fallback included) ----
+numpy>=1.26
+# chromadb>=0.5         # optional; enable for persistent vector search
+# sentence-transformers>=2.6  # optional; enable for real local embeddings
+
+# --- Tooling integrations (all optional; graceful fallbacks in code) -------
+# requests>=2.31         # optional; httpx is used instead by default
+# beautifulsoup4>=4.12   # optional; HTML parsing for browser/web tools
+# playwright>=1.43       # optional; real browser automation
+# pillow>=10.3           # optional; image processing
+# pytesseract>=0.3       # optional; OCR (also needs tesseract binary)
+# pypdf>=4.2             # optional; PDF reading
+# PyYAML>=6.0            # optional; YAML config parsing
+
+# --- Utilities --------------------------------------------------------------
+python-dotenv>=1.0
+rich>=13.7             # pretty CLI/log output
+tenacity>=8.2          # retry / error-recovery policies
+
+# --- UI ---------------------------------------------------------------------
+# The MOON UI is the web-based Neural Brain Command Center (web/moon_brain.html,
+# served at /brain). It is a standalone HTML+Three.js page loaded from a CDN, so
+# it requires NO Python UI dependency. (The old Textual TUI and 2D orb were
+# removed; textual is no longer needed.)
+
+# --- Voice (installed by install_moon.py; listed for completeness) ----------
+# espeakng, SpeechRecognition, pyaudio, piper-tts  -> added by the installer
+# (piper-tts pulls natural neural TTS; espeak-ng is the offline fallback).
+# sox is required at the SYSTEM level for tone/voice transforms (apt install sox).
+
+# --- Testing / quality ------------------------------------------------------
+pytest>=8.0
+pytest-asyncio>=0.23
+pytest-cov>=5.0
+ruff>=0.16
+mypy>=1.9
