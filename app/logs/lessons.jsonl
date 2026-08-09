@@ -1,2 +1,3 @@
 {"kind": "validation", "agent": "math", "text": "Avoid producing invalid output for: Compute 15 times 13 and show the result.. Issues: empty answer, answer too short"}
 {"kind": "validation", "agent": "math", "text": "Avoid producing invalid output for: Compute 12 * 14 and state the result.. Issues: empty answer, answer too short"}
+{"kind": "learning", "agent": "learning", "text": "Learned topic 'rust async':"}

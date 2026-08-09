@@ -54,6 +54,9 @@ from app.tools.powershell_tool import PowerShellTool
 from app.tools.python_executor import PythonExecutorTool
 from app.tools.recon_tool import ReconTool
 from app.tools.registry import ToolRegistry
+from app.tools.model_management_tool import ModelManagementTool
+from app.tools.learning_tool import LearningTool
+from app.tools.model_management_tool import ModelManagementTool
 from app.tools.self_evolve_tool import SelfEvolveTool
 from app.tools.github_sync_tool import GitHubSyncTool
 from app.tools.system_command_tool import SystemCommandTool
@@ -92,6 +95,7 @@ class Orchestrator:
         self._history = ConversationHistory(session_id="main")
         self._agents: dict[str, AgentCard] = {}
         self._agent_brains: dict[str, Any] = {}
+        self._agent_model_overrides: dict[str, str | None] = {}
         self._consolidator = None
         self._lock = SessionLock(locked=True, state_file=lock_state_file)
 
@@ -199,6 +203,8 @@ class Orchestrator:
             PdfReaderTool(enabled=self._settings.enable_pdf),
             ImageProcessingTool(enabled=self._settings.enable_pdf),
             SystemCommandTool(),
+            ModelManagementTool(orchestrator=self),
+            LearningTool(web_search=self._tools._registry._tools.get('web_search') if self._tools else None),
             ReconTool(), VulnScannerTool(), HardeningAuditTool(), LogAnalyzerTool(),
             MalwareAnalysisTool(), ExploitIntelTool(),
             SystemInfoTool(), PowerShellTool(), DockerTool(), GitTool(), SelfEvolveTool(), ModelPullTool(), GitHubSyncTool(),
@@ -320,6 +326,22 @@ class Orchestrator:
         import re as _re
         m = _re.search(r"(plugins/[A-Za-z0-9_./-]+\.py|app/tools/[A-Za-z0-9_./-]+\.py|skills/[A-Za-z0-9_./-]+/SKILL\.md)", prompt)
         return m.group(1) if m else None
+
+    async def set_main_model(self, model_name: str) -> None:
+        """Switch MOON's main brain active model at runtime."""
+        if not model_name:
+            return
+        try:
+            self._settings.model_name = model_name
+            self._llm.model_name = model_name  # type: ignore[attr-defined]
+            logger.info("main model switched -> %s", model_name)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("set_main_model failed: %s", e)
+
+    async def set_agent_model(self, role: str, model_name: str | None) -> None:
+        """Set the model used by a specific agent role (or clear override)."""
+        self._agent_model_overrides[role] = model_name
+        logger.info("agent model override: %s -> %s", role, model_name)
 
     async def refresh_repo_catalog(self) -> None:
         """Continuously-connected behavior: pull the connected repo and surface

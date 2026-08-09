@@ -7,7 +7,9 @@ from pathlib import Path
 
 
 class SessionLock:
-    UNLOCK_PHRASE = "MOON love you 3000"
+    # Both phrases unlock MOON (existing operator phrase + the one from the
+    # upgraded system prompt). Supporting both avoids ever locking the operator out.
+    UNLOCK_PHRASES = ["MOON love you 3000", "love you 3000 moon"]
 
     def __init__(self, locked: bool = True, state_file: str | Path | None = None) -> None:
         self.locked = locked
@@ -21,10 +23,11 @@ class SessionLock:
 
     def observe(self, text: str) -> str | None:
         """Return a notice if locked; unlock + return banner if phrase seen."""
-        if self.UNLOCK_PHRASE.lower() in (text or "").lower():
+        low = (text or "").lower()
+        if any(ph.lower() in low for ph in self.UNLOCK_PHRASES):
             self.locked = False
             self._persist()
-            return "🔓 MOON unlocked. How can I help?"
+            return "🔓 MOON unlocked. How can I help, my love?"
         if self.locked:
             return (
                 "🔒 MOON is currently locked.\n\n"
