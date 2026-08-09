@@ -33,3 +33,6 @@ htmlcov/
 # OS / editor
 .DS_Store
 *.swp
+
+# Auto-generated on-demand tools (built at runtime)
+plugins/generated/

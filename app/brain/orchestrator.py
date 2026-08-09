@@ -243,6 +243,45 @@ class Orchestrator:
         overlap = na & nb
         return len(overlap) < 0.4 * min(len(na), len(nb))
 
+    async def _auto_acquire_for_task(self, task: Task, agent) -> None:
+        """Detect a missing capability and auto-install a tool (catalog or LLM-generated)."""
+        from app.tools.tool_acquisition import acquire_by_catalog, generate_plugin
+
+        prompt = (task.prompt or "").lower()
+        for cap in ("youtube", "video", "audio download", "web scraping", "html parse",
+                    "browser automation", "image", "ocr", "pdf", "data", "csv",
+                    "plot", "chart", "speech", "translate api", "excel", "yaml", "qr"):
+            if cap in prompt:
+                name = acquire_by_catalog(cap, self._tools._registry)
+                if name:
+                    logger.info("auto-acquired catalog tool '%s'", name)
+                break
+        try:
+            if self._llm is not None:
+                sys_p = (
+                    "You are MOON's tool planner. If the task needs a tool MOON lacks, "
+                    "reply ONLY with JSON: {\"need\": \"<capability>\", \"name\": \"<tool_name>\", "
+                    "\"purpose\": \"<one line>\", \"code\": \"<Python BaseTool subclass source>\"}. "
+                    "If no new tool is needed, reply {\"need\": null}. Output JSON only."
+                )
+                decision = await self._llm.complete(
+                    [
+                        {"role": "system", "content": sys_p},
+                        {"role": "user", "content": f"Task: {task.prompt}"},
+                    ],
+                    max_tokens=600, temperature=0.2,
+                )
+                import json, re as _re
+                m = _re.search(r"\{.*\}", decision.content or "", _re.DOTALL)
+                if m:
+                    obj = json.loads(m.group(0))
+                    if obj.get("need"):
+                        cap = obj["need"]
+                        if not acquire_by_catalog(cap, self._tools._registry):
+                            generate_plugin(obj.get("name", "custom"), obj.get("purpose", ""), obj.get("code", ""), self._tools._registry)
+        except Exception as exc:  # noqa: BLE001
+            logger.info("LLM tool-plan skipped: %s", exc)
+
     def _is_simple_query(self, text: str) -> bool:
         """Heuristic: a short factual/chat question that needs no tools."""
         t = text.strip()
@@ -301,6 +340,11 @@ class Orchestrator:
         self._history.clear()
         agent = self._agents.get(task.agent_name, self._agents["planning"])
         agent_brain = self._agent_brains.get(agent.name)
+
+        try:
+            await self._auto_acquire_for_task(task, agent)
+        except Exception as exc:  # noqa: BLE001
+            logger.info("auto-acquire skipped: %s", exc)
 
         # --- Advanced: parallel fan-out for coordinator on multi-part goals ---
         if agent.name == "coordinator" and len(self._split_subtasks(task.prompt)) > 1:
