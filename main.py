@@ -17,7 +17,6 @@ _APP_MODULE = "app.api.main:" + "app"
 def _start_http() -> None:
     import subprocess
     import sys
-    settings = get_settings()
     logger.info("Starting MOON at http://localhost:8000/brain")
     subprocess.run([
         sys.executable, "-m", "uvicorn", _APP_MODULE,

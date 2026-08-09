@@ -10,7 +10,6 @@ from __future__ import annotations
 import hashlib
 import math
 
-import numpy as np
 
 from app.config.logging import get_logger
 

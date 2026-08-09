@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
-from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse

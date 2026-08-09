@@ -1,10 +1,9 @@
-"""MOON bootstrap script."""
-
-"install_moon.py -- bootstrap MOON on a fresh machine.
+"""install_moon.py -- bootstrap MOON on a fresh machine.
 
 Creates an isolated environment, fetches runtime dependencies, and (best-effort)
 the voice stack. Heavy framework requirements are pulled via requirements.txt.
-"
+"""
+
 import argparse
 import subprocess
 import sys

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -10,17 +9,20 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import routes_router
+from app.api.galaxy import galaxy_router
 from app.config.logging import get_logger
 from app.config.settings import get_settings
 
 logger = get_logger(__name__)
 WEB_DIR = Path(__file__).resolve().parent.parent.parent / "web"
 UI_FILE = WEB_DIR / "moon_brain.html"
+GALAXY_FILE = WEB_DIR / "galaxy.html"
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version="0.1.0")
 
 app.include_router(routes_router)
+app.include_router(galaxy_router)
 app.mount("/static", StaticFiles(directory=str(WEB_DIR), html=False), name="static")
 
 
@@ -29,6 +31,10 @@ app.mount("/static", StaticFiles(directory=str(WEB_DIR), html=False), name="stat
 @app.get("/brain")
 async def brain_ui() -> FileResponse:
     return FileResponse(str(UI_FILE))
+
+@app.get("/galaxy")
+async def galaxy_ui() -> FileResponse:
+    return FileResponse(str(GALAXY_FILE))
 
 
 @app.get("/health")

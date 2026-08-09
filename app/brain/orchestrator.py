@@ -16,6 +16,7 @@ from app.brain.context_builder import ContextBuilder
 from app.brain.error_recovery import ErrorRecovery
 from app.brain.lock import SessionLock
 from app.brain.memory_manager import MemoryManager
+from app.brain.agent_brain import AgentBrain
 from app.brain.output_formatter import OutputFormatter
 from app.brain.planner import Planner
 from app.brain.prompt_manager import PromptManager
@@ -74,6 +75,7 @@ class Orchestrator:
         self._recovery: ErrorRecovery | None = None
         self._history = ConversationHistory(session_id="main")
         self._agents: dict[str, AgentCard] = {}
+        self._agent_brains: dict[str, Any] = {}
         self._consolidator = None
         self._lock = SessionLock(locked=True, state_file=lock_state_file)
 
@@ -169,6 +171,17 @@ class Orchestrator:
             logger.warning("ContextRetriever wiring skipped: %s", exc)
 
         self._register_agents(registry)
+
+        # Each agent gets its OWN connected brain (durable per-agent memory)
+        # wired to the main brain for two-phase validation.
+        for name in self._agents:
+            try:
+                brain = AgentBrain(name, main_brain=self)
+                await brain.setup()
+                self._agent_brains[name] = brain
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("agent brain '%s' init skipped: %s", name, exc)
+        logger.info("Connected %d agent brains", len(self._agent_brains))
         logger.info("Orchestrator setup complete (model=%s)", cfg.model_name)
 
     def _register_agents(self, registry: ToolRegistry) -> None:
@@ -205,6 +218,7 @@ class Orchestrator:
         task.mark_running()
         self._history.clear()
         agent = self._agents.get(task.agent_name, self._agents["planning"])
+        agent_brain = self._agent_brains.get(agent.name)
 
         try:
             final_text, tokens = await self._run_cognition_loop(task, agent)
@@ -229,8 +243,29 @@ class Orchestrator:
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Learning loop store failed (skipped): %s", exc)
 
+            # Two-phase: let the agent's OWN brain refine the draft through the
+            # main brain when validation is enabled (best quality, costs one more
+            # model call). Otherwise use the draft directly.
+            if agent_brain is not None and self._settings.enable_agent_validation:
+                try:
+                    final_text = await agent_brain.refine_with_main(final_text, task.prompt)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("agent two-phase refine skipped: %s", exc)
+
+            # Persist the episode into the agent's OWN durable brain too.
+            if agent_brain is not None:
+                try:
+                    await agent_brain.remember({
+                        "goal": task.prompt,
+                        "outcome": final_text[:1000],
+                        "lesson": lesson,
+                        "success": reflection.satisfactory,
+                    })
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("agent brain remember failed: %s", exc)
+
             clean = self._formatter.format(final_text)
-            task.complete(clean, data={"tokens_used": tokens, "issues": validation.issues}, tokens_used=tokens)
+            task.complete(clean, data={"tokens_used": tokens, "issues": validation.issues, "agent": agent.name}, tokens_used=tokens)
             await self._memory.remember(clean, long_term=False)
         except Exception as exc:  # noqa: BLE001
             logger.exception("Task %s failed", task.id)
