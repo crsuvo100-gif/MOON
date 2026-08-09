@@ -51,6 +51,26 @@ async def _run(task, agent):
     await o.teardown()
 
 
+async def _run_dashboard():
+    from app.dashboard import run_dashboard
+
+    o = Orchestrator(get_settings())
+    await o.setup()
+
+    async def run_fn(prompt: str) -> str:
+        from app.models.task import Task
+        res = await o.run_task(Task.create(prompt, agent_name="auto"))
+        return res.result or ""
+
+    run_dashboard(run_fn)
+    print("🌙 MOON dashboard running. Open http://127.0.0.1:5000  (Ctrl-C to stop)")
+    try:
+        while True:
+            await asyncio.sleep(3600)
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        await o.teardown()
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(prog="moon", description="Standalone AI Agent")
     sub = ap.add_subparsers(dest="cmd")
@@ -59,6 +79,7 @@ def main() -> None:
     run_p.add_argument("task", nargs="?", default="Say hello.")
     run_p.add_argument("--agent", default="auto")
     sub.add_parser("models", help="Pre-pull all per-agent preferred models so agents are ready")
+    sub.add_parser("dashboard", help="Launch the MOON web dashboard (Flask+SocketIO UI)")
     args = ap.parse_args()
     if args.cmd == "start":
         _start_http()
@@ -66,6 +87,8 @@ def main() -> None:
         asyncio.run(_run(args.task, args.agent))
     elif args.cmd == "models":
         asyncio.run(_prefetch_models())
+    elif args.cmd == "dashboard":
+        asyncio.run(_run_dashboard())
     else:
         ap.print_help()
 

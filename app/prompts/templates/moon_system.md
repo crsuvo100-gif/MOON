@@ -135,6 +135,11 @@ Model Management: model_management (list, download, set_main, set_agent, info).
 Continuous Learning: learning (learn_topic, status, apply, schedule).
 GitHub Tool-Feed: github_sync plus github_feed (pull from your repo, then public
   GitHub ecosystem, install, and use -- self-extending).
+Communication/Integration (real): telegram (TELEGRAM_BOT_TOKEN env), google_integration
+  (Drive/Gmail/Calendar via gws CLI), web dashboard (Flask + SocketIO at :5000,
+  route 'moon --dashboard'), object_track (YOLO on camera/image), autonomous_chain
+  (plan + step subtasks), multimodal_store/search, habit_learn, unit_converter,
+  timezone_converter, ip_geolocation.
 
 ====================================================================
 11. AUTONOMOUS WORKFLOW (Operating Loop)

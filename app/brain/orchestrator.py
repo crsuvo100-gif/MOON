@@ -56,6 +56,11 @@ from app.tools.recon_tool import ReconTool
 from app.tools.registry import ToolRegistry
 from app.tools.model_management_tool import ModelManagementTool
 from app.tools.learning_tool import LearningTool
+from app.tools.utility_tools import UnitConverterTool, TimezoneConverterTool, IpGeolocationTool
+from app.tools.cv_and_memory_tools import ObjectTrackTool, AutonomousChainTool, MultimodalStoreTool, MultimodalSearchTool, HabitLearnTool
+from app.tools.telegram_tool import TelegramTool, GoogleWorkspaceTool
+from app.tools.model_management_tool import ModelManagementTool
+from app.tools.learning_tool import LearningTool
 from app.tools.model_management_tool import ModelManagementTool
 from app.tools.self_evolve_tool import SelfEvolveTool
 from app.tools.github_sync_tool import GitHubSyncTool
@@ -205,6 +210,10 @@ class Orchestrator:
             SystemCommandTool(),
             ModelManagementTool(orchestrator=self),
             LearningTool(web_search=self._tools._registry._tools.get('web_search') if self._tools else None),
+            UnitConverterTool(), TimezoneConverterTool(), IpGeolocationTool(),
+            ObjectTrackTool(), AutonomousChainTool(), MultimodalStoreTool(),
+            MultimodalSearchTool(), HabitLearnTool(),
+            TelegramTool(), GoogleWorkspaceTool(),
             ReconTool(), VulnScannerTool(), HardeningAuditTool(), LogAnalyzerTool(),
             MalwareAnalysisTool(), ExploitIntelTool(),
             SystemInfoTool(), PowerShellTool(), DockerTool(), GitTool(), SelfEvolveTool(), ModelPullTool(), GitHubSyncTool(),
