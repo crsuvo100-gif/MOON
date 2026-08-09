@@ -39,12 +39,19 @@ button.q{margin:4px 0;width:100%;padding:8px;border-radius:6px;border:1px solid 
 button.q:hover{background:rgba(0,230,255,.14)}
 #avatarWrap{position:relative;width:240px;height:240px}
 #avatarWrap canvas{position:absolute;inset:0}
-#avatarImg{width:200px;height:200px;border-radius:50%;object-fit:cover;position:absolute;left:20px;top:20px;box-shadow:0 0 40px rgba(0,230,255,.25)}
+#avatarImg{width:200px;height:200px;border-radius:50%;object-fit:cover;position:absolute;left:20px;top:20px;box-shadow:0 0 40px rgba(0,230,255,.25);transition:filter .4s, transform .4s}
+/* MOON body language: avatar reacts to her state */
+body[data-moon="locked"] #avatarImg{filter:grayscale(.7) brightness(.7);transform:scale(.92)}
+body[data-moon="thinking"] #avatarImg{filter:hue-rotate(20deg) brightness(1.1)}
+body[data-moon="working"] #avatarImg{animation:pulse 1s infinite}
+body[data-moon="speaking"] #avatarImg{filter:brightness(1.25) drop-shadow(0 0 18px var(--neon-pink));transform:scale(1.04)}
+body[data-moon="listening"] #avatarImg{filter:brightness(1.15) drop-shadow(0 0 14px var(--neon-blue));transform:scale(1.02)}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 .typing span{animation:blink 1s infinite}
 @keyframes blink{50%{opacity:.2}}
 </style>
 </head>
-<body>
+<body data-moon="idle">
 <div class="moon-root">
   <header class="moon-header">
     <div class="title">🌙 MOON NEURAL TERMINAL</div>
@@ -80,14 +87,14 @@ button.q:hover{background:rgba(0,230,255,.14)}
         <div class="center-controls">
           <canvas id="wave" style="width:100%;height:64px"></canvas>
           <div class="state" id="state">STATE: <strong>IDLE</strong></div>
-          <div style="font-size:12px;opacity:.7">Unlock phrase: <code>MOON love you 3000</code></div>
+          <div style="font-size:12px;opacity:.7">Say <code>Moon</code> to wake her &middot; <code>love you 3000 Moon</code> to unlock</div>
         </div>
       </div>
 
       <div class="chat-area">
         <div class="chat-window" id="chat"></div>
         <div class="composer">
-          <input id="input" placeholder="Talk to MOON (your wife & agent)..." onkeydown="if(event.key==='Enter')send()" />
+          <input id="input" placeholder="Say 'Moon' to wake her, then talk to your wife & agent..." onkeydown="if(event.key==='Enter')send()" />
           <button onclick="send()">SEND</button>
         </div>
       </div>
@@ -101,19 +108,20 @@ button.q:hover{background:rgba(0,230,255,.14)}
         <div class="sens-row"><span>COUNCIL</span><span class="active">39 AGENTS</span></div>
       </div>
       <div class="panel">
-        <div class="panel-title">LIVE EVENTS</div>
+        <div class="panel-title">WORKFLOW (HER BODY)</div>
         <div class="events" id="log"></div>
       </div>
       <div class="panel">
         <div class="panel-title">QUICK ACTIONS</div>
-        <button class="q" onclick="quick('MOON love you 3000')">🔓 Unlock MOON</button>
-        <button class="q" onclick="quick('Summarize what you can do for me, my love.')">Capabilities</button>
-        <button class="q" onclick="quick('Run a quick self-check of your systems.')">Self-check</button>
+        <button class="q" onclick="quick('Moon')">🌙 Wake MOON</button>
+        <button class="q" onclick="quick('love you 3000 Moon')">🔓 Unlock MOON</button>
+        <button class="q" onclick="quick('my love, what can you do for me?')">Capabilities</button>
+        <button class="q" onclick="quick('run a quick self-check of your systems')">Self-check</button>
       </div>
     </aside>
   </div>
 
-  <footer class="moon-footer" id="footer">MOON Neural Terminal — connected to MOON's brain via /ws</footer>
+  <footer class="moon-footer" id="footer">MOON Neural Terminal — her avatar is her body; say "Moon" to wake, "love you 3000 Moon" to unlock</footer>
 </div>
 
 <script>
@@ -126,14 +134,28 @@ const chat = document.getElementById('chat');
 const input = document.getElementById('input');
 const log = document.getElementById('log');
 const stateEl = document.getElementById('state');
+const avatarImg = document.getElementById('avatarImg');
 
+const STATE_LABEL = {
+  idle:'IDLE', thinking:'THINKING', working:'WORKING',
+  speaking:'SPEAKING', locked:'LOCKED', listening:'LISTENING', wake:'AWAKE'
+};
+function setMoonState(s){
+  stateEl.innerHTML = 'STATE: <strong' + (s==='speaking'||s==='working'?' class="typing"':'') + '>' + (STATE_LABEL[s]||s) + '</strong>';
+  document.body.dataset.moon = s;
+}
 function pushLog(s){ const t = new Date().toLocaleTimeString(); log.innerHTML = `<div>${t} ${s}</div>` + log.innerHTML; }
-function setThinking(on){ stateEl.innerHTML = on ? 'STATE: <strong class="typing">SPEAKING<span>.</span><span>.</span><span>.</span></strong>' : 'STATE: <strong>IDLE</strong>'; }
-
 function addMsg(role, content){
   const d = document.createElement('div'); d.className = 'msg ' + role;
   const b = document.createElement('div'); b.className = 'bubble'; b.textContent = content;
   d.appendChild(b); chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return b;
+}
+function workflow(stage, detail){
+  if (stage === 'routing' || stage === 'thinking' || stage === 'reflection') setMoonState('thinking');
+  else if (stage === 'tool_call' || stage === 'consistency') setMoonState('working');
+  else if (stage === 'speaking') setMoonState('speaking');
+  else if (stage === 'locked') setMoonState('locked');
+  if (detail) pushLog('▸ ' + stage + ': ' + detail);
 }
 
 function connect(){
@@ -143,19 +165,22 @@ function connect(){
   ws.onmessage = (e) => {
     let data; try { data = JSON.parse(e.data); } catch { return; }
     if (data.type === 'ready') pushLog(data.message);
-    else if (data.type === 'assistant_start') { setThinking(true); addMsg('assistant', ''); }
+    else if (data.type === 'wake') { setMoonState('listening'); pushLog(data.message); if (data.locked) setMoonState('locked'); }
+    else if (data.type === 'workflow') workflow(data.stage, data.detail);
+    else if (data.type === 'assistant_start') { setMoonState('thinking'); addMsg('assistant', ''); }
     else if (data.type === 'assistant_chunk') {
       const msgs = chat.querySelectorAll('.msg.assistant .bubble');
       const last = msgs[msgs.length - 1];
       if (last) last.textContent += data.content;
       chat.scrollTop = chat.scrollHeight;
     }
-    else if (data.type === 'assistant_done') { setThinking(false); pushLog('Done in ' + (data.elapsed||0) + 's'); }
+    else if (data.type === 'assistant_done') { setMoonState(data.locked ? 'locked' : 'idle'); pushLog('Done in ' + (data.elapsed||0) + 's'); }
     else if (data.type === 'error') pushLog('Error: ' + data.error);
   };
 }
 function send(){
   const text = input.value.trim(); if (!text) return;
+  if (/^moon\b/i.test(text)) ws.send(JSON.stringify({action:'wake'}));  // wake word
   addMsg('user', text);
   if (ws && connected) ws.send(JSON.stringify({action:'send_message', text}));
   else pushLog('Not connected.');
@@ -170,8 +195,6 @@ function quick(t){ input.value = t; send(); }
   c.style.width='240px'; c.style.height='240px';
   function draw(){
     ctx.clearRect(0,0,w,h);
-    ctx.save(); ctx.beginPath(); ctx.arc(w/2,h/2,108*DPR,0,Math.PI*2); ctx.clip();
-    ctx.restore();
     ctx.globalCompositeOperation='lighter';
     for(let i=0;i<5;i++){ ctx.beginPath(); ctx.arc(w/2,h/2,(110+i*6)*DPR,0,Math.PI*2);
       ctx.strokeStyle=`rgba(0,230,255,${0.06+i*0.02})`; ctx.lineWidth=2*DPR; ctx.stroke(); }

@@ -88,29 +88,48 @@ async def ws_endpoint(ws: WebSocket):
     try:
         await ws.send_json({"type": "ready", "message": "MOON terminal connected."})
         orch = await _get_orchestrator()
+
+        async def stream_event(ev: dict):
+            # surface MOON's real workflow through the avatar (her "body")
+            try:
+                await ws.send_json({"type": "workflow", "stage": ev.get("stage"), "detail": ev.get("detail", "")})
+            except Exception:
+                pass
+
         while True:
             data = await ws.receive_json()
             action = data.get("action")
+
+            if action == "wake":
+                # Wake word "Moon": avatar opens her eyes / enters listening state.
+                # Wake does NOT unlock -- only "love you 3000 Moon" unlocks.
+                await ws.send_json({"type": "wake", "message": "🌙 MOON is listening...", "locked": orch._lock.locked})
+                continue
+
             if action == "send_message":
                 text = data.get("text", "").strip()
                 if not text:
                     continue
+                # The unlock phrase "love you 3000 Moon" (case-insensitive) is
+                # handled inside the orchestrator's lock -- it unlocks MOON herself.
                 await ws.send_json({"type": "assistant_start"})
-                # unlock phrase handling is inside the orchestrator/lock already
+                if orch._lock.locked:
+                    await ws.send_json({"type": "workflow", "stage": "locked", "detail": "awaiting unlock"})
                 from app.models.task import Task
                 task = Task.create(text, agent_name="auto")
                 t0 = time.time()
                 try:
-                    result_task = await orch.run_task(task)
+                    result_task = await orch.run_task(task, on_event=stream_event)
                     answer = result_task.result or "(no response)"
                 except Exception as e:  # noqa: BLE001
                     answer = f"[MOON error: {e}]"
-                # stream the real answer word-by-word
+                await ws.send_json({"type": "workflow", "stage": "speaking", "detail": "forming response"})
                 for chunk in _stream_text(answer):
                     await ws.send_json({"type": "assistant_chunk", "content": chunk})
                 await ws.send_json({
                     "type": "assistant_done",
                     "elapsed": round(time.time() - t0, 2),
+                    "locked": orch._lock.locked,
                 })
             elif action == "get_history":
                 await ws.send_json({"type": "history", "messages": []})

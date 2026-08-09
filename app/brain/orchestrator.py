@@ -515,7 +515,7 @@ class Orchestrator:
         task.agent_name = agent
         logger.info("intent='%s' (conf=%.2f) -> agent='%s'", intent, conf, agent)
 
-    async def run_task(self, task: Task) -> Task:
+    async def run_task(self, task: Task, on_event=None) -> Task:
         if self._llm is None or self._tools is None or self._context is None:
             raise RuntimeError("Orchestrator.setup() must be called first")
 
@@ -528,6 +528,11 @@ class Orchestrator:
         task.mark_running()
         self._history.clear()
         self._route_intent(task)
+        if on_event:
+            try:
+                await on_event({"stage": "routing", "detail": f"intent -> {task.agent_name}"})
+            except Exception:
+                pass
         agent = self._agents.get(task.agent_name, self._agents["planning"])
         agent_brain = self._agent_brains.get(agent.name)
 
@@ -563,7 +568,7 @@ class Orchestrator:
             except Exception as exc:  # noqa: BLE001
                 logger.info("fast-path fell back to full loop: %s", exc)
         try:
-            final_text, tokens = await self._run_cognition_loop(task, agent)
+            final_text, tokens = await self._run_cognition_loop(task, agent, on_event=on_event)
             validation = await self._validator.validate(task.prompt, final_text)
             if not validation.valid:
                 logger.warning("Output invalid: %s", validation.issues)
@@ -579,11 +584,21 @@ class Orchestrator:
                 except Exception:  # noqa: BLE001
                     pass
             reflection = await self._reflection.reflect(task.prompt, final_text)
+            if on_event:
+                try:
+                    await on_event({"stage": "reflection", "detail": "self-reviewing answer"})
+                except Exception:
+                    pass
             if not reflection.satisfactory:
                 logger.info("Reflection suggested improvements: %s", reflection.improvements)
 
             # --- Self-consistency (accuracy): majority vote over N samples ----
             if self._settings.enable_self_consistency and self._is_factual(task.prompt):
+                if on_event:
+                    try:
+                        await on_event({"stage": "consistency", "detail": "majority-vote self-check"})
+                    except Exception:
+                        pass
                 try:
                     samples = [final_text]
                     for _ in range(max(1, self._settings.self_consistency_samples)):
@@ -643,7 +658,7 @@ class Orchestrator:
             task.fail(str(exc))
         return task
 
-    async def _run_cognition_loop(self, task: Task, agent: AgentCard) -> tuple[str, int]:
+    async def _run_cognition_loop(self, task: Task, agent: AgentCard, on_event=None) -> tuple[str, int]:
         assert self._llm is not None and self._tools is not None and self._context is not None
         retrieved = await self._memory.semantic_recall(task.prompt) if self._memory else []
         if self._memory is not None:
@@ -658,6 +673,11 @@ class Orchestrator:
         total_tokens = 0
         final_text = ""
         tool_outputs: list[str] = []
+        if on_event:
+            try:
+                await on_event({"stage": "thinking", "detail": f"recalled {len(retrieved)} memories; building context"})
+            except Exception:
+                pass
 
         for _ in range(_MAX_TOOL_ITERATIONS):
             # Prefer the agent's OWN model (per-agent models) for its function;
@@ -675,6 +695,11 @@ class Orchestrator:
             if resp.has_tool_calls:
                 for call in resp.tool_calls:
                     args = self._parse_args(call.get("arguments", "{}"))
+                    if on_event:
+                        try:
+                            await on_event({"stage": "tool_call", "detail": call.get("name", "tool")})
+                        except Exception:
+                            pass
                     result = await self._tools.run(call["name"], args, agent=agent)
                     messages.append(ChatMessage(role="tool", content=json.dumps(result.to_dict(), default=str)))
                     self._history.append(Message.tool_result(str(result.output), tool=call["name"]))

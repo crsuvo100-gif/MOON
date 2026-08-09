@@ -4,5 +4,11 @@
     "outcome": "**Verdict:** true.  \n\nThe square root of 144 is 12 because $12 \\times 12 = 144$, and there are no negative numbers that, when squared, result in 144. The square root function typically refers to the principal (positive) root, so the answer is 12.",
     "lesson": "",
     "success": true
+  },
+  {
+    "goal": "my love, name 3 things you can do",
+    "outcome": "Use `memo` to create, view, or search Apple Notes. Use `memo` to organize and export notes. Use `memo` to manage automation settings for Notes.",
+    "lesson": "",
+    "success": true
   }
 ]
