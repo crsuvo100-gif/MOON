@@ -63,8 +63,8 @@ class ExcalidrawTool(BaseTool):
             a, b = m.group(1).strip(), m.group(2).strip()
             if a in pos and b in pos:
                 aid = f"a{arrow_id}"; arrow_id += 1
-                ax, ay, _ = pos[a][1], pos[a][2], None
-                bx, by, _ = pos[b][1], pos[b][2], None
+                ax, ay = pos[a][1], pos[a][2]
+                bx = pos[b][1]
                 elements.append({
                     "type": "arrow", "id": aid, "x": ax + 220, "y": ay + 45,
                     "width": max(20, bx - ax), "height": 0,

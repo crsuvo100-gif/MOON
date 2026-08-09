@@ -35,7 +35,6 @@ class ArchitectureDiagramTool(BaseTool):
     ) -> str:
         components = components or []
         connections = connections or []
-        parts = []
         n = len(components) or 1
         cols = max(1, int(n ** 0.5))
         rects = []
@@ -52,7 +51,6 @@ class ArchitectureDiagramTool(BaseTool):
             x = 60 + col * 240
             y = 90 + row * 150
             name = re.split(r"[:\-]", comp)[0].strip()
-            label = comp
             pos[comp] = (x, y)
             rects.append(
                 f'<g><rect x="{x}" y="{y}" width="200" height="80" rx="6" '

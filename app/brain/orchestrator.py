@@ -166,6 +166,7 @@ class Orchestrator:
         allow_dangerous = True
         enabled_names = {t.name for t in registry.all()}
         self._tools = ToolManager(registry, enabled_tools=enabled_names, allow_dangerous=allow_dangerous)
+        self._tools._tool_timeout = self._settings.tool_timeout
 
         try:
             _galaxy = None
@@ -209,6 +210,31 @@ class Orchestrator:
     # ------------------------------------------------------------------
     # Advanced workflow helpers (speed + accuracy)
     # ------------------------------------------------------------------
+    def _is_factual(self, text: str) -> bool:
+        """Heuristic: a question likely to have a single factual answer."""
+        t = text.strip().lower()
+        return t.endswith("?") or any(
+            k in t for k in ("what is", "who is", "when did", "where is", "how many", "capital of")
+        )
+
+    @staticmethod
+    def _answers_disagree(a: str, b: str) -> bool:
+        """Cheap disagreement check: normalize and compare key tokens."""
+        import re as _re
+
+        def norm(s: str) -> set[str]:
+            s = (s or "").lower()
+            s = _re.sub(r"[^a-z0-9 ]", " ", s)
+            toks = set(s.split())
+            stop = {"the", "a", "an", "is", "are", "was", "of", "in", "on", "to", "and", "that", "it", "its"}
+            return toks - stop
+
+        na, nb = norm(a), norm(b)
+        if not na or not nb:
+            return False
+        overlap = na & nb
+        return len(overlap) < 0.4 * min(len(na), len(nb))
+
     def _is_simple_query(self, text: str) -> bool:
         """Heuristic: a short factual/chat question that needs no tools."""
         t = text.strip()
@@ -292,9 +318,36 @@ class Orchestrator:
             validation = await self._validator.validate(task.prompt, final_text)
             if not validation.valid:
                 logger.warning("Output invalid: %s", validation.issues)
+                # Self-improvement: remember the failure mode as a lesson.
+                try:
+                    from app.brain.prompt_tuner import record_lesson
+
+                    record_lesson(
+                        f"Avoid producing invalid output for: {task.prompt[:120]}. Issues: {', '.join(validation.issues)}",
+                        kind="validation",
+                        agent=agent.name,
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
             reflection = await self._reflection.reflect(task.prompt, final_text)
             if not reflection.satisfactory:
                 logger.info("Reflection suggested improvements: %s", reflection.improvements)
+
+            # --- Self-consistency (accuracy) ---------------------------------
+            if self._settings.enable_self_consistency and self._is_factual(task.prompt):
+                try:
+                    second, _ = await self._run_cognition_loop(
+                        Task.create(task.prompt, agent_name=agent.name), agent
+                    )
+                    if self._answers_disagree(final_text, second):
+                        logger.info("Self-consistency mismatch; flagging for review")
+                        final_text = (
+                            final_text
+                            + "\n\n[Self-consistency note] A second reasoning pass produced a "
+                            "different answer; please verify the key claim."
+                        )
+                except Exception as exc:  # noqa: BLE001
+                    logger.info("self-consistency skipped: %s", exc)
             try:
                 lesson = "; ".join(reflection.improvements) if reflection.improvements else ""
                 self._memory.episodic.record(

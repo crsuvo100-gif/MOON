@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     # tool-call loop and two-phase validation and answer in one model call.
     # Dramatically reduces latency on CPU-only hosts for ordinary queries.
     enable_fast_path: bool = True
+    # Self-consistency: re-ask once on factual prompts and compare; if the
+    # two answers disagree, flag it (improves accuracy on facts). CPU-costly.
+    enable_self_consistency: bool = False
+    # Tool execution timeout (seconds) -- hardens tools against hangs.
+    tool_timeout: float = 30.0
     # Max sub-agents to run concurrently when a complex goal is fanned out.
     max_parallel_agents: int = 4
 

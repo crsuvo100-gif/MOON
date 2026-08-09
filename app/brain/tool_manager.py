@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from typing import Any
 
@@ -31,6 +32,7 @@ class ToolManager:
         self._registry = registry
         self._enabled = enabled_tools or {t.name for t in registry.all()}
         self._allow_dangerous = allow_dangerous
+        self._tool_timeout = 30.0
 
     def available_specs(self) -> list[dict[str, Any]]:
         specs = []
@@ -42,13 +44,20 @@ class ToolManager:
                     specs.append({"name": t.name, "description": "", "parameters": {}})
         return specs
 
-    async def run(self, name: str, args: dict[str, Any], *, agent=None) -> ToolResult:
+    async def run(self, name: str, args: dict[str, Any], *, agent=None, timeout: float | None = None) -> ToolResult:
         tool = self._registry.get(name)
         if tool is None or name not in self._enabled:
             return ToolResult(name=name, output=None, success=False, error="tool not available")
         try:
-            result = await tool.execute(**(args or {}))
+            to = timeout if timeout is not None else getattr(self, "_tool_timeout", None)
+            if to:
+                result = await asyncio.wait_for(tool.execute(**(args or {})), timeout=to)
+            else:
+                result = await tool.execute(**(args or {}))
             return ToolResult(name=name, output=result, success=True)
+        except asyncio.TimeoutError:
+            logger.warning("tool %s timed out after %ss", name, to)
+            return ToolResult(name=name, output=None, success=False, error=f"tool timed out after {to}s")
         except Exception as exc:  # noqa: BLE001
             logger.warning("tool %s failed: %s", name, exc)
             return ToolResult(name=name, output=None, success=False, error=str(exc))

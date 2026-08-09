@@ -31,8 +31,10 @@ class ContextBuilder:
             sys_text = system_override
         elif agent is not None:
             from app.brain.agent_registry import persona_for
+            from app.brain.prompt_tuner import augment_persona
 
-            sys_text = persona_for(getattr(agent, "name", str(agent)))
+            base = persona_for(getattr(agent, "name", str(agent)))
+            sys_text = augment_persona(base, getattr(agent, "name", None))
         else:
             sys_text = self._prompts.system_prompt() if self._prompts else "You are MOON."
         messages = [Message.system(sys_text)]
