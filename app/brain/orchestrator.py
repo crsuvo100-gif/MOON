@@ -107,6 +107,20 @@ class Orchestrator:
         )
         await self._llm.setup()
 
+        # Optional STRONG model for accuracy-critical work + the main-brain
+        # accuracy gate. Routes factual / cyber-critical tasks to a better model.
+        self._llm_strong: "LLMService | None" = None
+        strong_name = self._settings.strong_model_name.strip()
+        if strong_name:
+            strong_url = self._settings.strong_model_base_url.strip() or cfg.base_url
+            self._llm_strong = LLMService(
+                base_url=strong_url, model_name=strong_name,
+                api_key=cfg.api_key, temperature=cfg.temperature,
+                max_tokens=cfg.max_tokens, timeout=cfg.timeout,
+            )
+            await self._llm_strong.setup()
+            logger.info("Strong model enabled: %s @ %s", strong_name, strong_url)
+
         self._embeddings = EmbeddingService(
             dim=ecfg.dim, enabled=ecfg.enabled,
             base_url=ecfg.base_url, model_name=ecfg.model_name,
@@ -219,6 +233,8 @@ class Orchestrator:
     async def teardown(self) -> None:
         if self._llm is not None:
             await self._llm.teardown()
+        if getattr(self, "_llm_strong", None) is not None:
+            await self._llm_strong.teardown()
         logger.info("Orchestrator torn down")
 
     # ------------------------------------------------------------------
@@ -230,6 +246,30 @@ class Orchestrator:
         return t.endswith("?") or any(
             k in t for k in ("what is", "who is", "when did", "where is", "how many", "capital of")
         )
+
+    @staticmethod
+    def _majority_answer(samples: list[str]) -> str:
+        """Return the most representative (majority) answer among samples."""
+        import re as _re
+        clean = [x for x in (s.strip() for s in samples) if x]
+        if not clean:
+            return ""
+        # Normalize for grouping: keep full text but pick the most frequent exact,
+        # else the one with highest token-overlap to the others (consensus).
+        from collections import Counter
+        exact = Counter(clean)
+        if exact.most_common(1)[0][1] > 1:
+            return exact.most_common(1)[0][0]
+        def toks(t: str) -> set[str]:
+            t = _re.sub(r"[^a-z0-9 ]", " ", t.lower())
+            return set(t.split()) - {"the","a","an","is","are","was","of","in","on","to","and","that","it","its"}
+        best, best_score = clean[0], -1
+        for c in clean:
+            tc = toks(c)
+            score = sum(len(tc & toks(o)) for o in clean)
+            if score > best_score:
+                best, best_score = c, score
+        return best
 
     @staticmethod
     def _answers_disagree(a: str, b: str) -> bool:
@@ -322,6 +362,17 @@ class Orchestrator:
                 parts = [p.strip() for p in numbered]
         return parts[: self._settings.max_parallel_agents]
 
+    def _pick_llm(self, task_prompt: str):
+        """Use the STRONG model for factual / cyber-critical tasks when configured."""
+        if self._llm_strong is None:
+            return self._llm
+        crit = any(k in (task_prompt or "").lower() for k in
+                    ("exploit", "vuln", "cve", "scan", "red team", "offensive", "pentest",
+                     "malware", "forensic", "reverse", "recon", "payload", "attack"))
+        if self._is_factual(task_prompt) or crit:
+            return self._llm_strong
+        return self._llm
+
     async def _fast_answer(self, task: Task, agent) -> tuple[str, int]:
         """Single-call answer for simple queries (no tool loop, no two-phase refine)."""
         persona = self._agent_persona(task.agent_name)
@@ -404,19 +455,21 @@ class Orchestrator:
             if not reflection.satisfactory:
                 logger.info("Reflection suggested improvements: %s", reflection.improvements)
 
-            # --- Self-consistency (accuracy) ---------------------------------
+            # --- Self-consistency (accuracy): majority vote over N samples ----
             if self._settings.enable_self_consistency and self._is_factual(task.prompt):
                 try:
-                    second, _ = await self._run_cognition_loop(
-                        Task.create(task.prompt, agent_name=agent.name), agent
-                    )
-                    if self._answers_disagree(final_text, second):
-                        logger.info("Self-consistency mismatch; flagging for review")
-                        final_text = (
-                            final_text
-                            + "\n\n[Self-consistency note] A second reasoning pass produced a "
-                            "different answer; please verify the key claim."
+                    samples = [final_text]
+                    for _ in range(max(1, self._settings.self_consistency_samples)):
+                        extra, _ = await self._run_cognition_loop(
+                            Task.create(task.prompt, agent_name=agent.name), agent
                         )
+                        if extra:
+                            samples.append(extra.strip())
+                    # Replace with the most common answer (majority wins).
+                    best = self._majority_answer(samples)
+                    if best and best != final_text:
+                        logger.info("Self-consistency: replaced answer via majority vote")
+                        final_text = best
                 except Exception as exc:  # noqa: BLE001
                     logger.info("self-consistency skipped: %s", exc)
             try:
@@ -480,7 +533,8 @@ class Orchestrator:
         tool_outputs: list[str] = []
 
         for _ in range(_MAX_TOOL_ITERATIONS):
-            resp = await self._llm.complete(messages, tools=tool_specs if tool_specs else None)
+            llm = self._pick_llm(task.prompt)
+            resp = await llm.complete(messages, tools=tool_specs if tool_specs else None)
             total_tokens += 1
             if resp.has_tool_calls:
                 for call in resp.tool_calls:
@@ -529,12 +583,14 @@ class Orchestrator:
         return text
 
     async def refine(self, prompt: str, *, temperature: float | None = None) -> str:
-        """Used by AgentBrain two-phase validation. Lower temperature for audits."""
-        if self._llm is None:
+        """Used by AgentBrain two-phase validation. Lower temperature for audits.
+        Uses the STRONG model when configured (best accuracy for the gate)."""
+        llm = self._llm_strong or self._llm
+        if llm is None:
             return ""
         try:
             t = temperature if temperature is not None else 0.1
-            resp = await self._llm.complete([ChatMessage(role="user", content=prompt)], max_tokens=400, temperature=t)
+            resp = await llm.complete([ChatMessage(role="user", content=prompt)], max_tokens=400, temperature=t)
             return (resp.content or "").strip()
         except Exception:  # noqa: BLE001
             return ""

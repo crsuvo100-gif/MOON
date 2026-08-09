@@ -88,20 +88,20 @@ def test_two_phase_parse_logic():
             async def refine(self, prompt, **kw):
                 return self._q.pop(0)
 
-        # Case 1: OK -> draft unchanged
-        brain.main_brain = FakeMain(["OK"])
+        # Case 1: verdict ok -> draft unchanged
+        brain.main_brain = FakeMain(['{"verdict": "ok", "answer": "draft answer"}'])
         out = o.run_until_complete(brain.refine_with_main("draft answer", "task"))
         assert out == "draft answer", out
 
-        # Case 2: CORRECTED -> returns corrected text
-        brain.main_brain = FakeMain(["CORRECTED\nthe right answer"])
+        # Case 2: verdict corrected (JSON) -> returns corrected text
+        brain.main_brain = FakeMain(['{"verdict": "corrected", "answer": "the right answer"}'])
         out = o.run_until_complete(brain.refine_with_main("wrong", "task"))
         assert "right answer" in out, out
 
-        # Case 3: CORRECTED then FIX -> verify phase overrides
-        brain.main_brain = FakeMain(["CORRECTED\ninterim", "FIX: better answer"])
-        out = o.run_until_complete(brain.refine_with_main("wrong", "task"))
-        assert "better answer" in out, out
+        # Case 3: free-form prose correction (heuristic fallback)
+        brain.main_brain = FakeMain(["The draft is wrong. Corrected Answer: 56"])
+        out = o.run_until_complete(brain.refine_with_main("7*8 = 54", "multiply"))
+        assert out == "56", out
     finally:
         o.close()
 
@@ -116,6 +116,32 @@ def test_every_agent_has_durable_brain_file():
         orch = o.run_until_complete(_make_orch())
         for name in orch._agent_brains:
             assert orch._agent_brains[name]._store._path.parent.exists()
+        o.run_until_complete(orch.teardown())
+    finally:
+        o.close()
+
+
+def test_majority_answer_logic():
+    from app.brain.orchestrator import Orchestrator
+    # exact majority
+    assert Orchestrator._majority_answer(["Paris", "Paris", "London"]) == "Paris"
+    # consensus by token overlap
+    out = Orchestrator._majority_answer([
+        "The capital of France is Paris.",
+        "France's capital city is Paris.",
+        "Berlin is the capital of Germany.",
+    ])
+    assert "Paris" in out, out
+
+
+def test_pick_llm_routing():
+    from app.brain.orchestrator import Orchestrator
+    o = asyncio.new_event_loop()
+    try:
+        orch = o.run_until_complete(_make_orch())
+        # no strong model configured -> always default
+        assert orch._pick_llm("what is 2+2?") is orch._llm
+        assert orch._pick_llm("scan this host for exploits") is orch._llm
         o.run_until_complete(orch.teardown())
     finally:
         o.close()

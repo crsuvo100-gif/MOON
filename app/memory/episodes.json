@@ -1,0 +1,8 @@
+[
+  {
+    "goal": "What is the square root of 144?",
+    "outcome": "**Verdict:** true.  \n\nThe square root of 144 is 12 because $12 \\times 12 = 144$, and there are no negative numbers that, when squared, result in 144. The square root function typically refers to the principal (positive) root, so the answer is 12.",
+    "lesson": "",
+    "success": true
+  }
+]

@@ -42,6 +42,18 @@ class Settings(BaseSettings):
     model_max_tokens: int = 2048
     model_timeout: float = Field(default=120.0, description="Per-request timeout (seconds).")
 
+    # Optional STRONG model for accuracy-critical work. When set, factual and
+    # cyber-critical tasks (and the main-brain accuracy gate) are routed to it
+    # for a higher-quality pass. Leave empty to use the default model only.
+    strong_model_name: str = Field(
+        default="",
+        description="Optional larger/more-capable model id for accuracy-critical tasks.",
+    )
+    strong_model_base_url: str = Field(
+        default="",
+        description="Endpoint for the strong model (defaults to model_base_url if blank).",
+    )
+
     embedding_base_url: str = ""
     embedding_model: str = "all-MiniLM-L6-v2"
     embedding_dim: int = 384
@@ -63,9 +75,12 @@ class Settings(BaseSettings):
     # tool-call loop and two-phase validation and answer in one model call.
     # Dramatically reduces latency on CPU-only hosts for ordinary queries.
     enable_fast_path: bool = True
-    # Self-consistency: re-ask once on factual prompts and compare; if the
-    # two answers disagree, flag it (improves accuracy on facts). CPU-costly.
-    enable_self_consistency: bool = False
+    # Self-consistency: sample multiple independent reasoning passes on
+    # factual prompts; if the majority disagrees with the primary answer,
+    # replace it with the majority answer. Strong accuracy boost.
+    enable_self_consistency: bool = True
+    # Number of EXTRA samples (primary + N = total passes). 2 -> 3-way vote.
+    self_consistency_samples: int = 2
     # Tool execution timeout (seconds) -- hardens tools against hangs.
     tool_timeout: float = 30.0
     # Max sub-agents to run concurrently when a complex goal is fanned out.
