@@ -106,6 +106,15 @@ class Orchestrator:
         self._memory = MemoryManager(short_term=stm, long_term=ltm, knowledge_base=kb)
         await self._memory.setup()
 
+        # Index the bundled Hermes skill corpus into the knowledge base so the
+        # skills are retrievable via semantic recall (MOON can use them).
+        try:
+            from app.knowledge.skills_library import index_skills
+
+            await index_skills(self._memory._kb)
+        except Exception as exc:  # noqa: BLE001
+            logger.info("skills index skipped: %s", exc)
+
         if self._settings.enable_auto_learning:
             try:
                 from app.brain.knowledge_consolidator import KnowledgeConsolidator
