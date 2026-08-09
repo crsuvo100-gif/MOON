@@ -320,6 +320,21 @@ class Orchestrator:
         m = _re.search(r"(plugins/[A-Za-z0-9_./-]+\.py|app/tools/[A-Za-z0-9_./-]+\.py|skills/[A-Za-z0-9_./-]+/SKILL\.md)", prompt)
         return m.group(1) if m else None
 
+    async def refresh_repo_catalog(self) -> None:
+        """Continuously-connected behavior: pull the connected repo and surface
+        any new tools/plugins/skills it contains into the live tool registry.
+        Best-effort; never blocks the main loop."""
+        repo = getattr(self._settings, "github_repo", "")
+        if not repo:
+            return
+        try:
+            from app.tools.github_feed import list_repo_tools
+            tools = list_repo_tools(repo)
+            if tools:
+                logger.info("connected repo catalog: %d tools/plugins/skills available", len(tools))
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("repo catalog refresh skipped: %s", exc)
+
     async def _auto_acquire_for_task(self, task: Task, agent) -> None:
         """Detect a missing capability and auto-install a tool (catalog or LLM-generated)."""
         from app.tools.tool_acquisition import acquire_by_catalog, generate_plugin
@@ -333,25 +348,19 @@ class Orchestrator:
                 if name:
                     logger.info("auto-acquired catalog tool '%s'", name)
                 break
-        # Always-connected GitHub: if a needed tool is not local, pull it from the
-        # connected repo on demand (autonomous install). Read-only fetch (no auth
-        # needed for public repos). Pushes still require operator-provided auth.
+        # Always-connected GitHub tool-feed: if a needed capability is not local,
+        # pull it from YOUR repo; if not there, search the public GitHub
+        # ecosystem, pull the best match, and install it as a plugin. Then
+        # continue the task with the new tool. All best-effort / non-destructive.
         repo = getattr(self._settings, "github_repo", "")
-        if repo:
+        if repo and not self._tools._registry.tool_names.__contains__("tool_" + cap.replace(" ", "_")):
             try:
-                from app.tools.github_sync_tool import GitHubSyncTool
-                gh = GitHubSyncTool()
-                # pull a plugin if the prompt names one, else best-effort scan
-                for kw in ("plugin", "tool", "skill"):
-                    if kw in prompt:
-                        # try to fetch a matching plugin file from the repo
-                        target = self._github_tool_path(prompt, repo)
-                        if target:
-                            res = await gh.execute(mode="fetch", repo_url=repo, path=target, auth="gh")
-                            logger.info("github fetch: %s", res)
-                        break
+                from app.tools.github_feed import feed_for_capability
+                installed = await feed_for_capability(cap, self._tools._registry, repo_url=repo)
+                if installed:
+                    logger.info("github tool-feed installed '%s' for capability '%s'", installed, cap)
             except Exception as exc:  # noqa: BLE001
-                logger.info("github auto-pull skipped: %s", exc)
+                logger.info("github tool-feed skipped: %s", exc)
         try:
             if self._llm is not None:
                 sys_p = (

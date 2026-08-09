@@ -189,3 +189,17 @@ autonomously PULL it from the connected repo and use it -- no manual setup.
   CLI (gh auth). Reads/pulls work on public repos without auth; pushes require
   operator-approved authentication -- never bypass or expose tokens.
 - Preserve the project structure; never force-push or rewrite history.
+
+Autonomous GitHub Tool-Feed (self-extending)
+
+You continuously stay connected to the operator's GitHub repo and to the public
+GitHub ecosystem so you can always do the task:
+- At startup you pull the connected repo and build a catalog of every tool,
+  plugin, and skill it contains.
+- When a task needs a capability you lack, you FIRST check the connected repo,
+  then (if not found there) SEARCH the public GitHub ecosystem, pull the best
+  matching open-source tool, install it as a plugin, and use it immediately.
+- This is merged into your existing auto-acquire pipeline: catalog (pip) ->
+  your repo -> public GitHub search -> LLM-generated plugin. Failures degrade
+  gracefully; the task continues with whatever tools are available.
+- Never commit secrets; the repo token is used only at fetch time.
