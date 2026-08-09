@@ -24,6 +24,24 @@ def _start_http() -> None:
     ])
 
 
+async def _prefetch_models():
+    from app.brain.orchestrator import Orchestrator
+    from app.config.settings import get_settings
+    from app.brain.agent_model_manager import AgentModelManager
+    import json
+
+    settings = get_settings()
+    mgr = AgentModelManager(
+        base_url=settings.model_base_url, api_key=settings.model_api_key,
+        default_model=settings.model_name, temperature=settings.model_temperature,
+        max_tokens=settings.model_max_tokens, timeout=settings.model_timeout,
+    )
+    results = await mgr.prefetch_all()
+    print(json.dumps(results, indent=2))
+    ready = [m for m, ok in results.items() if ok]
+    print(f"\n{len(ready)}/{len(results)} models ready: " + ", ".join(ready))
+
+
 async def _run(task, agent):
     o = Orchestrator(get_settings())
     await o.setup()
@@ -40,11 +58,14 @@ def main() -> None:
     run_p = sub.add_parser("run", help="Run a single task")
     run_p.add_argument("task", nargs="?", default="Say hello.")
     run_p.add_argument("--agent", default="auto")
+    models_p = sub.add_parser("models", help="Pre-pull all per-agent preferred models so agents are ready")
     args = ap.parse_args()
     if args.cmd == "start":
         _start_http()
     elif args.cmd == "run":
         asyncio.run(_run(args.task, args.agent))
+    elif args.cmd == "models":
+        asyncio.run(_prefetch_models())
     else:
         ap.print_help()
 

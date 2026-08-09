@@ -128,6 +128,26 @@ class AgentModelManager:
     def status(self) -> dict[str, str]:
         return {a: (self._preferred(a)) for a in set(list(AGENT_MODELS) + [self._default])}
 
+    async def prefetch_all(self, max_parallel: int = 2) -> dict[str, bool]:
+        """Startup routine: pull every distinct preferred model so agents are
+        ready instantly. Best-effort; reports per-model success and never
+        raises. Runs a few pulls concurrently to stay fast."""
+        import asyncio
+
+        models = sorted({self._preferred(a) for a in AGENT_MODELS} | {self._default})
+        sem = asyncio.Semaphore(max_parallel)
+        results: dict[str, bool] = {}
+
+        async def _one(m: str) -> None:
+            async with sem:
+                loop = asyncio.get_event_loop()
+                # run the blocking pull in a thread so we don't block the loop
+                ok = await loop.run_in_executor(None, self.ensure_model, m)
+                results[m] = bool(ok)
+
+        await asyncio.gather(*(_one(m) for m in models))
+        return results
+
     async def teardown(self) -> None:
         for svc in self._cache.values():
             try:

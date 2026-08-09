@@ -4,10 +4,10 @@
 
 PY := env -u PYTHONPATH .venv/bin/python
 
-.PHONY: help run serve terminal test live voice-test voice voice-install clean
+.PHONY: help run serve terminal test live voice-test voice voice-install models clean
 
 help:
-	@echo "Targets: run serve terminal test live voice-test clean"
+	@echo "Targets: run serve terminal test live voice-test models clean"
 
 run:
 	$(PY) main.py run "$(TASK)" --agent $(AGENT)
@@ -30,6 +30,9 @@ voice-test:
 
 voice:
 	$(PY) scripts/voice_loop.py
+
+models:
+	$(PY) main.py models
 
 voice-install:
 	$(PY) install_moon.py

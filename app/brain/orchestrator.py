@@ -119,6 +119,14 @@ class Orchestrator:
                 default_model=cfg.model_name, temperature=cfg.temperature,
                 max_tokens=cfg.max_tokens, timeout=cfg.timeout,
             )
+            # Startup routine: pre-pull every preferred model so agents are
+            # ready instantly. Best-effort; logs results, never raises.
+            try:
+                results = await self._agent_models.prefetch_all()
+                pulled = [m for m, ok in results.items() if ok]
+                logger.info("Per-agent model pre-pull: %d ready (%s)", len(pulled), ", ".join(pulled))
+            except Exception as exc:  # noqa: BLE001
+                logger.info("Per-agent model pre-pull skipped: %s", exc)
 
         # Optional STRONG model for accuracy-critical work + the main-brain
         # accuracy gate. Routes factual / cyber-critical tasks to a better model.
