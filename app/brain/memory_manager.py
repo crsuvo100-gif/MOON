@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -26,10 +25,10 @@ class MemoryManager:
 
     def __init__(
         self,
-        short_term: "ShortTermMemory | None" = None,
-        long_term: "LongTermMemory | None" = None,
-        knowledge_base: "KnowledgeBase | None" = None,
-        episodic: "EpisodicMemory | None" = None,
+        short_term: ShortTermMemory | None = None,
+        long_term: LongTermMemory | None = None,
+        knowledge_base: KnowledgeBase | None = None,
+        episodic: EpisodicMemory | None = None,
     ) -> None:
         self._stm = short_term
         self._ltm = long_term

@@ -23,7 +23,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
     from app.brain.memory_manager import MemoryManager
@@ -46,8 +46,8 @@ class KnowledgeConsolidator:
 
     def __init__(
         self,
-        memory: "MemoryManager",
-        llm: "LLMService | None" = None,
+        memory: MemoryManager,
+        llm: LLMService | None = None,
         *,
         use_llm: bool = False,
         max_facts_per_turn: int = 6,

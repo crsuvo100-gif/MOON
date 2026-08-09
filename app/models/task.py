@@ -18,7 +18,7 @@ class Task:
     tokens_used: int = 0
 
     @classmethod
-    def create(cls, prompt: str, agent_name: str = "auto") -> "Task":
+    def create(cls, prompt: str, agent_name: str = "auto") -> Task:
         return cls(prompt=prompt, agent_name=agent_name)
 
     def mark_running(self) -> None:

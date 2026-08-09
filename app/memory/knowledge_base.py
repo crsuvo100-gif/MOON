@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 class KnowledgeBase:
     """Document indexing + semantic retrieval over a vector store."""
 
-    def __init__(self, store: "VectorStore", embeddings: "EmbeddingService", chunk_size: int = 1500) -> None:
+    def __init__(self, store: VectorStore, embeddings: EmbeddingService, chunk_size: int = 1500) -> None:
         self._store = store
         self._embeddings = embeddings
         self._chunk_size = chunk_size

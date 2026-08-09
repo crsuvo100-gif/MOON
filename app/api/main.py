@@ -8,8 +8,8 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import routes_router
 from app.api.galaxy import galaxy_router
+from app.api.routes import routes_router
 from app.config.logging import get_logger
 from app.config.settings import get_settings
 

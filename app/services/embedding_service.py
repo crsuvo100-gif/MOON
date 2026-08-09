@@ -10,7 +10,6 @@ from __future__ import annotations
 import hashlib
 import math
 
-
 from app.config.logging import get_logger
 
 logger = get_logger(__name__)

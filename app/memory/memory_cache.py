@@ -10,7 +10,7 @@ class MemoryCache:
     def __init__(self, max_size: int = 256, ttl: float = 600.0) -> None:
         self._max = max_size
         self._ttl = ttl
-        self._data: "OrderedDict[str, tuple[float, object]]" = OrderedDict()
+        self._data: OrderedDict[str, tuple[float, object]] = OrderedDict()
 
     def get(self, key: str):
         item = self._data.get(key)

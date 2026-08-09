@@ -33,7 +33,7 @@ class MemoryEntry:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "MemoryEntry":
+    def from_dict(cls, data: dict[str, Any]) -> MemoryEntry:
         return cls(
             content=data.get("content", ""),
             scope=data.get("scope", "long_term"),

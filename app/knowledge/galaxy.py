@@ -27,7 +27,7 @@ class GalaxyService:
     def __init__(self) -> None:
         self._nodes: dict[str, GalaxyNode] = {}
 
-    async def build(self, registry=None) -> "GalaxyService":
+    async def build(self, registry=None) -> GalaxyService:
         if registry is not None:
             try:
                 tools = registry.all()

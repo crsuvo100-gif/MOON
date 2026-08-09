@@ -12,8 +12,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from app.config.logging import get_logger
 from app.config.constants import MemoryScope
+from app.config.logging import get_logger
 from app.models.memory import MemoryEntry
 
 logger = get_logger(__name__)

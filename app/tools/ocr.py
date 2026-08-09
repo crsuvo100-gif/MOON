@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from app.tools.base import BaseTool, ToolResult
+from app.tools.base import BaseTool
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +21,8 @@ class OcrTool(BaseTool):
         if not self._enabled:
             return "[ocr disabled]"
         try:
-            from PIL import Image
             import pytesseract
+            from PIL import Image
 
             return pytesseract.image_to_string(Image.open(path))[:2000]
         except Exception as exc:  # noqa: BLE001

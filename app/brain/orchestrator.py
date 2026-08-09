@@ -12,11 +12,11 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from app.brain.agent_brain import AgentBrain
 from app.brain.context_builder import ContextBuilder
 from app.brain.error_recovery import ErrorRecovery
 from app.brain.lock import SessionLock
 from app.brain.memory_manager import MemoryManager
-from app.brain.agent_brain import AgentBrain
 from app.brain.output_formatter import OutputFormatter
 from app.brain.planner import Planner
 from app.brain.prompt_manager import PromptManager
@@ -33,15 +33,15 @@ from app.models.message import Message
 from app.models.task import Task
 from app.services.embedding_service import EmbeddingService
 from app.services.llm_service import ChatMessage, LLMService
-from app.tools.registry import ToolRegistry
+from app.tools.api_requests import ApiRequestsTool
 from app.tools.browser import BrowserTool
 from app.tools.database import DatabaseTool
 from app.tools.file_manager import FileManagerTool
 from app.tools.image_processing import ImageProcessingTool
-from app.tools.api_requests import ApiRequestsTool
 from app.tools.ocr import OcrTool
 from app.tools.pdf_reader import PdfReaderTool
 from app.tools.python_executor import PythonExecutorTool
+from app.tools.registry import ToolRegistry
 from app.tools.system_command_tool import SystemCommandTool
 from app.tools.terminal import TerminalTool
 from app.tools.web_search import WebSearchTool
@@ -59,7 +59,7 @@ class Orchestrator:
 
     _persona_cache: str | None = None
 
-    def __init__(self, settings: "Settings", lock_state_file: str | Path | None = None) -> None:
+    def __init__(self, settings: Settings, lock_state_file: str | Path | None = None) -> None:
         self._settings = settings
         self._llm: LLMService | None = None
         self._embeddings: EmbeddingService | None = None
@@ -80,11 +80,11 @@ class Orchestrator:
         self._lock = SessionLock(locked=True, state_file=lock_state_file)
 
     async def setup(self) -> None:
-        from app.config.model_config import build_model_config, build_embedding_config
+        from app.config.model_config import build_embedding_config, build_model_config
+        from app.memory.knowledge_base import KnowledgeBase
         from app.memory.long_term import LongTermMemory
         from app.memory.short_term import ShortTermMemory
         from app.memory.vector_db import InMemoryVectorStore
-        from app.memory.knowledge_base import KnowledgeBase
 
         cfg = build_model_config(self._settings)
         ecfg = build_embedding_config(self._settings)
@@ -267,7 +267,7 @@ class Orchestrator:
             clean = self._formatter.format(final_text)
             task.complete(clean, data={"tokens_used": tokens, "issues": validation.issues, "agent": agent.name}, tokens_used=tokens)
             await self._memory.remember(clean, long_term=False)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.exception("Task %s failed", task.id)
             task.fail(str(exc))
         return task

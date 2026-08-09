@@ -6,7 +6,7 @@ import logging
 import re
 from typing import Any
 
-from app.tools.base import BaseTool, ToolResult
+from app.tools.base import BaseTool
 
 logger = logging.getLogger(__name__)
 
