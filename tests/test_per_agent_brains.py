@@ -29,18 +29,17 @@ def test_per_agent_brains_connected():
         o.close()
 
 
-def test_agent_brain_persists_episode(tmp_path):
-    import sys
-
-    sys.path.insert(0, ".")
+def test_agent_brain_persists_episode():
     from app.brain.agent_brain import AgentBrain
 
     o = asyncio.new_event_loop()
     try:
-        brain = AgentBrain("test_agent", main_brain=None)
+        brain = AgentBrain("test_agent_persist", main_brain=None)
         o.run_until_complete(brain.setup())
+        before = len(brain._store.episodes())
         o.run_until_complete(brain.remember({"goal": "g", "outcome": "o", "success": True}))
-        store = brain._store
-        assert len(store.episodes()) == 1
+        after = len(brain._store.episodes())
+        # remember must have added exactly one durable episode to the agent's own brain
+        assert after == before + 1
     finally:
         o.close()
