@@ -37,6 +37,23 @@ async def galaxy_ui() -> FileResponse:
     return FileResponse(str(GALAXY_FILE))
 
 
+@app.get("/api/agent-models")
+async def agent_models() -> JSONResponse:
+    """Report which model each agent is bound to (per-agent model system)."""
+    from app.api.routes import _ORCH
+    from app.brain.agent_model_manager import AGENT_MODELS
+
+    orch = _ORCH
+    if orch is None or getattr(orch, "_agent_models", None) is None:
+        return JSONResponse({"per_agent_models": False, "default": get_settings().model_name})
+    bound = {a: orch._agent_models._preferred(a) for a in orch._agents}
+    return JSONResponse({
+        "per_agent_models": True,
+        "default": orch._agent_models._default,
+        "agents": bound,
+    })
+
+
 @app.get("/health")
 async def health() -> JSONResponse:
     from app.api.routes import _ORCH

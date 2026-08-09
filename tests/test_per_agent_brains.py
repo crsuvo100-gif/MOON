@@ -145,3 +145,21 @@ def test_pick_llm_routing():
         o.run_until_complete(orch.teardown())
     finally:
         o.close()
+
+
+def test_per_agent_model_manager_binding():
+    from app.brain.agent_model_manager import AGENT_MODELS, AgentModelManager
+    from app.config.settings import get_settings
+
+    s = get_settings()
+    mgr = AgentModelManager(
+        base_url=s.model_base_url, api_key=s.model_api_key,
+        default_model=s.model_name, temperature=0.7, max_tokens=512,
+    )
+    # Specialists have a preferred (non-default) model; general agents fall back.
+    assert mgr._preferred("math") != s.model_name, "math should prefer its own model"
+    assert mgr._preferred("coding") != s.model_name, "coding should prefer coder model"
+    assert mgr._preferred("manager") == s.model_name, "manager uses default"
+    # every mapped agent resolves to a string model id
+    for a in AGENT_MODELS:
+        assert isinstance(mgr._preferred(a), str) and mgr._preferred(a)

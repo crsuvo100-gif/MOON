@@ -54,6 +54,11 @@ class Settings(BaseSettings):
         description="Endpoint for the strong model (defaults to model_base_url if blank).",
     )
 
+    # Per-agent models: each agent can pull/install and run on its OWN model
+    # (via Ollama) for domain-suited results, feeding its output up to the main
+    # brain. Disable to force every agent to share the default model.
+    enable_per_agent_models: bool = True
+
     embedding_base_url: str = ""
     embedding_model: str = "all-MiniLM-L6-v2"
     embedding_dim: int = 384

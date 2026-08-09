@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from app.brain.agent_brain import AgentBrain
+from app.brain.agent_model_manager import AgentModelManager
 from app.brain.context_builder import ContextBuilder
 from app.brain.error_recovery import ErrorRecovery
 from app.brain.lock import SessionLock
@@ -57,6 +58,7 @@ from app.tools.powershell_tool import PowerShellTool
 from app.tools.docker_tool import DockerTool
 from app.tools.git_tool import GitTool
 from app.tools.self_evolve_tool import SelfEvolveTool
+from app.tools.model_pull_tool import ModelPullTool
 
 logger = get_logger(__name__)
 
@@ -106,6 +108,17 @@ class Orchestrator:
             max_tokens=cfg.max_tokens, timeout=cfg.timeout,
         )
         await self._llm.setup()
+
+        # Per-agent models: every agent can run on its OWN model (pulled/installed
+        # on demand via Ollama) for better, domain-suited results. The agent's
+        # output still flows through its AgentBrain + the main-brain accuracy gate.
+        self._agent_models: AgentModelManager | None = None
+        if self._settings.enable_per_agent_models:
+            self._agent_models = AgentModelManager(
+                base_url=cfg.base_url, api_key=cfg.api_key,
+                default_model=cfg.model_name, temperature=cfg.temperature,
+                max_tokens=cfg.max_tokens, timeout=cfg.timeout,
+            )
 
         # Optional STRONG model for accuracy-critical work + the main-brain
         # accuracy gate. Routes factual / cyber-critical tasks to a better model.
@@ -178,7 +191,7 @@ class Orchestrator:
             SystemCommandTool(),
             ReconTool(), VulnScannerTool(), HardeningAuditTool(), LogAnalyzerTool(),
             MalwareAnalysisTool(), ExploitIntelTool(),
-            SystemInfoTool(), PowerShellTool(), DockerTool(), GitTool(), SelfEvolveTool(),
+            SystemInfoTool(), PowerShellTool(), DockerTool(), GitTool(), SelfEvolveTool(), ModelPullTool(),
         ):
             registry.register(tool)
 
@@ -235,6 +248,8 @@ class Orchestrator:
             await self._llm.teardown()
         if getattr(self, "_llm_strong", None) is not None:
             await self._llm_strong.teardown()
+        if getattr(self, "_agent_models", None) is not None:
+            await self._agent_models.teardown()
         logger.info("Orchestrator torn down")
 
     # ------------------------------------------------------------------
@@ -533,7 +548,16 @@ class Orchestrator:
         tool_outputs: list[str] = []
 
         for _ in range(_MAX_TOOL_ITERATIONS):
-            llm = self._pick_llm(task.prompt)
+            # Prefer the agent's OWN model (per-agent models) for its function;
+            # fall back to the shared/strong routing otherwise.
+            if self._agent_models is not None:
+                try:
+                    llm = await self._agent_models.get_llm(agent.name)
+                except Exception as exc:  # noqa: BLE001
+                    logger.info("agent model unavailable, using shared llm: %s", exc)
+                    llm = self._pick_llm(task.prompt)
+            else:
+                llm = self._pick_llm(task.prompt)
             resp = await llm.complete(messages, tools=tool_specs if tool_specs else None)
             total_tokens += 1
             if resp.has_tool_calls:
