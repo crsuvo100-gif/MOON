@@ -98,18 +98,48 @@ class AgentBrain:
         return prompt
 
     async def refine_with_main(self, draft_text: str, task: str) -> str:
-        """Two-phase: let the main brain validate/improve the draft."""
+        """Two-phase accuracy gate: main brain CRITIQUES then VERIFIES the draft.
+
+        Phase 1 (critique): the main brain audits the agent's draft for factual,
+        logical, or instruction-following errors and returns either 'OK' or a
+        corrected answer. Phase 2 (verify): the main brain re-checks the result.
+        This catches mistakes instead of merely "improving" wording, so the
+        agent's output that reaches the operator is validated by MOON's main
+        brain -- eliminating obvious errors.
+        """
         if not self._refine or self.main_brain is None:
             return draft_text
         try:
-            refine_prompt = (
-                f"MOON main brain: review this {self.agent_name} agent draft for correctness "
-                f"and improve it.\nTASK: {task}\nDRAFT: {draft_text}\nReturn the improved answer only."
+            # Phase 1: strict critique + correction
+            critique_prompt = (
+                f"You are MOON's MAIN BRAIN acting as a strict accuracy auditor for the "
+                f"'{self.agent_name}' agent. TASK: {task}\n\nAGENT DRAFT:\n{draft_text}\n\n"
+                f"Check the draft for (1) factual errors, (2) logical errors, (3) missing "
+                f"key requirements, (4) unsafe/offensive content, (5) hallucination. "
+                f"If it is correct and complete, reply with exactly: OK\n"
+                f"If there are problems, reply with: CORRECTED\n<the corrected full answer>."
             )
-            result = await self.main_brain.refine(refine_prompt)
-            return result or draft_text
+            verdict = (await self.main_brain.refine(critique_prompt, temperature=0.1)).strip()
+            if verdict.upper().startswith("OK"):
+                return draft_text
+            if verdict.upper().startswith("CORRECTED"):
+                corrected = verdict.split("\n", 1)[1].strip() if "\n" in verdict else verdict
+                if corrected:
+                    draft_text = corrected
+            # Phase 2: verify the (possibly corrected) answer once more
+            verify_prompt = (
+                f"Verify this final answer to the task is correct and complete. "
+                f"TASK: {task}\nANSWER: {draft_text}\n"
+                f"Reply 'VERIFIED' if correct, else 'FIX: <better answer>'."
+            )
+            v = (await self.main_brain.refine(verify_prompt, temperature=0.1)).strip()
+            if v.upper().startswith("FIX:"):
+                fixed = v.split(":", 1)[1].strip()
+                if fixed:
+                    return fixed
+            return draft_text
         except Exception as exc:  # noqa: BLE001
-            logger.warning("agent refine skipped: %s", exc)
+            logger.warning("agent two-phase refine skipped: %s", exc)
             return draft_text
 
     async def run(self, task: str, context: str = "") -> str:

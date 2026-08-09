@@ -528,12 +528,13 @@ class Orchestrator:
                 logger.debug("quick_reply self-learn skipped: %s", exc)
         return text
 
-    async def refine(self, prompt: str) -> str:
-        """Used by AgentBrain two-phase validation."""
+    async def refine(self, prompt: str, *, temperature: float | None = None) -> str:
+        """Used by AgentBrain two-phase validation. Lower temperature for audits."""
         if self._llm is None:
             return ""
         try:
-            resp = await self._llm.complete([ChatMessage(role="user", content=prompt)], max_tokens=400)
+            t = temperature if temperature is not None else 0.1
+            resp = await self._llm.complete([ChatMessage(role="user", content=prompt)], max_tokens=400, temperature=t)
             return (resp.content or "").strip()
         except Exception:  # noqa: BLE001
             return ""

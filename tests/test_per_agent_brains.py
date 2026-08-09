@@ -18,10 +18,13 @@ def test_per_agent_brains_connected():
     o = asyncio.new_event_loop()
     try:
         orch = o.run_until_complete(_make_orch())
-        assert len(orch._agents) >= 22
+        # Every agent has its OWN brain wired to the main MOON brain.
+        assert len(orch._agents) >= 36
         assert len(orch._agent_brains) == len(orch._agents)
-        for brain in orch._agent_brains.values():
-            assert brain.main_brain is orch
+        for name, brain in orch._agent_brains.items():
+            assert brain.main_brain is orch, f"{name} brain not connected to main"
+            assert hasattr(brain, "refine_with_main")
+            assert hasattr(brain, "remember")
         for name in ("coding", "math", "security", "fact_checker", "router", "coordinator"):
             assert name in orch._agents
         o.run_until_complete(orch.teardown())
@@ -65,5 +68,54 @@ def test_agent_brain_persists_episode():
         o.run_until_complete(brain.remember({"goal": "g", "outcome": "o", "success": True}))
         after = len(brain._store.episodes())
         assert after == before + 1
+    finally:
+        o.close()
+
+
+def test_two_phase_parse_logic():
+    """Unit-test the critique/verify parsing without hitting the LLM."""
+    from app.brain.agent_brain import AgentBrain
+
+    o = asyncio.new_event_loop()
+    try:
+        brain = AgentBrain("test_parse", main_brain=None)
+
+        # Simulate main-brain verdicts via a fake main_brain
+        class FakeMain:
+            def __init__(self, replies):
+                self._q = list(replies)
+
+            async def refine(self, prompt, **kw):
+                return self._q.pop(0)
+
+        # Case 1: OK -> draft unchanged
+        brain.main_brain = FakeMain(["OK"])
+        out = o.run_until_complete(brain.refine_with_main("draft answer", "task"))
+        assert out == "draft answer", out
+
+        # Case 2: CORRECTED -> returns corrected text
+        brain.main_brain = FakeMain(["CORRECTED\nthe right answer"])
+        out = o.run_until_complete(brain.refine_with_main("wrong", "task"))
+        assert "right answer" in out, out
+
+        # Case 3: CORRECTED then FIX -> verify phase overrides
+        brain.main_brain = FakeMain(["CORRECTED\ninterim", "FIX: better answer"])
+        out = o.run_until_complete(brain.refine_with_main("wrong", "task"))
+        assert "better answer" in out, out
+    finally:
+        o.close()
+
+
+def test_every_agent_has_durable_brain_file():
+    import asyncio
+    from app.brain.orchestrator import Orchestrator
+    from app.config.settings import get_settings
+
+    o = asyncio.new_event_loop()
+    try:
+        orch = o.run_until_complete(_make_orch())
+        for name in orch._agent_brains:
+            assert orch._agent_brains[name]._store._path.parent.exists()
+        o.run_until_complete(orch.teardown())
     finally:
         o.close()
