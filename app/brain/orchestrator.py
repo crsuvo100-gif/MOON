@@ -52,6 +52,11 @@ from app.tools.hardening_audit_tool import HardeningAuditTool
 from app.tools.log_analyzer_tool import LogAnalyzerTool
 from app.tools.malware_analysis_tool import MalwareAnalysisTool
 from app.tools.exploit_intel_tool import ExploitIntelTool
+from app.tools.system_info_tool import SystemInfoTool
+from app.tools.powershell_tool import PowerShellTool
+from app.tools.docker_tool import DockerTool
+from app.tools.git_tool import GitTool
+from app.tools.self_evolve_tool import SelfEvolveTool
 
 logger = get_logger(__name__)
 
@@ -159,6 +164,7 @@ class Orchestrator:
             SystemCommandTool(),
             ReconTool(), VulnScannerTool(), HardeningAuditTool(), LogAnalyzerTool(),
             MalwareAnalysisTool(), ExploitIntelTool(),
+            SystemInfoTool(), PowerShellTool(), DockerTool(), GitTool(), SelfEvolveTool(),
         ):
             registry.register(tool)
 
@@ -281,6 +287,19 @@ class Orchestrator:
                             generate_plugin(obj.get("name", "custom"), obj.get("purpose", ""), obj.get("code", ""), self._tools._registry)
         except Exception as exc:  # noqa: BLE001
             logger.info("LLM tool-plan skipped: %s", exc)
+
+    @staticmethod
+    def _final_report(task: "Task", actions: list[str], evidence: str, results: str) -> str:
+        """Format a task result per MOON's system-prompt report standard."""
+        remaining = "None" if results else "Incomplete -- needs human input"
+        return (
+            f"OBJECTIVE:\n{task.prompt}\n\n"
+            f"ACTIONS PERFORMED:\n" + ("\n".join(f"- {a}" for a in actions) if actions else "- (none recorded)") + "\n\n"
+            f"EVIDENCE:\n{evidence or '(see tool outputs)'}\n\n"
+            f"RESULTS:\n{results or '(pending)'}\n\n"
+            f"REMAINING ISSUES:\n{remaining}\n\n"
+            f"RECOMMENDED NEXT STEPS:\n- Verify outputs; continue or escalate as needed."
+        )
 
     def _is_simple_query(self, text: str) -> bool:
         """Heuristic: a short factual/chat question that needs no tools."""
