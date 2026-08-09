@@ -46,6 +46,12 @@ from app.tools.registry import ToolRegistry
 from app.tools.system_command_tool import SystemCommandTool
 from app.tools.terminal import TerminalTool
 from app.tools.web_search import WebSearchTool
+from app.tools.recon_tool import ReconTool
+from app.tools.vuln_scanner_tool import VulnScannerTool
+from app.tools.hardening_audit_tool import HardeningAuditTool
+from app.tools.log_analyzer_tool import LogAnalyzerTool
+from app.tools.malware_analysis_tool import MalwareAnalysisTool
+from app.tools.exploit_intel_tool import ExploitIntelTool
 
 logger = get_logger(__name__)
 
@@ -151,6 +157,8 @@ class Orchestrator:
             PdfReaderTool(enabled=self._settings.enable_pdf),
             ImageProcessingTool(enabled=self._settings.enable_pdf),
             SystemCommandTool(),
+            ReconTool(), VulnScannerTool(), HardeningAuditTool(), LogAnalyzerTool(),
+            MalwareAnalysisTool(), ExploitIntelTool(),
         ):
             registry.register(tool)
 
