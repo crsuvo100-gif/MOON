@@ -11,6 +11,22 @@ Brain Command Center at `http://localhost:8000/brain`.
 - **Neural Brain Command Center** -- Three.js visualization of the brain mesh, connected-agent mesh, and live cognition channel over WebSocket.
 - **Always-connected GitHub** -- MOON autonomously pulls needed tools/plugins/skills from the connected repo on demand.
 
+## Female Voice & Dictation
+
+MOON speaks with a warm, clearly-FEMALE voice (espeak female voice `f5` + a SoX
+timbre chain: pitch lift, body/bass, air/treble, subtle chorus + reverb for an
+intimate, attractive tone). Presets: `default`, `seductive`, `warm`, `crystal`.
+
+```bash
+make voice-install          # install espeak + sox (+ optional vosk for mic)
+make voice                  # companion loop: type/talk -> MOON -> female voice
+make voice-test             # generate a sample female-voice WAV
+```
+
+With a microphone + vosk (`VOSK_MODEL_DIR` set), use `make voice -- --mic` for
+true speech dictation. Without vosk it runs in typed mode but still replies in
+MOON's female voice. The voice module is `app/voice.py`.
+
 ## Quick start
 ```bash
 python -m venv .venv && .venv/bin/pip install -r requirements.txt

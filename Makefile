@@ -4,7 +4,7 @@
 
 PY := env -u PYTHONPATH .venv/bin/python
 
-.PHONY: help run serve terminal test live voice-test clean
+.PHONY: help run serve terminal test live voice-test voice voice-install clean
 
 help:
 	@echo "Targets: run serve terminal test live voice-test clean"
@@ -26,7 +26,13 @@ live:
 	$(PY) scripts/live_smoke_pipeline.py
 
 voice-test:
-	$(PY) scripts/voice_test.py
+	$(PY) -c "import asyncio; from app.voice import Voice; w=asyncio.run(Voice(preset='seductive').speak('Hello, I am MOON.')); print('female voice WAV:', w)"
+
+voice:
+	$(PY) scripts/voice_loop.py
+
+voice-install:
+	$(PY) install_moon.py
 
 clean:
 	find . -name '__pycache__' -type d -prune -exec rm -rf {} +
