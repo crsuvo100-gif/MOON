@@ -42,7 +42,6 @@ class ContextBuilder:
             ctx = "\n".join(f"- {r.get('content', r.get('chunk', ''))}" for r in retrieved[:5])
             if ctx.strip():
                 messages.append(Message.system(f"Relevant context:\n{ctx}"))
-        for m in history.messages():
-            messages.append(m)
+        messages.extend(history.messages())
         messages.append(Message.user(task.prompt))
         return messages

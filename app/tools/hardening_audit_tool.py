@@ -10,6 +10,8 @@ from __future__ import annotations
 import os
 import re
 
+from typing import ClassVar
+
 from app.tools.base import BaseTool
 
 
@@ -17,7 +19,7 @@ class HardeningAuditTool(BaseTool):
     name = "hardening_audit"
     description = "Review a config/file or the local host for hardening gaps (defensive)."
 
-    _CHECKS = [
+    _CHECKS: ClassVar[list] = [
         ("Telnet enabled", r"^\s*[^#]*(telnet|23/tcp)\b", "Disable telnet; use SSH."),
         ("Password auth without MFA", r"PasswordAuthentication\s+yes", "Prefer key auth + MFA."),
         ("Weak cipher", r"(des-cbc|rc4|md5)", "Replace weak ciphers/hashes."),

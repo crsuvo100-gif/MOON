@@ -38,27 +38,27 @@ from app.services.llm_service import ChatMessage, LLMService
 from app.tools.api_requests import ApiRequestsTool
 from app.tools.browser import BrowserTool
 from app.tools.database import DatabaseTool
+from app.tools.docker_tool import DockerTool
+from app.tools.exploit_intel_tool import ExploitIntelTool
 from app.tools.file_manager import FileManagerTool
-from app.tools.image_processing import ImageProcessingTool
-from app.tools.ocr import OcrTool
-from app.tools.pdf_reader import PdfReaderTool
-from app.tools.python_executor import PythonExecutorTool
-from app.tools.registry import ToolRegistry
-from app.tools.system_command_tool import SystemCommandTool
-from app.tools.terminal import TerminalTool
-from app.tools.web_search import WebSearchTool
-from app.tools.recon_tool import ReconTool
-from app.tools.vuln_scanner_tool import VulnScannerTool
+from app.tools.git_tool import GitTool
 from app.tools.hardening_audit_tool import HardeningAuditTool
+from app.tools.image_processing import ImageProcessingTool
 from app.tools.log_analyzer_tool import LogAnalyzerTool
 from app.tools.malware_analysis_tool import MalwareAnalysisTool
-from app.tools.exploit_intel_tool import ExploitIntelTool
-from app.tools.system_info_tool import SystemInfoTool
-from app.tools.powershell_tool import PowerShellTool
-from app.tools.docker_tool import DockerTool
-from app.tools.git_tool import GitTool
-from app.tools.self_evolve_tool import SelfEvolveTool
 from app.tools.model_pull_tool import ModelPullTool
+from app.tools.ocr import OcrTool
+from app.tools.pdf_reader import PdfReaderTool
+from app.tools.powershell_tool import PowerShellTool
+from app.tools.python_executor import PythonExecutorTool
+from app.tools.recon_tool import ReconTool
+from app.tools.registry import ToolRegistry
+from app.tools.self_evolve_tool import SelfEvolveTool
+from app.tools.system_command_tool import SystemCommandTool
+from app.tools.system_info_tool import SystemInfoTool
+from app.tools.terminal import TerminalTool
+from app.tools.vuln_scanner_tool import VulnScannerTool
+from app.tools.web_search import WebSearchTool
 
 logger = get_logger(__name__)
 
@@ -130,7 +130,7 @@ class Orchestrator:
 
         # Optional STRONG model for accuracy-critical work + the main-brain
         # accuracy gate. Routes factual / cyber-critical tasks to a better model.
-        self._llm_strong: "LLMService | None" = None
+        self._llm_strong: LLMService | None = None
         strong_name = self._settings.strong_model_name.strip()
         if strong_name:
             strong_url = self._settings.strong_model_base_url.strip() or cfg.base_url
@@ -340,7 +340,8 @@ class Orchestrator:
                     ],
                     max_tokens=600, temperature=0.2,
                 )
-                import json, re as _re
+                import json
+                import re as _re
                 m = _re.search(r"\{.*\}", decision.content or "", _re.DOTALL)
                 if m:
                     obj = json.loads(m.group(0))
@@ -352,7 +353,7 @@ class Orchestrator:
             logger.info("LLM tool-plan skipped: %s", exc)
 
     @staticmethod
-    def _final_report(task: "Task", actions: list[str], evidence: str, results: str) -> str:
+    def _final_report(task: Task, actions: list[str], evidence: str, results: str) -> str:
         """Format a task result per MOON's system-prompt report standard."""
         remaining = "None" if results else "Incomplete -- needs human input"
         return (

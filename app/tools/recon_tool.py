@@ -11,7 +11,7 @@ import socket
 import subprocess
 
 from app.security.authorization import require_auth
-from app.tools.base import BaseTool, ToolResult
+from app.tools.base import BaseTool
 
 
 class ReconTool(BaseTool):

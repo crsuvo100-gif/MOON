@@ -41,7 +41,6 @@ async def galaxy_ui() -> FileResponse:
 async def agent_models() -> JSONResponse:
     """Report which model each agent is bound to (per-agent model system)."""
     from app.api.routes import _ORCH
-    from app.brain.agent_model_manager import AGENT_MODELS
 
     orch = _ORCH
     if orch is None or getattr(orch, "_agent_models", None) is None:

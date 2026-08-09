@@ -18,12 +18,10 @@ Design
 
 from __future__ import annotations
 
-import json
 import logging
 import shutil
 import subprocess
 
-from app.config.settings import get_settings
 from app.services.llm_service import LLMService
 
 logger = logging.getLogger(__name__)

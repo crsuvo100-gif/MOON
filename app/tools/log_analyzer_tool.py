@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import re
 
+from typing import ClassVar
+
 from app.tools.base import BaseTool
 
 
@@ -15,7 +17,7 @@ class LogAnalyzerTool(BaseTool):
     name = "log_analyzer"
     description = "Detect attacks/IOCs in log text (brute force, scanning, web exploits, C2 patterns)."
 
-    _SIGS = {
+    _SIGS: ClassVar[dict] = {
         "SSH brute-force": r"Failed password for .* from (\d+\.\d+\.\d+\.\d+)",
         "Web exploit attempt": r"(union\s+select|/etc/passwd|base64_decode|<\?php|<script>|cmd\.exe)",
         "Port scan": r"scan detected|flags=.*SYN",

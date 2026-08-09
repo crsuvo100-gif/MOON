@@ -23,13 +23,14 @@ class SystemInfoTool(BaseTool):
         if section in ("all", "mem", "cpu") and shutil.which("free") is not None:
             try:
                 import subprocess
-                out.append("memory: " + subprocess.run(["free", "-h"], capture_output=True, text=True).stdout.strip().splitlines()[-1])  # noqa: F841
+                out.append("memory: " + subprocess.run(["free", "-h"], capture_output=True, text=True).stdout.strip().splitlines()[-1])
             except Exception:  # noqa: BLE001
                 pass
         if section in ("all", "disk"):
             try:
                 import shutil as sh
-                total, used, free = sh.disk_usage("/")
+                _du = sh.disk_usage("/")
+                total, used = _du.total, _du.used
                 out.append(f"disk /: {used//(1024**3)}G used / {total//(1024**3)}G total")
             except Exception:  # noqa: BLE001
                 pass

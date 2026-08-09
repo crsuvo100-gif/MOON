@@ -25,10 +25,10 @@ def _start_http() -> None:
 
 
 async def _prefetch_models():
-    from app.brain.orchestrator import Orchestrator
-    from app.config.settings import get_settings
-    from app.brain.agent_model_manager import AgentModelManager
     import json
+
+    from app.brain.agent_model_manager import AgentModelManager
+    from app.config.settings import get_settings
 
     settings = get_settings()
     mgr = AgentModelManager(
@@ -58,7 +58,7 @@ def main() -> None:
     run_p = sub.add_parser("run", help="Run a single task")
     run_p.add_argument("task", nargs="?", default="Say hello.")
     run_p.add_argument("--agent", default="auto")
-    models_p = sub.add_parser("models", help="Pre-pull all per-agent preferred models so agents are ready")
+    sub.add_parser("models", help="Pre-pull all per-agent preferred models so agents are ready")
     args = ap.parse_args()
     if args.cmd == "start":
         _start_http()
