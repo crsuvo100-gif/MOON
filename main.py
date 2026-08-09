@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Decontaminate PYTHONPATH BEFORE any other imports (see app/config/env_guard.py).
+import app.config.env_guard  # noqa: F401  (strips foreign-venv PYTHONPATH)
+
 import argparse
 import asyncio
 

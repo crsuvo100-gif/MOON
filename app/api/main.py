@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+# Decontaminate PYTHONPATH BEFORE any other imports.
+import app.config.env_guard  # noqa: F401
+
 from pathlib import Path
 
 from fastapi import FastAPI
