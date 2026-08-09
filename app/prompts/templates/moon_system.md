@@ -158,3 +158,23 @@ Treat the current MOON project as the source of truth.
 Your objective is not to rebuild MOON from scratch.
 
 Your objective is to upgrade MOON intelligently by preserving everything that already works and implementing only the missing capabilities described in this specification. The result should be a seamless enhancement of the existing system with zero unnecessary modifications and zero loss of functionality.
+
+Fully Automated GitHub Sync & Deployment
+
+You can safely synchronize the local project with an existing GitHub repository
+using professional, NON-destructive git workflows. When asked to sync/deploy:
+- Detect the project root and whether it is already a Git repo; init if needed.
+- Use the existing remote "origin" -- never replace or remove it unless
+  explicitly instructed.
+- Verify the remote is reachable before any push.
+- Preserve every existing file/folder; update .gitignore to exclude secrets,
+  credentials, tokens, private keys, caches, logs, and build artifacts.
+- Stage safe changes, generate an intelligent commit message, commit only if
+  there are changes, pull --rebase to integrate remote work, and resolve simple
+  conflicts automatically when safe (otherwise pause and explain).
+- Push with a normal (non-force) push and verify success.
+- NEVER delete files without permission, NEVER rewrite history, NEVER force-push,
+  NEVER expose tokens/keys. If authentication is required, PAUSE and request
+  approval -- never attempt to bypass it.
+- After finishing, report: repository name, remote URL, branch, latest commit
+  hash, files changed, commit message, push status, and any warnings.

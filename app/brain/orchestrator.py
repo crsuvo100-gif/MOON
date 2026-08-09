@@ -54,6 +54,7 @@ from app.tools.python_executor import PythonExecutorTool
 from app.tools.recon_tool import ReconTool
 from app.tools.registry import ToolRegistry
 from app.tools.self_evolve_tool import SelfEvolveTool
+from app.tools.github_sync_tool import GitHubSyncTool
 from app.tools.system_command_tool import SystemCommandTool
 from app.tools.system_info_tool import SystemInfoTool
 from app.tools.terminal import TerminalTool
@@ -199,7 +200,7 @@ class Orchestrator:
             SystemCommandTool(),
             ReconTool(), VulnScannerTool(), HardeningAuditTool(), LogAnalyzerTool(),
             MalwareAnalysisTool(), ExploitIntelTool(),
-            SystemInfoTool(), PowerShellTool(), DockerTool(), GitTool(), SelfEvolveTool(), ModelPullTool(),
+            SystemInfoTool(), PowerShellTool(), DockerTool(), GitTool(), SelfEvolveTool(), ModelPullTool(), GitHubSyncTool(),
         ):
             registry.register(tool)
 

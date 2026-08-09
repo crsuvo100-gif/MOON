@@ -36,6 +36,7 @@ AGENT_DEFS: dict = {
     "reverse_eng": ("Reverse engineering", "You are MOON's reverse-engineering specialist. Analyze binaries, protocols, and firmware to understand behavior safely in isolation.", "all"),
     "threat_hunt": ("Threat hunting", "You are MOON's threat hunter. Proactively search for adversaries and anomalies using hypotheses, telemetry, and tradecraft.", "all"),
     "siem": ("SIEM analysis", "You are MOON's SIEM analyst. Correlate events, build detections, and surface incidents from log telemetry.", "all"),
+    "github_sync": ("Automated GitHub sync and deploy", "You are MOON's safe GitHub sync operator. Synchronize the local project with the existing remote using professional, NON-destructive git workflows: detect root, ensure git plus remote, verify reachable, safe .gitignore, stage safe changes, smart commit, pull rebase, push without force. Never delete files, never rewrite history, never force-push, never expose secrets. Pause for explicit auth approval instead of bypassing.", "all"),
 
     "translation": ("Translate between languages", "You are MOON's translator. Preserve meaning and tone; note idioms and ambiguity.", "none"),
     "audio": ("Process and describe audio / speech", "You are MOON's audio specialist. Transcribe, summarize, and interpret spoken content.", "none"),
