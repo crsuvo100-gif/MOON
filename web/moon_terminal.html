@@ -125,7 +125,9 @@ body[data-moon="listening"] #avatarImg{filter:brightness(1.18) drop-shadow(0 0 1
   color:var(--txt);cursor:pointer;font-size:11px;letter-spacing:1px}
 .qa:hover{background:rgba(0,243,255,.18);box-shadow:0 0 10px rgba(0,243,255,.3)}
 .foot{height:28px;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:var(--dim);letter-spacing:1px}
-code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(--cyan)}
+.code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(--cyan)}
+.atag{display:inline-block;font-size:9px;padding:2px 6px;margin:2px;border:1px solid var(--edge);border-radius:9px;color:var(--cyan);background:rgba(0,243,255,.06)}
+#agentList{max-height:120px;overflow:auto;margin-top:4px}
 </style>
 </head>
 <body data-moon="idle">
@@ -148,23 +150,23 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         <div class="row"><span>SYSTEM</span><span class="active">ACTIVE</span></div>
       </div>
       <div class="panel"><div class="panel-title">Memory Core</div>
-        <div class="row"><span>EPISODIC</span><span class="bar"><i style="width:92%"></i></span></div>
-        <div class="row"><span>VECTOR DB</span><span class="bar"><i style="width:89%"></i></span></div>
-        <div class="row"><span>WORKING</span><span class="bar"><i style="width:63%"></i></span></div>
-        <div class="row"><span>LONG TERM</span><span class="bar"><i id="ltmBar" style="width:91%"></i></span></div>
+        <div class="row"><span>EPISODIC</span><span id="epCount">—</span></div>
+        <div class="row"><span>VECTOR DB</span><span id="vecCount">—</span></div>
+        <div class="row"><span>WORKING</span><span id="stmCount">—</span></div>
+        <div class="row"><span>LONG TERM</span><span class="bar"><i id="ltmBar" style="width:0%"></i></span></div>
         <div class="row" style="opacity:.7"><span>ENTRIES</span><span id="ltmCount">—</span></div>
       </div>
       <div class="panel"><div class="panel-title">Knowledge Base</div>
-        <div class="row"><span>GRAPH</span><span class="bar"><i style="width:94%"></i></span></div>
-        <div class="row"><span>REAL TIME</span><span class="bar"><i style="width:77%"></i></span></div>
-        <div class="row"><span>DOC STORE</span><span class="bar"><i style="width:91%"></i></span></div>
-        <div class="row"><span>CONTEXT</span><span class="bar"><i style="width:42%"></i></span></div>
+        <div class="row"><span>GRAPH</span><span id="kbCount">—</span></div>
+        <div class="row"><span>REAL TIME</span><span class="active">LIVE</span></div>
+        <div class="row"><span>DOC STORE</span><span id="kbCount2">—</span></div>
+        <div class="row"><span>CONTEXT</span><span class="active">LINKED</span></div>
       </div>
       <div class="panel"><div class="panel-title">System Overview</div>
-        <div class="gline"><small>CPU</small><div class="gauge" id="gCpu" style="--v:32%"><span>32%</span></div></div>
-        <div class="gline"><small>RAM</small><div class="gauge" id="gRam" style="--v:68%"><span>68%</span></div></div>
-        <div class="gline"><small>GPU</small><div class="gauge" style="--v:41%"><span>41%</span></div></div>
-        <div class="gline"><small>NET</small><div class="gauge" style="--v:73%"><span>73%</span></div></div>
+        <div class="gline"><small>CPU</small><div class="gauge" id="gCpu" style="--v:0%"><span>0%</span></div></div>
+        <div class="gline"><small>RAM</small><div class="gauge" id="gRam" style="--v:0%"><span id="ramTxt">0/0MB</span></div></div>
+        <div class="gline"><small>GPU</small><div class="gauge" style="--v:0%"><span>CPU</span></div></div>
+        <div class="gline"><small>NET</small><div class="gauge" style="--v:0%"><span id="netTxt">0MB</span></div></div>
       </div>
     </div>
 
@@ -238,6 +240,9 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
           <div class="w" data-s="planner">PLAN</div><div class="w" data-s="tools">TOOLS</div>
           <div class="w" data-s="execution">EXEC</div><div class="w" data-s="verify">VERIFY</div>
         </div>
+      </div>
+      <div class="panel"><div class="panel-title">Agent Roster (<span id="agents">0</span>)</div>
+        <div id="agentList"></div>
       </div>
       <div class="panel"><div class="panel-title">Environment</div>
         <div class="row"><span>EARTH</span><span class="active">ONLINE</span></div>
@@ -319,6 +324,8 @@ function connect(){
     else if(d.type==='wake'){setMoon('listening');push('[WAKE] '+d.message);if(d.locked)setMoon('locked');}
     else if(d.type==='workflow'){if(d.stage!=='speaking')push('[WF] '+d.stage+(d.detail?': '+d.detail:''));hlWF(d.stage);
       if(d.stage==='speaking')setMoon('speaking'); if(d.stage==='locked')setMoon('locked');}
+    else if(d.type==='forward'){ // button routed to a real sub-action
+      if(ws&&connected)ws.send(JSON.stringify({action:d.action,query:d.query||'summary'})); }
     else if(d.type==='assistant_start'){setMoon('thinking');addMsg('assistant','');}
     else if(d.type==='assistant_chunk'){const ms=chat.querySelectorAll('.msg.a .b');const l=ms[ms.length-1];if(l)l.textContent+=d.content;chat.scrollTop=chat.scrollHeight;}
     else if(d.type==='assistant_done'){setMoon(d.locked?'locked':'idle');push('[DONE] '+d.elapsed+'s');}
@@ -330,16 +337,46 @@ function send(){ const t=input.value.trim(); if(!t)return;
   addMsg('user',t); if(ws&&connected)ws.send(JSON.stringify({action:'send_message',text:t})); else push('not connected'); input.value=''; }
 function quick(t){ t=(t||'').trim(); if(!t)return; input.value=t; send(); }
 function runAction(c){ addMsg('user','▶ '+c); if(ws&&connected)ws.send(JSON.stringify({action:'run',command:c})); else push('not connected'); }
-function apply(s){ document.getElementById('agents').textContent=s.agents;
-  document.getElementById('ver').textContent=s.version; document.getElementById('model').textContent=s.model;
-  document.getElementById('ltmCount').textContent=s.long_term_entries;
-  document.getElementById('uptime').textContent=(parseFloat(s.uptime)/86400).toFixed(1)+'d';
+function apply(s){
+  document.getElementById('agents').textContent=s.agents;
+  document.getElementById('ver').textContent=s.version;
+  document.getElementById('model').textContent=s.model + (s.strong_model?(' / '+s.strong_model):'');
   const ls=document.getElementById('lockState'); ls.textContent=s.locked?'LOCKED':'UNLOCKED'; ls.className=s.locked?'standby':'active';
-  if(s.locked)setMoon('locked'); }
+  if(s.locked)setMoon('locked');
+  // real memory counts
+  const m=s.memory||{};
+  const ltm=document.getElementById('ltmCount'); if(ltm)ltm.textContent=m.long_term||0;
+  document.getElementById('ltmBar').style.width=Math.min(100,(m.long_term||0)*4)+'%';
+  document.getElementById('epCount').textContent=m.episodic||0;
+  document.getElementById('vecCount').textContent=m.vector||0;
+  document.getElementById('kbCount').textContent=m.kb_docs||0;
+  const kc2=document.getElementById('kbCount2'); if(kc2)kc2.textContent=m.kb_docs||0;
+  document.getElementById('stmCount').textContent=m.short_term||0;
+  // real system metrics -> gauges
+  const sys=s.system||{};
+  setGauge('gCpu',sys.cpu||0); setGauge('gRam',sys.ram_pct||0);
+  document.getElementById('temp').textContent=(sys.temp_c||0)+'°C';
+  document.getElementById('netTxt').textContent=(sys.net||0)+'MB';
+  document.getElementById('ramTxt').textContent=(sys.ram_used_mb||0)+'/'+(sys.ram_total_mb||0)+'MB';
+  document.getElementById('uptime').textContent=(parseFloat(s.uptime||0)/86400).toFixed(2)+'d';
+  // agent list (real)
+  const al=document.getElementById('agentList'); if(al){ al.innerHTML=(s.agent_list||[]).map(n=>`<span class="atag">${n}</span>`).join(''); }
+}
+function setGauge(id,v){ const g=document.getElementById(id); if(!g)return; g.style.setProperty('--v',Math.max(2,Math.min(100,v))+'%'); const sp=g.querySelector('span'); if(sp)sp.textContent=Math.round(v)+'%'; }
+function switchTab(name){
+  document.querySelectorAll('#tabs .t').forEach(x=>x.classList.toggle('on',x.textContent.toUpperCase()===name));
+  const views={DASHBOARD:0,DIAGNOSTICS:1,MEMORY:2,KNOWLEDGE:3,TOOLS:4,AUTOMATION:5,SECURITY:6,NETWORK:7,SETTINGS:8};
+  push('[VIEW] '+name);
+  // route to a real action where one exists
+  const map={DIAGNOSTICS:'diagnostics',MEMORY:'memory_search',KNOWLEDGE:'knowledge',SECURITY:'diagnostics'};
+  if(map[name]&&ws&&connected){ ws.send(JSON.stringify({action:map[name],query:'summary'})); }
+}
 function toggleMute(){ const b=document.getElementById('muteBtn'); const on=b.textContent.includes('OFF'); b.textContent='MUTE: '+(on?'ON':'OFF'); push('[VOICE] mute '+(on?'on':'off')); }
-document.querySelectorAll('#tabs .t').forEach(t=>t.onclick=()=>{document.querySelectorAll('#tabs .t').forEach(x=>x.classList.remove('on'));t.classList.add('on');push('[NAV] '+t.textContent);});
+document.querySelectorAll('#tabs .t').forEach(t=>t.onclick=()=>switchTab(t.textContent.trim().toUpperCase()));
 function tick(){ const n=new Date(); document.getElementById('date').textContent=n.toLocaleDateString('en-GB'); document.getElementById('time').textContent=n.toLocaleTimeString(); }
 setInterval(tick,1000); tick();
+// heartbeat: keep HUD live with real data
+setInterval(()=>{ if(ws&&connected)ws.send(JSON.stringify({action:'status'})); }, 5000);
 
 /* neural synapse particle web */
 (function(){ const c=document.getElementById('synapse'),x=c.getContext('2d'); let W,H,pts;

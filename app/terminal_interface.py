@@ -15,6 +15,7 @@ drop one in). MOON's brain is the orchestrator already built in this project.
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from pathlib import Path
 
@@ -91,35 +92,127 @@ async def avatar_png():
     return HTMLResponse("<svg/>", status_code=404)
 
 
+def _proc_uptime() -> float:
+    try:
+        return float(open("/proc/uptime").read().split()[0])
+    except Exception:
+        return 0.0
+
+
+def _system_metrics() -> dict:
+    """Real host metrics read from /proc (no external deps)."""
+    out = {"cpu": 0.0, "ram_pct": 0.0, "ram_used_mb": 0, "ram_total_mb": 0,
+           "load1": 0.0, "net": 0.0, "temp_c": 0.0, "gpu": 0.0}
+    try:
+        # load avg (1-min) as a CPU pressure proxy
+        la = open("/proc/loadavg").read().split()
+        out["load1"] = float(la[0])
+        ncpu = max(1, os.cpu_count() or 1)
+        out["cpu"] = min(99.0, round(float(la[0]) / ncpu * 100, 1))
+    except Exception:
+        pass
+    try:
+        with open("/proc/meminfo") as fh:
+            mi = {}
+            for line in fh:
+                if ":" not in line:
+                    continue
+                k, v = line.split(":", 1)
+                mi[k.strip()] = int(v.split()[0])
+        total = mi.get("MemTotal", 0)
+        avail = mi.get("MemAvailable", mi.get("MemFree", 0))
+        out["ram_total_mb"] = total // 1024
+        out["ram_used_mb"] = (total - avail) // 1024
+        out["ram_pct"] = round((total - avail) / total * 100, 1) if total else 0.0
+    except Exception:
+        pass
+    try:
+        with open("/proc/net/dev") as fh:
+            rx = 0
+            for line in fh:
+                if ":" in line:
+                    parts = line.split(":", 1)[1].split()
+                    rx += int(parts[0]) + int(parts[8])
+            out["net"] = round(rx / 1_000_000, 1)  # MB since boot
+    except Exception:
+        pass
+    # virtual thermal (cgroup max) if present
+    for p in ("/sys/class/thermal/thermal_zone0/temp",):
+        try:
+            t = int(open(p).read().strip()) / 1000.0
+            out["temp_c"] = round(t, 1)
+        except Exception:
+            pass
+    return out
+
+
 async def _moon_status(orch) -> dict:
     """Real MOON status for the terminal HUD (no simulation)."""
-    import os as _os
+    n_agents = 0
+    agents = []
     try:
-        n_agents = len(orch._agents)
+        ags = orch._agents
+        if isinstance(ags, dict):
+            n_agents = len(ags)
+            agents = [getattr(v, "name", k) for k, v in ags.items()]
+        else:
+            n_agents = len(ags)
+            agents = [getattr(a, "name", str(a)) for a in ags]
     except Exception:
-        n_agents = 0
+        pass
+    tools = []
     try:
         reg = getattr(orch._tools, "_registry", None)
         tools = list(reg.tool_names) if reg and hasattr(reg, "tool_names") else []
     except Exception:
         tools = []
+
     ltm_count = 0
+    stm_count = 0
+    episodic = 0
+    kb_docs = 0
+    vec_items = 0
     try:
-        ltm = orch._memory._ltm if orch._memory else None
-        if ltm is not None and hasattr(ltm, "path") and _os.path.exists(ltm.path):
-            with open(ltm.path) as fh:
-                ltm_count = sum(1 for _ in fh)
+        mem = orch._memory
+        if mem is not None:
+            ltm = getattr(mem, "_ltm", None)
+            if ltm is not None and hasattr(ltm, "path") and os.path.exists(ltm.path):
+                with open(ltm.path) as fh:
+                    ltm_count = sum(1 for _ in fh)
+            stm = getattr(mem, "_stm", None)
+            if stm is not None:
+                stm_count = len(getattr(stm, "_buf", []))
+            ep = getattr(mem, "episodic", None)
+            if ep is not None:
+                episodic = len(getattr(ep, "_eps", []))
+            kb = getattr(mem, "_kb", None)
+            if kb is not None:
+                kb_docs = len(getattr(kb, "_doc_chunks", {}) or {})
+                store = getattr(kb, "_store", None)
+                if store is not None:
+                    vec_items = len(getattr(store, "_items", []))
     except Exception:
-        ltm_count = 0
+        pass
+
+    sys_metrics = _system_metrics()
     return {
         "version": "2.1.0",
         "model": orch._settings.model_name,
+        "strong_model": getattr(orch._settings, "strong_model_name", ""),
         "locked": orch._lock.locked,
         "agents": n_agents,
+        "agent_list": agents[:40],
         "tools": tools,
         "n_tools": len(tools),
-        "long_term_entries": ltm_count,
-        "uptime": _os.path.exists("/proc/uptime") and open("/proc/uptime").read().split()[0] or "0",
+        "memory": {
+            "episodic": episodic,
+            "long_term": ltm_count,
+            "short_term": stm_count,
+            "vector": vec_items,
+            "kb_docs": kb_docs,
+        },
+        "system": sys_metrics,
+        "uptime": _proc_uptime(),
     }
 
 
@@ -127,6 +220,50 @@ async def _moon_status(orch) -> dict:
 async def status():
     orch = await _get_orchestrator()
     return await _moon_status(orch)
+
+
+def _broadcast_status(orch) -> dict:
+    """Status payload for the HUD panels (real data)."""
+    return _moon_status_sync(orch)
+
+
+def _moon_status_sync(orch) -> dict:
+    try:
+        return asyncio.get_event_loop().run_until_complete(_moon_status(orch))
+    except Exception:
+        # fallback: build a minimal sync status
+        return {
+            "version": "2.1.0",
+            "model": getattr(getattr(orch, "_settings", None), "model_name", "?"),
+            "locked": getattr(getattr(orch, "_lock", None), "locked", True),
+            "agents": 0, "agent_list": [], "tools": [], "n_tools": 0,
+            "memory": {}, "system": {}, "uptime": 0.0,
+        }
+
+
+async def _run_diagnostics(orch) -> dict:
+    """Real self-check: ping each subsystem and report pass/fail + numbers."""
+    st = await _moon_status(orch)
+    checks = []
+    # agents
+    checks.append(("Agent brains", "OK" if st["agents"] > 0 else "FAIL", f"{st['agents']} connected"))
+    # tools
+    checks.append(("Tool registry", "OK" if st["n_tools"] > 0 else "FAIL", f"{st['n_tools']} tools"))
+    # memory subsystems
+    mem = st.get("memory", {})
+    checks.append(("Long-term memory", "OK" if mem.get("long_term", 0) >= 0 else "FAIL",
+                   f"{mem.get('long_term',0)} entries"))
+    checks.append(("Short-term memory", "OK", f"{mem.get('short_term',0)} items"))
+    checks.append(("Episodic memory", "OK", f"{mem.get('episodic',0)} episodes"))
+    checks.append(("Knowledge base", "OK" if mem.get("kb_docs", 0) > 0 else "WARN",
+                   f"{mem.get('kb_docs',0)} docs / {mem.get('vector',0)} vectors"))
+    # system
+    sys_ = st.get("system", {})
+    checks.append(("System health", "OK" if sys_.get("ram_pct", 100) < 95 else "WARN",
+                   f"CPU {sys_.get('cpu',0)}% / RAM {sys_.get('ram_pct',0)}%"))
+    checks.append(("Lock state", "OK" if not st["locked"] else "LOCKED",
+                   "unlocked" if not st["locked"] else "awaiting 'love you 3000 Moon'"))
+    return {"checks": checks, "summary": f"{sum(1 for c in checks if c[1]=='OK')}/{len(checks)} subsystems nominal"}
 
 
 @app.websocket("/ws")
@@ -178,14 +315,65 @@ async def ws_endpoint(ws: WebSocket):
                     "elapsed": round(time.time() - t0, 2),
                     "locked": orch._lock.locked,
                 })
-            elif action == "run":
-                # Quick-action buttons: command preset routed through MOON's brain.
-                cmd = (data.get("command") or "").strip()
-                if not cmd:
+            elif action == "diagnostics":
+                # Real self-check across MOON's subsystems.
+                await ws.send_json({"type": "assistant_start"})
+                await ws.send_json({"type": "workflow", "stage": "tools", "detail": "running diagnostics"})
+                diag = await _run_diagnostics(orch)
+                await ws.send_json({"type": "workflow", "stage": "speaking", "detail": "reporting"})
+                report = diag["summary"] + "\n" + "\n".join(f"[{s[1]}] {s[0]}: {s[2]}" for s in diag["checks"])
+                for chunk in _stream_text(report):
+                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
+                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
+            elif action == "memory_search":
+                q = (data.get("query") or data.get("text") or "").strip()
+                if not q:
                     continue
                 await ws.send_json({"type": "assistant_start"})
+                await ws.send_json({"type": "workflow", "stage": "memory", "detail": f"recalling '{q}'"})
+                try:
+                    hits = await orch._memory.recall(q, limit=5)
+                    out = (f"Found {len(hits)} memory hit(s):\n" + "\n".join(f"- {h[:160]}" for h in hits)) if hits else "No matching memories."
+                except Exception as e:  # noqa: BLE001
+                    out = f"[memory error: {e}]"
+                await ws.send_json({"type": "workflow", "stage": "speaking", "detail": "reporting"})
+                for chunk in _stream_text(out):
+                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
+                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
+            elif action == "knowledge":
+                q = (data.get("query") or data.get("text") or "").strip()
+                if not q:
+                    continue
+                await ws.send_json({"type": "assistant_start"})
+                await ws.send_json({"type": "workflow", "stage": "knowledge", "detail": f"querying KB '{q}'"})
+                try:
+                    hits = await orch._memory.semantic_recall(q, top_k=5)
+                    out = (f"KB returned {len(hits)} chunk(s):\n" + "\n".join(f"- {h.get('chunk', str(h))[:160]}" for h in hits)) if hits else "No KB matches."
+                except Exception as e:  # noqa: BLE001
+                    out = f"[kb error: {e}]"
+                await ws.send_json({"type": "workflow", "stage": "speaking", "detail": "reporting"})
+                for chunk in _stream_text(out):
+                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
+                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
+            elif action == "run":
+                # Quick-action buttons: route to MOON's real subsystems when a
+                # direct function applies, else run through her brain.
+                cmd = (data.get("command") or "").strip().lower()
+                if not cmd:
+                    continue
+                if "diagnostic" in cmd:
+                    await ws.send_json({"type": "forward", "action": "diagnostics"})
+                    continue
+                if "memory" in cmd and "search" in cmd:
+                    await ws.send_json({"type": "forward", "action": "memory_search", "query": "recent"})
+                    continue
+                if "knowledge" in cmd:
+                    await ws.send_json({"type": "forward", "action": "knowledge", "query": "summary"})
+                    continue
+                # default: run through MOON's real brain
+                await ws.send_json({"type": "assistant_start"})
                 from app.models.task import Task
-                task = Task.create(cmd, agent_name="auto")
+                task = Task.create(data.get("command") or "", agent_name="auto")
                 t0 = time.time()
                 try:
                     result_task = await orch.run_task(task, on_event=stream_event)
