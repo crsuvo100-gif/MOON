@@ -152,8 +152,14 @@ body::before{content:"";position:fixed;inset:0;background:
 .voice-grp{flex:1;min-width:220px}
 /* compact bottom dock: voice | command | quick actions in one row */
 .dock{display:flex;gap:8px;align-items:stretch;margin-top:0;flex:none}
-.dock-voice{width:140px;flex:none;display:flex;gap:8px;align-items:center;border:1px solid var(--edge);border-radius:10px;padding:6px 8px;background:rgba(0,243,255,.04)}
-.dock-voice .voice-ico{width:38px;height:38px;font-size:15px;flex:none}
+.dock-voice{width:200px;flex:none;display:flex;gap:6px;align-items:center;border:1px solid var(--edge);border-radius:10px;padding:6px 8px;background:rgba(0,243,255,.04)}
+.dock-voice .voice-ico{width:34px;height:34px;font-size:14px;flex:none}
+/* MUTE / TALK voice buttons: compact, sit inside the voice panel without
+   colliding with its 1px border (own clear border + active glow). */
+.dock-voice .qa{margin:0;padding:5px 4px;font-size:9px;line-height:1.1;flex:1 1 0;min-width:0;border:1px solid var(--edge);border-radius:7px;background:rgba(0,243,255,.07);color:var(--txt);cursor:pointer;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dock-voice .qa:hover{background:rgba(0,243,255,.18);box-shadow:0 0 10px rgba(0,243,255,.3)}
+/* mic actively listening: glowing pink border + animated pulse */
+.dock-voice .qa.on{border-color:var(--pink);background:rgba(255,61,203,.18);color:#fff;box-shadow:0 0 12px rgba(255,61,203,.5);animation:pulse 1.1s infinite}
 .dock-cmd{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:5px}
 .dock-qa{flex:1 1 0;min-width:0;display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
 .dock-qa .qa{padding:5px 2px;font-size:9px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
