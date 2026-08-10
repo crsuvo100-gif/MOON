@@ -16,8 +16,7 @@ serve:
 	$(PY) main.py start
 
 terminal:
-	@echo "The Textual TUI was removed. Use the web UI instead:"
-	@echo "  make serve   # then open http://localhost:8000/brain"
+	$(PY) main.py start
 
 test:
 	$(PY) -m pytest tests -q

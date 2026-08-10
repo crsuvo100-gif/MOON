@@ -7,7 +7,7 @@ WebSocket, and speaks MOON's reply in her FEMALE voice.
 Usage:
     python scripts/voice_loop.py                 # typed mode + female TTS
     python scripts/voice_loop.py --mic           # microphone dictation mode
-    python scripts/voice_loop.py --preset seductive --url ws://localhost:8000/ws
+    python scripts/voice_loop.py --preset seductive --url ws://127.0.0.1:8777/ws
 
 Requires MOON running (make serve). Female voice needs espeak + sox (both
 already present on this host). Dictation needs vosk + VOSK_MODEL_DIR.
@@ -28,7 +28,7 @@ from app.voice import Voice
 
 async def _main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--url", default="ws://127.0.0.1:8000/ws")
+    ap.add_argument("--url", default="ws://127.0.0.1:8777/ws")
     ap.add_argument("--preset", default="default", choices=["default", "seductive", "warm", "crystal"])
     ap.add_argument("--mic", action="store_true", help="use microphone dictation (needs vosk)")
     ap.add_argument("--unlock", default="MOON love you 3000")

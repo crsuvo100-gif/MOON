@@ -2,7 +2,7 @@
 
 A self-hosted autonomous AI agent with its own "brain", connected per-agent
 brains, and continuous self-learning. The interface is the web-based Neural
-Brain Command Center at `http://localhost:8000/brain`.
+Brain Command Center at `http://127.0.0.1:8777`.
 
 ## Features
 - **Main brain (LongTermMemory + KnowledgeBase)** -- durable, survives restarts.
@@ -31,7 +31,7 @@ MOON's female voice. The voice module is `app/voice.py`.
 ```bash
 python -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env
-make serve
+make serve          # MOON Neural Command Center at http://127.0.0.1:8777
 ```
 
 ## Configuration (`.env`)

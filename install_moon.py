@@ -62,7 +62,7 @@ def main():
             install_voice_stack()
         except Exception as exc:  # noqa: BLE001
             print("Voice stack install skipped:", exc)
-    print("Setup complete. Launch the UI with: make serve  (http://localhost:8000/brain)")
+    print("Setup complete. Launch the UI with: make serve  (http://127.0.0.1:8777)")
     print("Female voice companion: make voice")
     print("Smoke import:", "OK" if smoke_import() else "FAILED")
 

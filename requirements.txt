@@ -35,10 +35,11 @@ rich>=13.7             # pretty CLI/log output
 tenacity>=8.2          # retry / error-recovery policies
 
 # --- UI ---------------------------------------------------------------------
-# The MOON UI is the web-based Neural Brain Command Center (web/moon_brain.html,
-# served at /brain). It is a standalone HTML+Three.js page loaded from a CDN, so
-# it requires NO Python UI dependency. (The old Textual TUI and 2D orb were
-# removed; textual is no longer needed.)
+# The MOON UI is the web-based Neural Brain Command Center (web/moon_terminal.html,
+# served at the root / by app.terminal_interface on port 8777). It is a standalone
+# HTML+Three.js+SVG page requiring NO Python UI dependency. (The old Textual TUI,
+# 2D orb, and moon_brain.html were removed; textual/flask are no longer needed
+# for the terminal UI.)
 
 # --- Voice (installed by install_moon.py; listed for completeness) ----------
 # espeakng, SpeechRecognition, pyaudio, piper-tts  -> added by the installer
