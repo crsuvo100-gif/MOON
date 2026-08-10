@@ -485,10 +485,9 @@ function apply(s){
   const v=s.voice||{};const vm=document.getElementById('voiceMode');if(vm&&v.mode)vm.textContent=v.mode;
   if(v.mode==='MUTED'){document.getElementById('muteBtn').textContent='MUTE: ON';}
   const sn=s.sensors||{};
-  // Sensory: VOICE/TEXT/SYSTEM are always-on input channels (ACTIVE).
-  // VISION/FILE are on-demand capabilities, shown STANDBY until actively used
-  // (matches the reference command-center look; not streaming sensors).
-  setSens('senVoice',sn.voice);setSens('senText',sn.text);setSens('senVision',false);setSens('senFile',false);setSens('senSystem',sn.system);
+  // Sensory: drive every channel from the backend's real capability flags
+  // (vision/file reflect whether the corresponding tools are registered).
+  setSens('senVoice',sn.voice);setSens('senText',sn.text);setSens('senVision',sn.vision);setSens('senFile',sn.file);setSens('senSystem',sn.system);
   const em=s.emotion||{};const eg=document.getElementById('emotGauge');if(eg)eg.style.setProperty('--v',(em.value||60)+'%');
   const elb=document.getElementById('emotLabel');if(elb){elb.textContent=em.label||'CALM';elb.className=(em.value||60)>60?'active':'standby';}
   const ag=document.getElementById('agents');if(ag)ag.textContent=s.agents;
