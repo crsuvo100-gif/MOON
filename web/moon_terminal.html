@@ -416,58 +416,96 @@ connect();
 </script>
 <script src="/three.min.js"></script>
 <script>
-/* ===== MOON 3D human face (Three.js, no external assets) ===== */
+/* ===== MOON 3D human face (Three.js, no external assets, polished) ===== */
 (function(){
   if(typeof THREE==='undefined'){return;}
   const cv=document.getElementById('face3d'); if(!cv) return;
-  function sizeFace(){const r=cv.getBoundingClientRect();const w=Math.max(160,r.width||230),h=w;cv.width=w;cv.height=h;return w/h;}
+  function sizeFace(){const r=cv.getBoundingClientRect();const w=Math.max(180,r.width||240),h=w;cv.width=w;cv.height=h;return w/h;}
   let aspect=sizeFace();
   const renderer=new THREE.WebGLRenderer({canvas:cv,alpha:true,antialias:true});
   renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+  renderer.outputEncoding=THREE.sRGBEncoding;
   const scene=new THREE.Scene();
-  const cam=new THREE.PerspectiveCamera(38,aspect,0.1,100); cam.position.set(0,0,5.2);
-  scene.add(new THREE.AmbientLight(0x6688ff,0.7));
-  const key=new THREE.PointLight(0x00f3ff,1.1); key.position.set(2,3,4); scene.add(key);
-  const rim=new THREE.PointLight(0xbd00ff,0.9); rim.position.set(-3,-1,2); scene.add(rim);
+  const cam=new THREE.PerspectiveCamera(36,aspect,0.1,100); cam.position.set(0,0.05,5.0);
+  scene.add(new THREE.AmbientLight(0x88aaff,0.55));
+  const key=new THREE.PointLight(0x00f3ff,1.2); key.position.set(2.4,3,4); scene.add(key);
+  const rim=new THREE.PointLight(0xbd00ff,1.0); rim.position.set(-3,-1,2.5); scene.add(rim);
+  const fill=new THREE.DirectionalLight(0xffffff,0.35); fill.position.set(0,-2,3); scene.add(fill);
   const head=new THREE.Group(); scene.add(head);
-  const skinMat=new THREE.MeshStandardMaterial({color:0xffd9c2,roughness:0.55,metalness:0.05});
-  const face=new THREE.Mesh(new THREE.SphereGeometry(1.35,48,48),skinMat);face.scale.set(1.0,1.22,0.95);head.add(face);
-  const jaw=new THREE.Mesh(new THREE.SphereGeometry(1.05,32,32),skinMat);jaw.scale.set(0.95,0.7,0.9);jaw.position.y=-0.7;head.add(jaw);
-  const hairMat=new THREE.MeshStandardMaterial({color:0x2a2342,roughness:0.8});
-  const hair=new THREE.Mesh(new THREE.SphereGeometry(1.42,40,40,0,Math.PI*2,0,Math.PI*0.62),hairMat);hair.scale.set(1.02,1.24,0.98);hair.position.y=0.12;head.add(hair);
+  // ---- skin (sub-surface-ish via emissive tint) ----
+  const skinMat=new THREE.MeshStandardMaterial({color:0xf6cdb0,roughness:0.42,metalness:0.04,
+    emissive:0x3a1f17,emissiveIntensity:0.18});
+  const face=new THREE.Mesh(new THREE.SphereGeometry(1.32,64,64),skinMat);face.scale.set(1.0,1.24,0.96);head.add(face);
+  const jaw=new THREE.Mesh(new THREE.SphereGeometry(1.04,40,40),skinMat);jaw.scale.set(0.96,0.72,0.9);jaw.position.y=-0.66;head.add(jaw);
+  const cheekL=new THREE.Mesh(new THREE.SphereGeometry(0.4,24,24),skinMat);cheekL.scale.set(0.8,0.6,0.5);cheekL.position.set(-0.5,-0.15,0.95);head.add(cheekL);
+  const cheekR=cheekL.clone();cheekR.position.x=0.5;head.add(cheekR);
+  // ---- hair + fringe ----
+  const hairMat=new THREE.MeshStandardMaterial({color:0x241d3a,roughness:0.85,metalness:0.05});
+  const hair=new THREE.Mesh(new THREE.SphereGeometry(1.4,48,48,0,Math.PI*2,0,Math.PI*0.6),hairMat);
+  hair.scale.set(1.03,1.26,0.99);hair.position.y=0.14;head.add(hair);
+  const fringe=new THREE.Mesh(new THREE.SphereGeometry(1.36,40,40,0,Math.PI*2,0,Math.PI*0.26),hairMat);
+  fringe.scale.set(1.04,1.2,1.0);fringe.position.set(0,0.42,0.05);fringe.rotation.x=-0.35;head.add(fringe);
+  // ---- eyes (white, glowing iris, pupil) ----
   function eye(sx){const g=new THREE.Group();
-    const white=new THREE.Mesh(new THREE.SphereGeometry(0.26,24,24),new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.3}));white.scale.set(1,0.7,0.6);g.add(white);
-    const iris=new THREE.Mesh(new THREE.SphereGeometry(0.15,24,24),new THREE.MeshStandardMaterial({color:0x00d9ff,roughness:0.2,emissive:0x0090b0,emissiveIntensity:0.6}));iris.position.z=0.18;g.add(iris);
-    const pupil=new THREE.Mesh(new THREE.SphereGeometry(0.07,16,16),new THREE.MeshBasicMaterial({color:0x081018}));pupil.position.z=0.27;g.add(pupil);
-    g.position.set(sx,0.18,0.96);g.rotation.y=-sx*0.25;return g;}
-  const eyeL=eye(-0.45),eyeR=eye(0.45);head.add(eyeL);head.add(eyeR);
-  const lidMat=new THREE.MeshStandardMaterial({color:skinMat.color,roughness:0.5});
-  function lid(sx){const m=new THREE.Mesh(new THREE.SphereGeometry(0.27,20,20,0,Math.PI*2,0,Math.PI*0.5),lidMat);m.scale.set(1,0.7,0.6);m.position.set(sx,0.18,0.95);m.rotation.x=Math.PI;return m;}
-  const lidL=lid(-0.45),lidR=lid(0.45);lidL.scale.y=0.02;lidR.scale.y=0.02;head.add(lidL);head.add(lidR);
-  // high-collar futuristic suit
-  const suitMat=new THREE.MeshStandardMaterial({color:0x0a1626,roughness:0.7,metalness:0.2});
-  const suit=new THREE.Mesh(new THREE.CylinderGeometry(1.0,1.3,1.2,32,1,true),suitMat);suit.position.y=-1.55;suit.scale.set(1,1,0.9);head.add(suit);
-  const nose=new THREE.Mesh(new THREE.ConeGeometry(0.16,0.45,16),skinMat);nose.position.set(0,-0.05,1.18);nose.rotation.x=Math.PI/2;head.add(nose);
-  const mouthMat=new THREE.MeshStandardMaterial({color:0xb83b5e,roughness:0.5});
-  const mouth=new THREE.Mesh(new THREE.TorusGeometry(0.4,0.12,16,32),mouthMat);mouth.position.set(0,-0.62,1.02);mouth.rotation.x=Math.PI/2;mouth.scale.set(1,0.35,1);head.add(mouth);
-  const aura=new THREE.Mesh(new THREE.SphereGeometry(1.7,32,32),new THREE.MeshBasicMaterial({color:0x00f3ff,transparent:true,opacity:0.06}));aura.scale.set(1,1.22,0.9);head.add(aura);
-  let state='idle',t=0,talking=0,blink=0,blinkT=2+Math.random()*2;
+    const white=new THREE.Mesh(new THREE.SphereGeometry(0.24,32,32),new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.25}));white.scale.set(1,0.72,0.62);g.add(white);
+    const iris=new THREE.Mesh(new THREE.SphereGeometry(0.15,32,32),new THREE.MeshStandardMaterial({color:0x00d9ff,roughness:0.18,emissive:0x00b0d0,emissiveIntensity:0.9}));iris.position.z=0.17;g.add(iris);
+    const pupil=new THREE.Mesh(new THREE.SphereGeometry(0.07,20,20),new THREE.MeshBasicMaterial({color:0x05101a}));pupil.position.z=0.26;g.add(pupil);
+    const glint=new THREE.Mesh(new THREE.SphereGeometry(0.03,12,12),new THREE.MeshBasicMaterial({color:0xffffff}));glint.position.set(-0.04,0.05,0.3);g.add(glint);
+    g.position.set(sx,0.2,1.3);g.rotation.y=-sx*0.22;head.add(g);return g;}
+  const eyeL=eye(-0.42),eyeR=eye(0.42);
+  // ---- eyelids (close on blink) ----
+  const lidMat=new THREE.MeshStandardMaterial({color:0xf6cdb0,roughness:0.4});
+  function lid(sx){const m=new THREE.Mesh(new THREE.SphereGeometry(0.27,24,24,0,Math.PI*2,0,Math.PI*0.5),lidMat);m.scale.set(1,0.72,0.62);m.position.set(sx,0.2,0.94);m.rotation.x=Math.PI;head.add(m);return m;}
+  const lidL=lid(-0.42),lidR=lid(0.42);lidL.scale.y=0.02;lidR.scale.y=0.02;
+  // ---- eyebrows ----
+  const browMat=new THREE.MeshStandardMaterial({color:0x3a2f22,roughness:0.7});
+  function brow(sx){const m=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.05,0.06),browMat);m.position.set(sx,0.5,1.28);m.rotation.z=sx*0.12;m.rotation.x=-0.15;head.add(m);return m;}
+  const browL=brow(-0.42),browR=brow(0.42);
+  // ---- nose + mouth ----
+  const nose=new THREE.Mesh(new THREE.ConeGeometry(0.15,0.42,20),skinMat);nose.position.set(0,-0.04,1.42);nose.rotation.x=Math.PI/2;head.add(nose);
+  const mouthMat=new THREE.MeshStandardMaterial({color:0xb83b5e,roughness:0.45,emissive:0x40101c,emissiveIntensity:0.3});
+  const mouth=new THREE.Mesh(new THREE.TorusGeometry(0.38,0.1,20,40),mouthMat);mouth.position.set(0,-0.6,1.32);mouth.rotation.x=Math.PI/2;mouth.scale.set(1,0.34,1);head.add(mouth);
+  // ---- neck + shoulders ----
+  const neckMat=skinMat;
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.5,0.5,24),neckMat);neck.position.y=-1.25;head.add(neck);
+  const suitMat=new THREE.MeshStandardMaterial({color:0x0a1626,roughness:0.65,metalness:0.25});
+  const shoulders=new THREE.Mesh(new THREE.SphereGeometry(1.0,32,24,0,Math.PI*2,0,Math.PI*0.5),suitMat);shoulders.scale.set(1.5,0.7,0.9);shoulders.position.y=-1.7;head.add(shoulders);
+  const collar=new THREE.Mesh(new THREE.TorusGeometry(0.5,0.08,16,32),new THREE.MeshStandardMaterial({color:0x00f3ff,emissive:0x00f3ff,emissiveIntensity:0.5,roughness:0.3}));collar.rotation.x=Math.PI/2;collar.position.y=-1.35;collar.scale.set(1,1,0.6);head.add(collar);
+  // ---- aura + HUD ring + motes ----
+  const aura=new THREE.Mesh(new THREE.SphereGeometry(1.66,32,32),new THREE.MeshBasicMaterial({color:0x00f3ff,transparent:true,opacity:0.05}));aura.scale.set(1,1.24,0.9);head.add(aura);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(1.9,0.012,12,80),new THREE.MeshBasicMaterial({color:0x00f3ff,transparent:true,opacity:0.5}));ring.rotation.x=Math.PI/2.1;scene.add(ring);
+  const moteGeo=new THREE.BufferGeometry();const MN=40,mpos=new Float32Array(MN*3);
+  for(let i=0;i<MN;i++){const a=i/MN*Math.PI*2,r=1.9+Math.random()*0.3;mpos[i*3]=Math.cos(a)*r;mpos[i*3+1]=Math.sin(a)*r*0.6;mpos[i*3+2]=Math.random()*0.4-0.2;}
+  moteGeo.setAttribute('position',new THREE.BufferAttribute(mpos,3));
+  const motes=new THREE.Points(moteGeo,new THREE.PointsMaterial({color:0x00f3ff,size:0.05,transparent:true,opacity:0.7}));scene.add(motes);
+  let state='idle',t=0,talking=0,blink=0,blinkT=2+Math.random()*2,smile=0;
   window.setMoonState=function(s){state=s||'idle';};
   window.setMouthOpen=function(v){talking=Math.max(0,Math.min(1,v));};
   function animate(){requestAnimationFrame(animate);t+=0.016;
     aspect=sizeFace();cam.aspect=aspect;cam.updateProjectionMatrix();renderer.setSize(cv.width,cv.height,false);
-    const br=Math.sin(t*1.3)*0.03;head.position.y=br;head.scale.setScalar(1+br*0.3);
-    head.rotation.y=Math.sin(t*0.5)*0.12;head.rotation.x=Math.sin(t*0.7)*0.04;
-    blinkT-=0.016;if(blinkT<=0){blink=0.12;blinkT=2+Math.random()*3;}
-    if(blink>0){blink-=0.016;lidL.scale.y=lidR.scale.y=0.02+Math.min(1,blink/0.12)*0.95;}else{lidL.scale.y=lidR.scale.y=0.02;}
-    const mo=talking>0?talking:0.12+Math.sin(t*6)*0.05;mouth.scale.set(1+mo*0.2,0.18+mo*0.9,1);if(talking>0)talking-=0.05;
-    let ec=0x00f3ff,op=0.06;
-    if(state==='listening'){ec=0xffd23d;op=0.1;}
+    const br=Math.sin(t*1.2)*0.025;head.position.y=br;head.scale.setScalar(1+br*0.25);
+    head.rotation.y=Math.sin(t*0.45)*0.1;head.rotation.x=Math.sin(t*0.6)*0.03;
+    // blink
+    blinkT-=0.016;if(blinkT<=0){blink=0.13;blinkT=2+Math.random()*3;}
+    const bl=blink>0?(blink-=0.016,Math.min(1,blink/0.13)):0;
+    lidL.scale.y=lidR.scale.y=0.02+bl*0.95;browL.position.y=0.5-(state==='thinking'?0.06:0);browR.position.y=0.5-(state==='thinking'?0.06:0);
+    // mouth / smile driven by real speech
+    const mo=talking>0?talking:0.1+Math.sin(t*5)*0.04;
+    mouth.scale.set(1+mo*0.25,0.16+mo*0.95,1);
+    smile+=( (state==='speaking'||state==='idle'?0.0:0.0) - smile)*0.05;
+    if(talking>0)talking-=0.04;
+    // state color
+    let ec=0x00f3ff,op=0.05;
+    if(state==='listening'){ec=0xffd23d;op=0.09;}
     else if(state==='thinking'||state==='reasoning'){ec=0xbd00ff;op=0.1;}
-    else if(state==='speaking'||state==='execution'){ec=0x00ffa3;op=0.13;}
-    else if(state==='working'||state==='tools'){ec=0xff3dcb;op=0.11;}
-    else if(state==='locked'){ec=0xff4d4d;op=0.08;}
-    aura.material.color.setHex(ec);aura.material.opacity=op;key.color.setHex(ec);
+    else if(state==='speaking'||state==='execution'){ec=0x00ffa3;op=0.12;}
+    else if(state==='working'||state==='tools'){ec=0xff3dcb;op=0.1;}
+    else if(state==='locked'){ec=0xff4d4d;op=0.07;}
+    aura.material.color.setHex(ec);aura.material.opacity=op;
+    ring.material.color.setHex(ec);motes.material.color.setHex(ec);key.color.setHex(ec);
+    // thinking pulse on ring
+    const pulse=state==='thinking'?1+Math.sin(t*8)*0.03:1;ring.scale.set(pulse,pulse,1);
+    ring.rotation.z+=0.003;motes.rotation.y-=0.004;
     renderer.render(scene,cam);}
   animate();
 })();
