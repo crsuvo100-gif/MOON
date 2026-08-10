@@ -262,6 +262,13 @@ async def _moon_status(orch) -> dict:
             "mode": "MUTED" if _voice_muted else "AUTO",
             "available": bool(_get_voice()),
         },
+        "sensors": {
+            "voice": True,
+            "text": True,
+            "vision": any(n in tools for n in ("image_processing", "ocr", "vision")),
+            "file": any(n in tools for n in ("file_manager", "pdf_reader", "read_file")),
+            "system": True,
+        },
     }
 
 
@@ -347,16 +354,26 @@ async def ws_endpoint(ws: WebSocket):
                 # The unlock phrase "love you 3000 Moon" (case-insensitive) is
                 # handled inside the orchestrator's lock -- it unlocks MOON herself.
                 await ws.send_json({"type": "assistant_start"})
+                t0 = 0.0
                 if orch._lock.locked:
-                    await ws.send_json({"type": "workflow", "stage": "locked", "detail": "awaiting unlock"})
-                from app.models.task import Task
-                task = Task.create(text, agent_name="auto")
-                t0 = time.time()
-                try:
-                    result_task = await orch.run_task(task, on_event=stream_event)
-                    answer = result_task.result or "(no response)"
-                except Exception as e:  # noqa: BLE001
-                    answer = f"[MOON error: {e}]"
+                    # Locked: MOON still talks (wife persona / status / knowledge)
+                    # but does NOT execute active operations. Unlock for those.
+                    await ws.send_json({"type": "workflow", "stage": "locked", "detail": "conversing (locked)"})
+                    try:
+                        answer = await orch.quick_reply(text)
+                    except Exception as e:  # noqa: BLE001
+                        answer = f"[MOON error: {e}]"
+                    if not answer:
+                        answer = "I'm here, my love. Say the phrase to let me act."
+                else:
+                    from app.models.task import Task
+                    task = Task.create(text, agent_name="auto")
+                    t0 = time.time()
+                    try:
+                        result_task = await orch.run_task(task, on_event=stream_event)
+                        answer = result_task.result or "(no response)"
+                    except Exception as e:  # noqa: BLE001
+                        answer = f"[MOON error: {e}]"
                 await ws.send_json({"type": "workflow", "stage": "speaking", "detail": "forming response"})
                 for chunk in _stream_text(answer):
                     await ws.send_json({"type": "assistant_chunk", "content": chunk})
@@ -365,7 +382,7 @@ async def ws_endpoint(ws: WebSocket):
                     await ws.send_json({"type": "audio", "format": "wav", "data": audio})
                 await ws.send_json({
                     "type": "assistant_done",
-                    "elapsed": round(time.time() - t0, 2),
+                    "elapsed": round(time.time() - t0, 2) if not orch._lock.locked else 0.0,
                     "locked": orch._lock.locked,
                 })
             elif action == "diagnostics":
@@ -454,8 +471,18 @@ async def ws_endpoint(ws: WebSocket):
                                     "voice": {"mode": "MUTED" if _voice_muted else "AUTO",
                                               "available": bool(_get_voice())}})
                 await ws.send_json({"type": "notice", "message": push_note})
-            elif action == "get_history":
-                await ws.send_json({"type": "history", "messages": []})
+            elif action == "connect_agents":
+                # Surface MOON's live 39-agent brain mesh (real subsystem list).
+                await ws.send_json({"type": "assistant_start"})
+                await ws.send_json({"type": "workflow", "stage": "tools", "detail": "linking agent brains"})
+                ags = getattr(orch, "_agents", {})
+                names = [getattr(v, "name", k) for k, v in ags.items()] if isinstance(ags, dict) else list(ags)
+                names = [str(n) for n in names][:40]
+                out = (f"Connected {len(names)} agent brains to MOON's main cortex:\n"
+                       + ", ".join(names))
+                for chunk in _stream_text(out):
+                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
+                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
             else:
                 await ws.send_json({"type": "unknown", "action": action})
     except WebSocketDisconnect:

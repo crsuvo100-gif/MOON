@@ -103,11 +103,11 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
     <!-- LEFT -->
     <div class="col">
       <div class="panel"><div class="panel-title">Sensory Input</div>
-        <div class="row"><span>VOICE</span><span class="active">ACTIVE</span></div>
-        <div class="row"><span>TEXT</span><span class="active">ACTIVE</span></div>
-        <div class="row"><span>VISION</span><span class="standby">STANDBY</span></div>
-        <div class="row"><span>FILE</span><span class="standby">STANDBY</span></div>
-        <div class="row"><span>SYSTEM</span><span class="active">ACTIVE</span></div>
+        <div class="row"><span>VOICE</span><span class="active" id="senVoice">ACTIVE</span></div>
+        <div class="row"><span>TEXT</span><span class="active" id="senText">ACTIVE</span></div>
+        <div class="row"><span>VISION</span><span class="standby" id="senVision">STANDBY</span></div>
+        <div class="row"><span>FILE</span><span class="standby" id="senFile">STANDBY</span></div>
+        <div class="row"><span>SYSTEM</span><span class="active" id="senSystem">ACTIVE</span></div>
       </div>
       <div class="panel"><div class="panel-title">Memory Core</div>
         <div class="row"><span>EPISODIC</span><span class="bar"><i id="epBar" style="width:0%"></i></span></div>
@@ -175,7 +175,11 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         <button class="qa" onclick="runAction('show active workflow steps')">ACTIVE WORKFLOW</button>
         <button class="qa" onclick="runAction('memory search')">MEMORY SEARCH</button>
         <button class="qa" onclick="runAction('query knowledge base')">KNOWLEDGE BASE</button>
+        <button class="qa" onclick="runAction('connect all my agents')">CONNECT AGENTS</button>
         <button class="qa" onclick="runAction('stop current tasks')">STOP TASKS</button>
+      </div>
+      <div class="panel"><div class="panel-title">Agent Roster (<span id="agents">0</span>)</div>
+        <div id="agentList"></div>
       </div>
       <div class="panel"><div class="panel-title">MOON AI Agent</div>
         <div class="row"><span>VERSION</span><span id="ver">2.1.0</span></div>
@@ -229,7 +233,9 @@ function send(){const t=input.value.trim();if(!t)return;
   if(/^moon\b/i.test(t))ws.send(JSON.stringify({action:'wake'}));
   addMsg('user',t);if(ws&&connected)ws.send(JSON.stringify({action:'send_message',text:t}));else push('not connected');input.value='';}
 function quick(t){t=(t||'').trim();if(!t)return;input.value=t;send();}
-function runAction(c){addMsg('user','▶ '+c);if(ws&&connected)ws.send(JSON.stringify({action:'run',command:c}));else push('not connected');}
+function runAction(c){addMsg('user','▶ '+c);
+  if(/connect.*agent/i.test(c)){if(ws&&connected)ws.send(JSON.stringify({action:'connect_agents'}));return;}
+  if(ws&&connected)ws.send(JSON.stringify({action:'run',command:c}));else push('not connected');}
 function apply(s){
   document.getElementById('ver').textContent=s.version;
   document.getElementById('model').textContent=s.model+(s.strong_model?(' / '+s.strong_model):'');
@@ -238,6 +244,14 @@ function apply(s){
   const v=s.voice||{};
   const vm=document.getElementById('voiceMode');if(vm&&v.mode)vm.textContent=v.mode;
   if(v.mode==='MUTED'){document.getElementById('muteBtn').textContent='MUTE: ON';}
+  const sn=s.sensors||{};
+  const setSens=(id,on)=>{const el=document.getElementById(id);if(el)el.textContent=on?'ACTIVE':'STANDBY';el.className=on?'active':'standby';};
+  setSens('senVoice',sn.voice);setSens('senText',sn.text);setSens('senVision',sn.vision);
+  setSens('senFile',sn.file);setSens('senSystem',sn.system);
+  const agents=s.agents||0;
+  const ag=document.getElementById('agents');if(ag)ag.textContent=agents;
+  const roster=document.getElementById('agentList');
+  if(roster&&s.agent_list){roster.innerHTML=s.agent_list.slice(0,24).map(n=>`<span class="atag">${n}</span>`).join('');}
   const m=s.memory||{};
   document.getElementById('ltmCount').textContent=m.long_term||0;
   document.getElementById('ltmBar').style.width=Math.min(100,(m.long_term||0)*4)+'%';
