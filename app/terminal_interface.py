@@ -82,6 +82,44 @@ async def avatar_gif():
     return HTMLResponse("<svg/>", status_code=404)
 
 
+async def _moon_status(orch) -> dict:
+    """Real MOON status for the terminal HUD (no simulation)."""
+    import os as _os
+    try:
+        n_agents = len(orch._agents)
+    except Exception:
+        n_agents = 0
+    try:
+        reg = getattr(orch._tools, "_registry", None)
+        tools = list(reg.tool_names) if reg and hasattr(reg, "tool_names") else []
+    except Exception:
+        tools = []
+    ltm_count = 0
+    try:
+        ltm = orch._memory._ltm if orch._memory else None
+        if ltm is not None and hasattr(ltm, "path") and _os.path.exists(ltm.path):
+            with open(ltm.path) as fh:
+                ltm_count = sum(1 for _ in fh)
+    except Exception:
+        ltm_count = 0
+    return {
+        "version": "2.1.0",
+        "model": orch._settings.model_name,
+        "locked": orch._lock.locked,
+        "agents": n_agents,
+        "tools": tools,
+        "n_tools": len(tools),
+        "long_term_entries": ltm_count,
+        "uptime": _os.path.exists("/proc/uptime") and open("/proc/uptime").read().split()[0] or "0",
+    }
+
+
+@app.get("/status")
+async def status():
+    orch = await _get_orchestrator()
+    return await _moon_status(orch)
+
+
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
     await ws.accept()
@@ -131,6 +169,26 @@ async def ws_endpoint(ws: WebSocket):
                     "elapsed": round(time.time() - t0, 2),
                     "locked": orch._lock.locked,
                 })
+            elif action == "run":
+                # Quick-action buttons: command preset routed through MOON's brain.
+                cmd = (data.get("command") or "").strip()
+                if not cmd:
+                    continue
+                await ws.send_json({"type": "assistant_start"})
+                from app.models.task import Task
+                task = Task.create(cmd, agent_name="auto")
+                t0 = time.time()
+                try:
+                    result_task = await orch.run_task(task, on_event=stream_event)
+                    answer = result_task.result or "(no response)"
+                except Exception as e:  # noqa: BLE001
+                    answer = f"[MOON error: {e}]"
+                await ws.send_json({"type": "workflow", "stage": "speaking", "detail": "forming response"})
+                for chunk in _stream_text(answer):
+                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
+                await ws.send_json({"type": "assistant_done", "elapsed": round(time.time() - t0, 2), "locked": orch._lock.locked})
+            elif action == "status":
+                await ws.send_json({"type": "status", **(await _moon_status(orch))})
             elif action == "get_history":
                 await ws.send_json({"type": "history", "messages": []})
             else:

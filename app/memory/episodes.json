@@ -10,5 +10,17 @@
     "outcome": "Use `memo` to create, view, or search Apple Notes. Use `memo` to organize and export notes. Use `memo` to manage automation settings for Notes.",
     "lesson": "",
     "success": true
+  },
+  {
+    "goal": "my love, list 2 things you can do",
+    "outcome": "I don't have a \"list\" tool to generate ideas, but I can help you create reminders or manage notes. Let me know what you'd like me to do!",
+    "lesson": "The answer is vague and lacks specific details. It mentions creating reminders or managing notes but doesn't specify what exactly the user wants. The answer is not concrete and doesn't meet the prompt's requirements",
+    "success": false
+  },
+  {
+    "goal": "my love, what can you do",
+    "outcome": "I can do X and Y, my love.",
+    "lesson": "Missing concrete problems: The answer lacks specific details about the problems being referred to; Vagueness: The answer is too general, not providing specific information about the problems; SATISFACTORY",
+    "success": false
   }
 ]
