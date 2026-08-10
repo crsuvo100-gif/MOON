@@ -151,6 +151,14 @@ async def avatar_png():
     return HTMLResponse("<svg/>", status_code=404)
 
 
+@app.get("/three.min.js")
+async def three_js():
+    p = WEB_DIR / "three.min.js"
+    if p.exists():
+        return FileResponse(str(p), media_type="application/javascript")
+    return HTMLResponse("/* not found */", status_code=404)
+
+
 def _proc_uptime() -> float:
     try:
         return float(open("/proc/uptime").read().split()[0])
