@@ -39,3 +39,6 @@ htmlcov/
 # Auto-generated on-demand tools (built at runtime)
 plugins/generated/
 Telegram/
+
+# Optional local skills corpus (not shipped; index_skills handles absence)
+skills/

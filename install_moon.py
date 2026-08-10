@@ -38,13 +38,36 @@ def smoke_import():
 
 
 def install_voice_stack():
-    """Best-effort install of MOON's FEMALE voice + optional dictation."""
-    # System TTS + SoX (already present on this host; install if missing).
-    _run(["bash", "-c", "command -v espeak >/dev/null 2>&1 || (apt-get update && apt-get install -y espeak sox)"])
+    """Best-effort install of MOON's FEMALE voice + optional dictation.
+
+    Tries the right system package manager for the host OS (Debian/Ubuntu,
+    Fedora/RHEL, Arch, macOS/brew) and falls back gracefully if none is
+    available or the user lacks permission. The Python side (vosk/pyaudio)
+    is optional for mic dictation and never blocks the core install.
+    """
+    import shutil
+
+    pkg_cmd = None
+    if shutil.which("apt-get"):
+        pkg_cmd = "apt-get update && apt-get install -y espeak-ng sox"
+    elif shutil.which("dnf"):
+        pkg_cmd = "dnf install -y espeak-ng sox"
+    elif shutil.which("yum"):
+        pkg_cmd = "yum install -y espeak-ng sox"
+    elif shutil.which("pacman"):
+        pkg_cmd = "pacman -S --noconfirm espeak-ng sox"
+    elif shutil.which("brew"):
+        pkg_cmd = "brew install espeak sox"
+    if pkg_cmd:
+        _run(["bash", "-c", pkg_cmd])
+    else:
+        print("No supported system package manager found; skipping espeak-ng/sox "
+              "system install. Install them manually for TTS: https://github.com/espeak-ng/espeak-ng")
     # Optional offline dictation (vosk). Pulled on demand; not required to run.
     py = ROOT / ".venv" / "bin" / "python"
     _run([str(py), "-m", "pip", "install", "vosk", "pyaudio"])
-    print("Voice stack: espeak+sox required (installed if missing); vosk+pyaudio optional for mic dictation.")
+    print("Voice stack: espeak-ng+sox for TTS (system, best-effort); "
+          "vosk+pyaudio optional for mic dictation.")
 
 
 def main():

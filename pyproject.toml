@@ -7,7 +7,29 @@ name = "moon-ai-agent"
 version = "0.1.0"
 description = "MOON -- self-hosted autonomous AI agent with its own brain, connected agent brains, and a Neural Brain Command Center UI."
 requires-python = ">=3.10"
-dependencies = []
+# Keep in sync with requirements.txt. Listed here so `pip install .` works on
+# any machine without first reading requirements.txt.
+dependencies = [
+    "fastapi>=0.141",
+    "uvicorn[standard]>=0.52",
+    "pydantic>=2.13",
+    "pydantic-settings>=2.15",
+    "anyio>=4.3",
+    "httpx>=0.27",
+    "openai>=2.53",
+    "numpy>=1.26",
+    "requests>=2.31",
+    "python-dotenv>=1.0",
+    "rich>=13.7",
+    "tenacity>=8.2",
+    "flask",
+    "flask-socketio",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+moon = "main:main"
 
 [tool.setuptools]
 packages = ["app", "plugins", "scripts"]
