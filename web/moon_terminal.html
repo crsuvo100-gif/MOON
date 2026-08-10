@@ -19,7 +19,7 @@ body::before{content:"";position:fixed;inset:0;background:
 .scanline{position:fixed;inset:0;pointer-events:none;z-index:1;
   background:linear-gradient(rgba(0,243,255,.04),transparent 8%);background-size:100% 4px;mix-blend-mode:screen}
 .mono{font-family:'Share Tech Mono','Courier New',ui-monospace,monospace}
-.moon-root{position:relative;z-index:2;display:flex;flex-direction:column;height:100vh;padding:10px;gap:10px}
+.moon-root{position:relative;z-index:2;display:grid;grid-template-rows:auto 1fr auto auto auto;height:100dvh;min-height:100dvh;max-height:100dvh;padding:8px 8px 4px;gap:6px;overflow:hidden}
 .col,.center{scrollbar-width:thin;scrollbar-color:rgba(0,243,255,.45) transparent}
 .col::-webkit-scrollbar,.center::-webkit-scrollbar{width:6px}
 .col::-webkit-scrollbar-thumb,.center::-webkit-scrollbar-thumb{background:rgba(0,243,255,.4);border-radius:3px}
@@ -43,9 +43,10 @@ body::before{content:"";position:fixed;inset:0;background:
 .clock .on{color:var(--green);text-shadow:0 0 8px var(--green)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 1.6s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-#wfHead{width:90px;height:26px}
+#wfHead{width:90px;height:26px}#wfHeadL{width:90px;height:26px;transform:scaleX(-1)}
 /* body */
-.body{display:flex;gap:10px;flex:1;min-height:0}
+.body{display:flex;gap:10px;flex:1 1 auto;min-height:0;max-height:none;overflow:hidden}
+.moon-root>.body{min-height:0}
 .col{width:300px;display:flex;flex-direction:column;gap:7px;overflow:auto}
 .col .panel-title{margin-bottom:3px}
 .col .gline{margin:1px 0}
@@ -144,12 +145,13 @@ body::before{content:"";position:fixed;inset:0;background:
 .qa-grp{flex:1;min-width:260px}
 .voice-grp{flex:1;min-width:220px}
 /* compact bottom dock: voice | command | quick actions in one row */
-.dock{display:flex;gap:8px;align-items:stretch;margin-top:8px;flex-wrap:nowrap}
+.dock{display:flex;gap:8px;align-items:stretch;margin-top:0;flex:none}
 .dock-voice{width:140px;flex:none;display:flex;gap:8px;align-items:center;border:1px solid var(--edge);border-radius:10px;padding:6px 8px;background:rgba(0,243,255,.04)}
 .dock-voice .voice-ico{width:38px;height:38px;font-size:15px;flex:none}
 .dock-cmd{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:5px}
 .dock-qa{flex:1 1 0;min-width:0;display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
-.dock-qa .qa{padding:5px 2px;font-size:10px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dock-qa .qa{padding:5px 2px;font-size:9px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dock-qa .stop{color:#ff6b6b;border-color:rgba(255,80,80,.5);background:rgba(255,40,40,.08)}
 /* sensory active waveform + standby dashed */
 .swave{display:inline-block;width:34px;height:9px;margin-left:6px;vertical-align:middle}
 .swave i{display:inline-block;width:3px;height:100%;margin:0 1px;background:var(--cyan);border-radius:1px;animation:eq .9s ease-in-out infinite}
@@ -171,12 +173,12 @@ body::before{content:"";position:fixed;inset:0;background:
 .qa{margin:3px 0;width:100%;padding:6px;border-radius:8px;border:1px solid var(--edge);background:rgba(0,243,255,.07);color:var(--txt);cursor:pointer;font-size:11px;letter-spacing:1px;font-family:inherit}
 .qa:hover{background:rgba(0,243,255,.18);box-shadow:0 0 10px rgba(0,243,255,.3)}
 .voice-ico{width:54px;height:54px;border-radius:50%;border:2px solid var(--edge);display:grid;place-items:center;box-shadow:0 0 14px rgba(0,243,255,.3);background:radial-gradient(circle,rgba(0,243,255,.12),transparent);font-size:20px}
-.foot{height:28px;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:var(--dim);letter-spacing:1px}
+.foot{height:22px;flex:none;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:var(--dim);letter-spacing:1px}
 code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(--cyan)}
 /* responsive */
 @media (min-width:1800px){.col{width:360px}.panel{padding:14px 16px}.core{width:280px;height:280px}.halo{width:300px;height:300px}}
-@media (max-width:1100px){.col{width:264px}}
-@media (max-height:900px){.moon-root{height:auto;min-height:100vh;overflow:auto}.col,.center{overflow:visible}.col{gap:6px}.center{gap:6px}.panel{padding:7px 10px}.stage{min-height:200px}.foot{height:22px}}
+@media (max-height:900px){.moon-root{height:100dvh;min-height:100dvh;max-height:100dvh;overflow:hidden}.col,.center{gap:5px}.panel{padding:6px 9px}.stage{min-height:150px}.core{width:min(140px,38vw);height:min(140px,38vw)}.foot{height:20px}.hdr{padding:5px 12px}.dock{gap:6px}.bw{height:38px}.nav{padding:4px 6px}.tabs .t{padding:5px 8px}}
+@media (max-width:1100px){.col{width:250px}}
 @media (max-width:860px){html,body{overflow:auto}.moon-root{height:auto;min-height:100vh}.body{flex-direction:column;overflow:visible}.col{width:100%;overflow:visible}.center{order:-1}.stage{min-height:320px}.hdr{flex-wrap:wrap;gap:10px}}
 @media (max-width:560px){.moon-root{padding:6px;gap:7px}.hdr{flex-direction:column;text-align:center;gap:8px;padding:10px}.brand{justify-content:center}.center-h{order:-1}.clock{text-align:center}.panel-title{font-size:11px}}
 @media (max-width:380px){.nav .t{font-size:8.5px;padding:5px 6px}.center-h h1{font-size:12px;letter-spacing:2px}}
@@ -186,7 +188,7 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
 <div class="scanline"></div>
 <div class="moon-root">
   <header class="hdr panel">
-    <div class="brand"><div class="logo"></div><b>MOON</b><span style="font-size:10px;letter-spacing:2px;color:var(--cyan)">NEURAL AGENT</span></div>
+    <div class="brand"><div class="logo"></div><b>MOON</b><span style="font-size:10px;letter-spacing:2px;color:var(--cyan)">NEURAL AGENT</span><canvas id="wfHeadL"></canvas></div>
     <div class="center-h"><h1>MOON NEURAL COMMAND CENTER</h1><div class="sub">HUMAN BRAIN NEURAL WORKFLOW &bull; MOON AGENT ORCHESTRATOR</div></div>
     <div class="clock"><div>DATE: <span id="date">--/--/----</span></div><div>TIME: <span id="time">--:--:--</span></div><div>STATUS: <span class="dot"></span> <span class="on">ONLINE</span></div><canvas id="wfHead"></canvas></div>
   </header>
@@ -298,7 +300,7 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
       </div>
       <div class="panel"><div class="panel-title">Environment</div>
         <div class="brainwrap" style="justify-content:flex-start">
-          <canvas id="globe" class="globe"></canvas>
+          <div style="text-align:center"><canvas id="globe" class="globe"></canvas><div class="mini" style="color:var(--green);text-shadow:0 0 8px var(--green)">EARTH ONLINE</div></div>
           <div style="flex:1;min-width:120px">
             <div class="row"><span>SYS TEMP</span><span id="envTemp" class="active">0&deg;C</span></div>
             <canvas id="tempSpark" class="tempspark"></canvas>
@@ -333,12 +335,12 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         </div>
       </div>
       <div class="dock-qa">
-        <button class="qa" onclick="runAction('wake moon')">WAKE</button>
-        <button class="qa" onclick="quick('system status')">STATUS</button>
-        <button class="qa" onclick="runAction('run diagnostics on your subsystems')">DIAG</button>
-        <button class="qa" onclick="runAction('show active workflow steps')">WORKFLOW</button>
-        <button class="qa" onclick="runAction('memory search')">MEM</button>
-        <button class="qa" onclick="runAction('stop all tasks')">STOP</button>
+        <button class="qa" onclick="quick('system status')">SYSTEM STATUS</button>
+        <button class="qa" onclick="runAction('run diagnostics on your subsystems')">RUN DIAGNOSTICS</button>
+        <button class="qa" onclick="runAction('show active workflow steps')">ACTIVE WORKFLOW</button>
+        <button class="qa" onclick="runAction('memory search')">MEMORY SEARCH</button>
+        <button class="qa" onclick="quick('open knowledge base')">KNOWLEDGE BASE</button>
+        <button class="qa stop" onclick="runAction('stop all tasks')">STOP TASKS ✕</button>
       </div>
     </div>
   </div>
@@ -536,6 +538,7 @@ function wave(canvas,color){const c=canvas.getContext('2d');let W,H;
   init();loop();window.addEventListener('resize',init);}
 wave(document.getElementById('syn2'),'rgba(0,243,255,.8)');
 wave(document.getElementById('wfHead'),'rgba(92,255,154,.9)');
+wave(document.getElementById('wfHeadL'),'rgba(0,243,255,.9)');
 /* live audio waveform under avatar — driven by MOON's REAL voice RMS */
 (function(){const c=document.getElementById('wave'),x=c.getContext('2d');let W,H,amp=0;
   window.drawWave=function(r){amp=Math.max(amp*0.6,r*3);};
