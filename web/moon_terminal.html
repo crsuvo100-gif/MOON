@@ -60,7 +60,9 @@ body::before{content:"";position:fixed;inset:0;background:
 .standby{color:var(--amber)}
 .bar{height:7px;flex:1;margin-left:9px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}
 .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));box-shadow:0 0 10px var(--cyan);border-radius:5px;transition:width .6s ease}
-.gline{display:flex;gap:8px;align-items:center;margin:5px 0}
+.gline{display:flex;align-items:center;gap:8px;margin:2px 0}
+.cpu-chip{margin-left:auto;font-size:16px;filter:drop-shadow(0 0 6px rgba(255,140,0,.7));opacity:.85}
+.loadbar{margin-top:2px}
 .gline small{width:46px;font-size:10px;color:var(--dim)}
 .gauge{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;position:relative;
   background:conic-gradient(var(--green) var(--v,80%),rgba(255,255,255,.08) 0);box-shadow:0 0 10px rgba(92,255,154,.35)}
@@ -103,7 +105,8 @@ body::before{content:"";position:fixed;inset:0;background:
 .statestr b{color:var(--cyan)}
 .stchips{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-top:4px}
 .stchips span{font-size:8.5px;letter-spacing:1px;padding:3px 7px;border:1px solid var(--edge);border-radius:9px;color:var(--dim);transition:.2s}
-.stchips span.on{color:#fff;border-color:var(--pink);background:rgba(255,61,203,.18);box-shadow:0 0 10px rgba(255,61,203,.5);text-shadow:0 0 6px var(--pink)}
+.stchips span i{font-style:normal;margin-right:3px;filter:drop-shadow(0 0 3px var(--cyan))}
+.stchips span.on i{filter:drop-shadow(0 0 4px var(--pink))}
 .speech{margin-top:8px;max-width:520px;background:rgba(2,8,16,.6);border:1px solid var(--edge);border-radius:10px;padding:8px 12px;font-size:12px;color:#eafdff;min-height:38px;text-align:center}
 .speech.idle{opacity:.55}
 /* HUMAN BRAIN viz */
@@ -230,7 +233,7 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         <div class="slabel" id="moontag">MOON IS ACTIVE AND AWARE</div>
         <div class="statestr">STATE: <b id="state">IDLE</b></div>
         <div class="stchips" id="stchips">
-          <span data-s="idle">IDLE</span><span data-s="listening">LISTENING</span><span data-s="thinking">THINKING</span><span data-s="execution">EXECUTING</span><span data-s="speaking">SPEAKING</span>
+          <span data-s="idle"><i>◉</i>IDLE</span><span data-s="listening"><i>🎙</i>LISTENING</span><span data-s="thinking"><i>🧠</i>THINKING</span><span data-s="execution"><i>⚙</i>EXECUTING</span><span data-s="speaking"><i>💬</i>SPEAKING</span>
         </div>
         <canvas id="wave" class="wave"></canvas>
         <div class="speech idle" id="speech">Awaiting your command…</div>
@@ -275,7 +278,7 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         <div class="gline"><small>GOAL MANAGER</small><div class="gauge" id="gGoal" style="--v:88%"><span>●</span></div><span class="active">ACTIVE</span></div>
         <div class="gline"><small>DECISION ENGINE</small><div class="gauge" id="gDecis" style="--v:92%"><span>●</span></div><span class="active">ACTIVE</span></div>
         <div class="gline"><small>EMOTION ENGINE</small><div class="gauge" id="emotGauge" style="--v:60%"><span>●</span></div><span class="standby" id="emotLabel">CALM</span></div>
-        <div class="gline"><small>SELF LEARNING</small><div class="gauge" id="gLearn" style="--v:96%"><span>●</span></div><span class="active">ACTIVE</span></div>
+        <div class="gline"><small>SELF LEARNING</small><div class="gauge" id="gLearn" style="--v:96%"><span>●</span></div><span class="active">ACTIVE</span><span class="cpu-chip">🧩</span></div>
       </div>
       <div class="panel"><div class="panel-title">MOON AI Agent</div>
         <div class="row"><span>STATUS</span><span class="active">ONLINE</span></div>
@@ -283,6 +286,7 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         <div class="row"><span>MODEL</span><span id="model">—</span></div>
         <div class="row"><span>UPTIME</span><span id="uptime">0d 0h 0m</span></div>
         <div class="row"><span>LOAD</span><span id="loadTxt" class="active">0%</span></div>
+        <span class="bar loadbar"><i id="loadBar" style="width:0%"></i></span>
         <div class="row"><span>LOCK</span><span id="lockState" class="standby">LOCKED</span></div>
         <div class="agent-extra"><span class="op">● FULLY OPERATIONAL</span><span class="lr">LEARNING: CONTINUOUS</span></div>
         <div style="display:flex;justify-content:flex-end;margin-top:4px"><img class="portrait" src="/avatar.svg" alt="MOON" onerror="this.style.display='none'"/></div>
@@ -438,6 +442,7 @@ function apply(s){
   setBar('gGpu',sy.gpu||0);document.getElementById('gpuTxt').textContent=(sy.gpu||0)+'%';
   setBar('gNet',Math.min(100,(sy.net||0)/100));document.getElementById('netTxt').textContent=(sy.net||0)+'MB';
   document.getElementById('loadTxt').textContent=(sy.load||0)+'%';
+  const lb=document.getElementById('loadBar');if(lb)lb.style.width=Math.min(100,(sy.load||0))+'%';
   // Environment panel (real data)
   const st=document.getElementById('envTemp');if(st)st.textContent=(sy.temp_c||0)+'°C';
   const er=document.getElementById('envEnergy');if(er)er.style.width=Math.min(100,100-(sy.ram_pct||0))+'%';
