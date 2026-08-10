@@ -101,6 +101,9 @@ body::before{content:"";position:fixed;inset:0;background:
 .slabel{color:var(--pink);font-weight:700;letter-spacing:2px;text-shadow:0 0 12px var(--pink),0 0 24px var(--pink);font-size:14px;text-align:center;margin-top:4px}
 .statestr{color:#fff;font-size:13px;letter-spacing:1px;text-shadow:0 0 8px var(--cyan);margin-top:2px}
 .statestr b{color:var(--cyan)}
+.stchips{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+.stchips span{font-size:8.5px;letter-spacing:1px;padding:3px 7px;border:1px solid var(--edge);border-radius:9px;color:var(--dim);transition:.2s}
+.stchips span.on{color:#fff;border-color:var(--pink);background:rgba(255,61,203,.18);box-shadow:0 0 10px rgba(255,61,203,.5);text-shadow:0 0 6px var(--pink)}
 .speech{margin-top:8px;max-width:520px;background:rgba(2,8,16,.6);border:1px solid var(--edge);border-radius:10px;padding:8px 12px;font-size:12px;color:#eafdff;min-height:38px;text-align:center}
 .speech.idle{opacity:.55}
 /* HUMAN BRAIN viz */
@@ -226,6 +229,9 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         </div>
         <div class="slabel" id="moontag">MOON IS ACTIVE AND AWARE</div>
         <div class="statestr">STATE: <b id="state">IDLE</b></div>
+        <div class="stchips" id="stchips">
+          <span data-s="idle">IDLE</span><span data-s="listening">LISTENING</span><span data-s="thinking">THINKING</span><span data-s="execution">EXECUTING</span><span data-s="speaking">SPEAKING</span>
+        </div>
         <canvas id="wave" class="wave"></canvas>
         <div class="speech idle" id="speech">Awaiting your command…</div>
         <div class="pipeline" id="pipeline"></div>
@@ -343,7 +349,11 @@ const PIPE_KEYS=['input','memory','knowledge','reasoning','planner','tools','exe
 const STEP_LABELS={input:'INPUT',memory:'MEMORY',knowledge:'KNOWLEDGE',reasoning:'REASONING',planner:'PLANNER',tools:'TOOLS',execution:'EXECUTION',verify:'VERIFY'};
 let _curKey=null;
 function setMoon(s){stateEl.textContent=s.toUpperCase();document.body.dataset.moon=s;_curKey=s;
-  if(window.setMoonState)window.setMoonState(s);}
+  if(window.setMoonState)window.setMoonState(s);
+  // highlight the 5-state chip row (IDLE/LISTENING/THINKING/EXECUTING/SPEAKING)
+  const map={idle:'idle',listening:'listening',thinking:'thinking',reasoning:'thinking',execution:'execution',speaking:'speaking',working:'execution',tools:'execution',locked:'idle'};
+  const chip=map[s]||'idle';
+  document.querySelectorAll('#stchips span').forEach(n=>n.classList.toggle('on',n.dataset.s===chip));}
 function push(s){const d=document.createElement('div');d.textContent=`[${new Date().toLocaleTimeString()}] ${s}`;log.prepend(d);}
 function addMsg(role,c){const m=document.createElement('div');m.className='msg '+(role==='user'?'u':'a');const b=document.createElement('div');b.className='b';b.textContent=c;m.appendChild(b);chat.appendChild(m);chat.scrollTop=chat.scrollHeight;return b;}
 function fmtEv(stage,detail){const code={input:'INPUT',routing:'ROUTE',memory:'MEM',knowledge:'KNOW',thinking:'REASON',tool_call:'TOOLS',reflection:'VERIFY',consistency:'VERIFY',speaking:'TTS',working:'EXEC',locked:'LOCK'}[stage]||stage.toUpperCase().slice(0,5);return `[${code}] ${detail||stage}`;}
