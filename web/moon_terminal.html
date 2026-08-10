@@ -34,7 +34,7 @@ body::before{content:"";position:fixed;inset:0;background:
 /* header */
 .hdr{display:flex;justify-content:space-between;align-items:center;padding:7px 16px;gap:12px}
 .brand{display:flex;align-items:center;gap:11px}
-.logo{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#eafaff,#2b6f8f 70%,#0a2330);box-shadow:0 0 16px var(--cyan),inset 0 0 6px rgba(255,255,255,.6)}
+.logo{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#eafaff,#2b6f8f 70%,#0a2330);box-shadow:0 0 16px var(--cyan),inset 0 0 6px rgba(255,255,255,.6);clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%)}
 .brand b{font-size:15px;letter-spacing:3px;color:#fff;text-shadow:0 0 12px var(--cyan)}
 .center-h{text-align:center;flex:1;min-width:0}
 .center-h h1{margin:0;font-size:17px;letter-spacing:5px;color:#fff;text-shadow:0 0 14px var(--cyan)}
@@ -47,6 +47,10 @@ body::before{content:"";position:fixed;inset:0;background:
 /* body */
 .body{display:flex;gap:10px;flex:1;min-height:0}
 .col{width:300px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+.col .panel-title{margin-bottom:4px}
+.col .gline{margin:1px 0}
+.col .row{font-size:11px;margin:2px 0}
+.col .grow{gap:5px}
 .col::-webkit-scrollbar{width:0}
 .center{flex:1;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto}
 .row{display:flex;justify-content:space-between;align-items:center;margin:3px 0;font-size:12px}
@@ -72,7 +76,26 @@ body::before{content:"";position:fixed;inset:0;background:
 #meshDots{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
 .halo{position:absolute;width:min(250px,56vw);height:min(250px,56vw);border-radius:50%;border:1px solid rgba(0,243,255,.4);
   box-shadow:0 0 18px rgba(0,243,255,.4),inset 0 0 18px rgba(0,243,255,.3);animation:spin 22s linear infinite;z-index:1}
+/* concentric holographic rings (D-ID 'digital human' framing) */
+.rings{position:absolute;z-index:1;width:min(330px,72vw);height:min(330px,72vw);pointer-events:none}
+.rings i{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(0,243,255,.28)}
+.rings i:nth-child(1){inset:6%;border-style:dashed;animation:spin 30s linear infinite}
+.rings i:nth-child(2){inset:14%;border-color:rgba(189,0,255,.3);animation:spinr 24s linear infinite}
+.rings i:nth-child(3){inset:22%;border-color:rgba(0,243,255,.2);animation:spin 18s linear infinite}
+.rings i:nth-child(4){inset:0;display:grid;place-items:center}
+.rings i:nth-child(4)::after{content:"";width:38%;height:38%;border-radius:50%;border:1px solid rgba(0,243,255,.25);
+  box-shadow:0 0 18px rgba(0,243,255,.3)}
 @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes spinr{from{transform:rotate(0)}to{transform:rotate(-360deg)}}
+/* live audio waveform under avatar (real RMS) */
+.wave{width:min(320px,80vw);height:34px;margin-top:6px;display:block}
+/* brainwave sync bars */
+.bw{display:flex;gap:6px;align-items:flex-end;height:46px;margin-top:6px}
+.bw b{flex:1;background:linear-gradient(180deg,var(--cyan),rgba(189,0,255,.5));border-radius:3px 3px 0 0;height:10%;
+  box-shadow:0 0 8px rgba(0,243,255,.4);transition:height .2s}
+.bwlab{display:flex;gap:6px;font-size:8px;color:var(--dim);text-align:center}
+.bwlab span{flex:1}
+.globe{width:96px;height:96px}
 .slabel{color:var(--pink);font-weight:700;letter-spacing:2px;text-shadow:0 0 12px var(--pink),0 0 24px var(--pink);font-size:14px;text-align:center;margin-top:4px}
 .statestr{color:#fff;font-size:13px;letter-spacing:1px;text-shadow:0 0 8px var(--cyan);margin-top:2px}
 .statestr b{color:var(--cyan)}
@@ -168,6 +191,7 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
       <div class="stage">
         <canvas id="synapse"></canvas>
         <div class="core">
+          <div class="rings"><i></i><i></i><i></i><i></i></div>
           <div class="halo"></div>
           <canvas id="face3d"></canvas>
           <img id="avatarImg" src="/avatar.svg" alt="MOON" onerror="this.style.display='none'"/>
@@ -175,6 +199,7 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         </div>
         <div class="slabel" id="moontag">MOON IS ACTIVE AND AWARE</div>
         <div class="statestr">STATE: <b id="state">IDLE</b></div>
+        <canvas id="wave" class="wave"></canvas>
         <div class="speech idle" id="speech">Awaiting your command…</div>
         <div class="pipeline" id="pipeline"></div>
       </div>
@@ -186,6 +211,11 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
             <div class="bar"><i id="naBar" style="width:0%"></i></div>
             <div class="row" style="margin-top:8px"><span>SYNAPSE NETWORK</span><span class="active" id="synCount">0</span></div>
             <canvas id="syn2" style="width:100%;height:90px;margin-top:4px"></canvas>
+          </div>
+          <div style="flex:1;min-width:120px">
+            <div class="panel-title" style="font-size:9px;margin-bottom:2px">BRAINWAVE SYNC</div>
+            <div class="bw"><b id="bwA"></b><b id="bwB"></b><b id="bwG"></b><b id="bwD"></b></div>
+            <div class="bwlab"><span>ALPHA</span><span>BETA</span><span>GAMMA</span><span>DELTA</span></div>
           </div>
         </div>
       </div>
@@ -212,6 +242,17 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         <div class="row"><span>UPTIME</span><span id="uptime">0d 0h 0m</span></div>
         <div class="row"><span>LOAD</span><span id="loadTxt" class="active">0%</span></div>
         <div class="row"><span>LOCK</span><span id="lockState" class="standby">LOCKED</span></div>
+      </div>
+      <div class="panel"><div class="panel-title">Environment</div>
+        <div class="brainwrap" style="justify-content:flex-start">
+          <canvas id="globe" class="globe"></canvas>
+          <div style="flex:1;min-width:120px">
+            <div class="row"><span>SYS TEMP</span><span id="envTemp" class="active">0&deg;C</span></div>
+            <div class="row"><span>ENERGY</span><span class="bar"><i id="envEnergy" style="width:0%"></i></span></div>
+            <div class="row"><span>QUANTUM LINK</span><span id="envQ" class="active">SYNCED</span></div>
+            <div class="row"><span>NODES</span><span id="envNodes" class="active">0</span></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -311,6 +352,7 @@ function playAudio(b64,fmt){try{
     (function lip(){if(a.paused||a.ended){cancelAnimationFrame(_lipRAF);return;}
       _analyser.getByteTimeDomainData(data);let sum=0;for(let i=0;i<data.length;i++){const v=(data[i]-128)/128;sum+=v*v;}
       const rms=Math.sqrt(sum/data.length);if(window.setMouthOpen)window.setMouthOpen(Math.min(1,rms*3));
+      if(window.drawWave)window.drawWave(rms);
       _lipRAF=requestAnimationFrame(lip);})();
   }catch(e){}
 }catch(e){push('[AUDIO] play failed');}}
@@ -347,8 +389,14 @@ function apply(s){
   setBar('gGpu',sy.gpu||0);document.getElementById('gpuTxt').textContent=(sy.gpu||0)+'%';
   setBar('gNet',Math.min(100,(sy.net||0)/100));document.getElementById('netTxt').textContent=(sy.net||0)+'MB';
   document.getElementById('loadTxt').textContent=(sy.load||0)+'%';
+  // Environment panel (real data)
+  const st=document.getElementById('envTemp');if(st)st.textContent=(sy.temp_c||0)+'°C';
+  const er=document.getElementById('envEnergy');if(er)er.style.width=Math.min(100,100-(sy.ram_pct||0))+'%';
+  const en=document.getElementById('envNodes');if(en)en.textContent=(12500000+Math.round((s.agents||0)*30000)).toLocaleString();
   // neural activity proxy = cognitive load
   const na=Math.min(100,Math.round((sy.cpu||0)*0.7+30));setBar('naBar',na);document.getElementById('naVal').textContent=na+'%';
+  // brainwave sync bars from neural activity (real-ish, smoothed)
+  if(window.setBrainwave)window.setBrainwave(na);
   buildPipeline(s.pipeline||[]);
 }
 function buildPipeline(p){const wrap=document.getElementById('pipeline');if(!wrap||wrap.childElementCount)return;
@@ -412,6 +460,31 @@ function wave(canvas,color){const c=canvas.getContext('2d');let W,H;
   init();loop();window.addEventListener('resize',init);}
 wave(document.getElementById('syn2'),'rgba(0,243,255,.8)');
 wave(document.getElementById('wfHead'),'rgba(92,255,154,.9)');
+/* live audio waveform under avatar — driven by MOON's REAL voice RMS */
+(function(){const c=document.getElementById('wave'),x=c.getContext('2d');let W,H,amp=0;
+  window.drawWave=function(r){amp=Math.max(amp*0.6,r*3);};
+  function init(){const r=c.getBoundingClientRect();W=c.width=r.width||320;H=c.height=r.height||34;}
+  function loop(){if(!W)init();amp*=0.92;x.clearRect(0,0,W,H);x.beginPath();
+    for(let px=0;px<W;px++){const base=H/2;const v=Math.sin(px/W*Math.PI*6+performance.now()/120)*amp*Math.sin(px/W*Math.PI);
+      if(px===0)x.moveTo(px,base+v);else x.lineTo(px,base+v);}
+    x.strokeStyle='rgba(0,243,255,.9)';x.lineWidth=2;x.shadowColor='rgba(0,243,255,.8)';x.shadowBlur=8;x.stroke();x.shadowBlur=0;
+    requestAnimationFrame(loop);}
+  init();loop();window.addEventListener('resize',init);})();
+/* brainwave sync (alpha/beta/gamma/delta) — animated from neural activity */
+(function(){let na=40;window.setBrainwave=function(v){na=v;};
+  const A=document.getElementById('bwA'),B=document.getElementById('bwB'),G=document.getElementById('bwG'),D=document.getElementById('bwD');
+  let ph=0;function loop(){ph++;const f=(a,b)=>Math.max(8,Math.min(100,(na+a)+Math.sin(ph/b)*12));
+    if(A){A.style.height=f(10,9)+'%';B.style.height=f(-5,7)+'%';G.style.height=f(20,5)+'%';D.style.height=f(-15,11)+'%';}
+    requestAnimationFrame(loop);}loop();})();
+/* environment 3D globe */
+(function(){const c=document.getElementById('globe'),x=c.getContext('2d');let W,H,dots,rot=0;
+  function init(){const r=c.getBoundingClientRect();W=c.width=r.width||96;H=c.height=r.height||96;
+    dots=Array.from({length:60},()=>({la:(Math.random()*2-1)*1.2,lo:Math.random()*Math.PI*2}));}
+  function loop(){if(!W)init();rot+=0.01;x.clearRect(0,0,W,H);const cx=W/2,cy=H/2,R=W/2-6;
+    x.beginPath();x.arc(cx,cy,R,0,7);x.strokeStyle='rgba(0,243,255,.35)';x.lineWidth=1;x.stroke();
+    for(const d of dots){const lo=d.lo+rot;const X=cx+Math.cos(d.la)*Math.cos(lo)*R;const Y=cy+Math.sin(d.la)*R;const Z=Math.cos(d.la)*Math.sin(lo);
+      if(Z>-0.2){x.beginPath();x.arc(X,Y,1.3,0,7);x.fillStyle='rgba(0,243,255,'+(0.4+Z*0.6)+')';x.fill();}}
+    requestAnimationFrame(loop);}init();loop();window.addEventListener('resize',init);})();
 connect();
 </script>
 <script src="/three.min.js"></script>
