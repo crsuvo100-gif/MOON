@@ -15,10 +15,13 @@ _PKG = "pip"
 
 def _run(cmd, env=None):
     print("+", " ".join(cmd))
-    # Drop PYTHONPATH so pip/venv never target a foreign venv (e.g. Hermes agent).
+    # Drop PYTHONPATH AND VIRTUAL_ENV so pip/venv never target a foreign venv
+    # (e.g. the Hermes agent environment on the dev host). We deliberately use
+    # the venv we just created under .venv/ via sys.executable below.
     import os
     e = dict(os.environ)
     e.pop("PYTHONPATH", None)
+    e.pop("VIRTUAL_ENV", None)
     if env:
         e.update(env)
     subprocess.run(cmd, check=False, env=e)
