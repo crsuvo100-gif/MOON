@@ -5,29 +5,23 @@
 <title>MOON Neural Command Center</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <style>
-:root{
-  --bg:#020205; --panel:rgba(10,18,32,.45); --edge:rgba(0,243,255,.25);
-  --cyan:#00f3ff; --purple:#bd00ff; --amber:#ffaa00; --pink:#ff3dcb;
-  --txt:#cfefff; --green:#5cff9a; --dim:#6f86a6;
-}
+:root{--bg:#02030a;--panel:rgba(10,16,32,.45);--edge:rgba(0,243,255,.25);
+  --cyan:#00f3ff;--purple:#bd00ff;--amber:#ffaa00;--pink:#ff3dcb;--txt:#cfefff;--green:#5cff9a;--dim:#6f86a6}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;font-family:'Segoe UI',Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--txt);overflow:hidden}
 body::before{content:"";position:fixed;inset:0;background:
   radial-gradient(circle at 20% 10%,rgba(0,243,255,.08),transparent 40%),
   radial-gradient(circle at 80% 90%,rgba(189,0,255,.08),transparent 45%),
-  repeating-linear-gradient(0deg,rgba(0,243,255,.04) 0 1px,transparent 1px 3px);
-  pointer-events:none;z-index:0}
+  repeating-linear-gradient(0deg,rgba(0,243,255,.04) 0 1px,transparent 1px 3px);pointer-events:none;z-index:0}
 .mono{font-family:'Courier New',ui-monospace,monospace}
 .moon-root{position:relative;z-index:1;display:flex;flex-direction:column;height:100vh;padding:10px;gap:10px}
-/* glass panel */
 .panel{position:relative;background:var(--panel);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
   border:1px solid var(--edge);border-radius:12px;padding:11px 12px;
-  box-shadow:0 0 18px rgba(0,243,255,.10),inset 0 0 22px rgba(0,243,255,.04);}
+  box-shadow:0 0 18px rgba(0,243,255,.10),inset 0 0 22px rgba(0,243,255,.04)}
 .panel::after{content:"";position:absolute;inset:0;border-radius:12px;pointer-events:none;
   background:linear-gradient(135deg,rgba(0,243,255,.10),transparent 40%,transparent 60%,rgba(189,0,255,.10));opacity:.5}
 .panel-title{font-size:10.5px;letter-spacing:2px;color:var(--cyan);font-weight:700;margin-bottom:7px;text-transform:uppercase;
   text-shadow:0 0 8px rgba(0,243,255,.7)}
-/* header */
 .hdr{display:flex;justify-content:space-between;align-items:center;padding:9px 18px}
 .brand{display:flex;align-items:center;gap:11px}
 .logo{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#eafaff,#2b6f8f 70%,#0a2330);
@@ -45,94 +39,58 @@ body::before{content:"";position:fixed;inset:0;background:
 .col::-webkit-scrollbar{width:0}
 .center{flex:1;display:flex;flex-direction:column;gap:10px;min-height:0}
 .row{display:flex;justify-content:space-between;align-items:center;margin:4px 0;font-size:12px}
-.active{color:var(--green);text-shadow:0 0 6px rgba(92,255,154,.6)}
+.active{color:var(--cyan);text-shadow:0 0 6px rgba(0,243,255,.6)}
 .standby{color:var(--amber)}
-.off{color:var(--dim)}
 .bar{height:7px;flex:1;margin-left:9px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}
 .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));box-shadow:0 0 10px var(--cyan);border-radius:5px}
-/* circular gauge */
+.gline{display:flex;gap:8px;align-items:center;margin:5px 0}
+.gline small{width:42px;font-size:10px;color:var(--dim)}
 .gauge{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;position:relative;
   background:conic-gradient(var(--cyan) var(--v,40%),rgba(255,255,255,.08) 0);box-shadow:0 0 10px rgba(0,243,255,.3)}
 .gauge::before{content:"";position:absolute;inset:4px;border-radius:50%;background:#04101a}
 .gauge span{position:relative;font-size:10px;color:#fff}
-.gline{display:flex;gap:8px;align-items:center;margin:5px 0}
-.gline small{width:34px;font-size:10px;color:var(--dim)}
-/* center visual */
-.stage{position:relative;flex:1;display:flex;align-items:center;justify-content:center;min-height:0;overflow:hidden}
-#synapse{position:absolute;inset:0;width:100%;height:100%}
-.brain3d{position:absolute;left:6%;top:8%;width:120px;height:120px;perspective:420px;opacity:.9;z-index:1}
-.brain3d .spin{transform-style:preserve-3d;animation:spin 14s linear infinite}
-@keyframes spin{from{transform:rotateY(0) rotateX(12deg)}to{transform:rotateY(360deg) rotateX(12deg)}}
-.brn{position:absolute;left:50%;top:50%;width:96px;height:78px;margin:-39px 0 0 -48px;border:1.5px solid var(--cyan);
-  border-radius:48px 48px 40px 40px/54px 54px 36px 36px;box-shadow:0 0 14px var(--cyan);transform-style:preserve-3d}
-.brn.f{transform:rotateY(90deg)}
-.brn.l{transform:translateZ(22px)}
-.brn.r{transform:translateZ(-22px)}
-.brn.g{transform:translateX(22px) rotateY(90deg)}
-.brn.h{transform:translateX(-22px) rotateY(90deg)}
-.avatar-wrap{position:relative;z-index:2;width:230px;height:230px;display:grid;place-items:center}
-#avatarImg{width:168px;height:168px;border-radius:50%;object-fit:cover;
-  box-shadow:0 0 50px rgba(0,243,255,.5),0 0 90px rgba(189,0,255,.35);
-  border:2px solid rgba(0,243,255,.5);filter:saturate(1.1) contrast(1.05);transition:filter .4s,transform .4s}
-.halo{position:absolute;width:230px;height:230px;border-radius:50%;border:1px solid rgba(0,243,255,.4);
-  box-shadow:0 0 22px rgba(0,243,255,.4),inset 0 0 22px rgba(0,243,255,.3);animation:spin 22s linear infinite}
-.halo.b{width:262px;height:262px;border-color:rgba(189,0,255,.35);animation-duration:30s;animation-direction:reverse}
-.faceui{position:absolute;inset:0;pointer-events:none}
-.faceui .pt{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
-.scan{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);
-  box-shadow:0 0 10px var(--cyan);animation:scan 3.5s linear infinite}
-@keyframes scan{0%{top:6%}100%{top:94%}}
-body[data-moon="locked"] #avatarImg{filter:grayscale(.8) brightness(.55) blur(1px)}
-body[data-moon="thinking"] #avatarImg{filter:hue-rotate(25deg) brightness(1.15)}
-body[data-moon="working"] #avatarImg{animation:bp 1s infinite}
-body[data-moon="speaking"] #avatarImg{filter:brightness(1.3) drop-shadow(0 0 22px var(--pink));transform:scale(1.04)}
-body[data-moon="listening"] #avatarImg{filter:brightness(1.18) drop-shadow(0 0 16px var(--cyan));transform:scale(1.02)}
-@keyframes bp{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
-.slabel{color:var(--pink);font-weight:700;letter-spacing:2px;text-shadow:0 0 12px var(--pink);font-size:13px}
+/* center neural viz */
+.stage{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;overflow:hidden}
+#waves{position:absolute;inset:0;width:100%;height:100%}
+.avatar-wrap{position:relative;z-index:2;width:150px;height:150px;display:grid;place-items:center;margin-bottom:6px}
+#avatarImg{width:128px;height:128px;border-radius:50%;object-fit:cover;border:2px solid rgba(0,243,255,.5);
+  box-shadow:0 0 44px rgba(0,243,255,.5),0 0 80px rgba(189,0,255,.3);filter:saturate(1.1)}
+.halo{position:absolute;width:150px;height:150px;border-radius:50%;border:1px solid rgba(0,243,255,.4);
+  box-shadow:0 0 18px rgba(0,243,255,.4),inset 0 0 18px rgba(0,243,255,.3);animation:spin 22s linear infinite}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.slabel{color:var(--pink);font-weight:700;letter-spacing:2px;text-shadow:0 0 12px var(--pink);font-size:13px;text-align:center}
+.statestr{color:#fff;font-size:12px;letter-spacing:1px}
 .sicons{display:flex;gap:7px;margin-top:6px}
 .sicons .si{flex:1;text-align:center;font-size:9px;padding:5px 2px;border:1px solid var(--edge);border-radius:7px;opacity:.5;letter-spacing:1px}
 .sicons .si.on{opacity:1;background:rgba(255,61,203,.18);border-color:var(--pink);color:#fff;box-shadow:0 0 12px rgba(255,61,203,.4)}
-#wave{width:100%;height:42px;margin-top:4px}
+#flow{width:100%;height:34px;margin-top:4px}
 .chat{flex:1;display:flex;flex-direction:column;gap:6px;min-height:0}
-.chatwin{background:rgba(2,8,16,.5);backdrop-filter:blur(6px);border:1px solid var(--edge);border-radius:10px;
-  padding:10px;overflow:auto;flex:1;font-size:12px}
+.composer{display:flex;gap:7px}
+.composer input{flex:1;padding:10px 12px;border-radius:9px;border:1px solid var(--edge);background:rgba(2,10,20,.6);color:var(--txt);font-size:13px;outline:none}
+.composer input:focus{box-shadow:0 0 12px rgba(0,243,255,.3)}
+.composer button{padding:10px 16px;border-radius:9px;border:none;background:linear-gradient(90deg,var(--cyan),var(--pink));color:#041018;font-weight:800;cursor:pointer;letter-spacing:1px}
+.composer button:hover{filter:brightness(1.12)}
+.chatwin{background:rgba(2,8,16,.5);border:1px solid var(--edge);border-radius:10px;padding:10px;overflow:auto;flex:1;font-size:12px}
 .msg{margin:6px 0;display:flex}.msg.u{justify-content:flex-end}
 .msg .b{display:inline-block;padding:7px 11px;border-radius:11px;max-width:82%;white-space:pre-wrap;line-height:1.45}
 .msg.u .b{background:linear-gradient(90deg,rgba(0,180,255,.18),rgba(0,255,200,.08));color:#eafdff;border:1px solid rgba(0,243,255,.25)}
 .msg.a .b{background:linear-gradient(90deg,rgba(189,0,255,.16),rgba(0,0,0,.2));color:#ffe9fb;border:1px solid rgba(189,0,255,.25)}
-.composer{display:flex;gap:7px}
-.composer input{flex:1;padding:10px 12px;border-radius:9px;border:1px solid var(--edge);background:rgba(2,10,20,.6);
-  color:var(--txt);font-size:13px;outline:none}
-.composer input:focus{box-shadow:0 0 12px rgba(0,243,255,.3)}
-.composer button{padding:10px 16px;border-radius:9px;border:none;background:linear-gradient(90deg,var(--cyan),var(--pink));
-  color:#041018;font-weight:800;cursor:pointer;letter-spacing:1px}
-.composer button:hover{filter:brightness(1.12)}
-.events{font-size:10.5px;line-height:1.5;max-height:150px;overflow:auto;color:var(--cyan);opacity:.85}
-.wf{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
-.wf .w{font-size:9px;text-align:center;padding:6px 2px;border:1px solid var(--edge);border-radius:7px;opacity:.45;letter-spacing:1px}
-.wf .w.on{opacity:1;border-color:var(--pink);color:#fff;background:rgba(255,61,203,.16);box-shadow:0 0 12px rgba(255,61,203,.35)}
-.tabs{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
+.tabs{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
 .tabs .t{font-size:9.5px;padding:6px 9px;border:1px solid var(--edge);border-radius:8px;cursor:pointer;opacity:.7;letter-spacing:1px}
 .tabs .t.on{opacity:1;color:#fff;border-color:var(--pink);background:rgba(255,61,203,.16)}
-.deck{display:flex;gap:10px}
-.deck .panel{flex:1}
-.viz{width:74px;height:74px;border-radius:50%;border:2px solid var(--edge);position:relative;display:grid;place-items:center;
-  box-shadow:0 0 14px rgba(0,243,255,.3);background:radial-gradient(circle,rgba(0,243,255,.12),transparent)}
-.viz .mic{font-size:22px}
 .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
 .tags span{font-size:10px;padding:3px 8px;border:1px solid var(--edge);border-radius:11px;cursor:pointer;color:var(--cyan)}
-.qa{margin:4px 0;width:100%;padding:8px;border-radius:8px;border:1px solid var(--edge);background:rgba(0,243,255,.07);
-  color:var(--txt);cursor:pointer;font-size:11px;letter-spacing:1px}
+.qa{margin:4px 0;width:100%;padding:8px;border-radius:8px;border:1px solid var(--edge);background:rgba(0,243,255,.07);color:var(--txt);cursor:pointer;font-size:11px;letter-spacing:1px}
 .qa:hover{background:rgba(0,243,255,.18);box-shadow:0 0 10px rgba(0,243,255,.3)}
+.voice-ico{width:54px;height:54px;border-radius:50%;border:2px solid var(--edge);display:grid;place-items:center;box-shadow:0 0 14px rgba(0,243,255,.3);background:radial-gradient(circle,rgba(0,243,255,.12),transparent);font-size:20px}
+.events{font-size:10.5px;line-height:1.5;max-height:110px;overflow:auto;color:var(--cyan);opacity:.85}
 .foot{height:28px;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:var(--dim);letter-spacing:1px}
-.code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(--cyan)}
+code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(--cyan)}
 .atag{display:inline-block;font-size:9px;padding:2px 6px;margin:2px;border:1px solid var(--edge);border-radius:9px;color:var(--cyan);background:rgba(0,243,255,.06)}
-#agentList{max-height:120px;overflow:auto;margin-top:4px}
 </style>
 </head>
 <body data-moon="idle">
 <div class="moon-root">
-  <!-- HEADER -->
   <header class="hdr panel">
     <div class="brand"><div class="logo"></div><b>MOON NEURAL AGENT</b></div>
     <div class="center-h"><h1>MOON NEURAL COMMAND CENTER</h1><div class="sub">HUMAN_BRAIN_NEURAL_WORKFLOW &bull; MOON_AGENT_ORCHESTRATOR</div></div>
@@ -150,75 +108,50 @@ body[data-moon="listening"] #avatarImg{filter:brightness(1.18) drop-shadow(0 0 1
         <div class="row"><span>SYSTEM</span><span class="active">ACTIVE</span></div>
       </div>
       <div class="panel"><div class="panel-title">Memory Core</div>
-        <div class="row"><span>EPISODIC</span><span id="epCount">—</span></div>
-        <div class="row"><span>VECTOR DB</span><span id="vecCount">—</span></div>
-        <div class="row"><span>WORKING</span><span id="stmCount">—</span></div>
+        <div class="row"><span>EPISODIC</span><span class="bar"><i id="epBar" style="width:0%"></i></span></div>
+        <div class="row"><span>VECTOR DB</span><span class="bar"><i id="vecBar" style="width:0%"></i></span></div>
+        <div class="row"><span>WORKING</span><span class="bar"><i id="stmBar2" style="width:0%"></i></span></div>
         <div class="row"><span>LONG TERM</span><span class="bar"><i id="ltmBar" style="width:0%"></i></span></div>
-        <div class="row" style="opacity:.7"><span>ENTRIES</span><span id="ltmCount">—</span></div>
+        <div class="row" style="opacity:.7"><span>ENTRIES</span><span id="ltmCount">0</span></div>
       </div>
-      <div class="panel"><div class="panel-title">Knowledge Base</div>
-        <div class="row"><span>GRAPH</span><span id="kbCount">—</span></div>
-        <div class="row"><span>REAL TIME</span><span class="active">LIVE</span></div>
-        <div class="row"><span>DOC STORE</span><span id="kbCount2">—</span></div>
-        <div class="row"><span>CONTEXT</span><span class="active">LINKED</span></div>
-      </div>
-      <div class="panel"><div class="panel-title">System Overview</div>
-        <div class="gline"><small>CPU</small><div class="gauge" id="gCpu" style="--v:0%"><span>0%</span></div></div>
-        <div class="gline"><small>RAM</small><div class="gauge" id="gRam" style="--v:0%"><span id="ramTxt">0/0MB</span></div></div>
-        <div class="gline"><small>GPU</small><div class="gauge" style="--v:0%"><span>CPU</span></div></div>
-        <div class="gline"><small>NET</small><div class="gauge" style="--v:0%"><span id="netTxt">0MB</span></div></div>
+      <div class="panel"><div class="panel-title">Voice Control</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="voice-ico">🎙</div>
+          <div style="flex:1">
+            <div class="row"><span>MODE</span><span id="voiceMode">AUTO</span></div>
+            <button class="qa" id="muteBtn" onclick="toggleMute()">MUTE: OFF</button>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- CENTER -->
     <div class="center">
       <div class="stage">
-        <canvas id="synapse"></canvas>
-        <div class="brain3d"><div class="spin">
-          <div class="brn l"></div><div class="brn r"></div><div class="brn g"></div><div class="brn h"></div><div class="brn f"></div>
-        </div></div>
+        <canvas id="waves"></canvas>
         <div class="avatar-wrap">
-          <div class="halo"></div><div class="halo b"></div>
+          <div class="halo"></div>
           <img id="avatarImg" src="/avatar.svg" alt="MOON" onerror="this.style.display='none'"/>
-          <div class="faceui">
-            <div class="pt" style="left:34%;top:30%"></div>
-            <div class="pt" style="left:62%;top:34%"></div>
-            <div class="pt" style="left:50%;top:52%"></div>
-            <div class="pt" style="left:40%;top:70%"></div>
-            <div class="pt" style="left:60%;top:70%"></div>
-          </div>
-          <script>
-          // Prefer a real photo if the operator drops one in (web/avatar.png or web/avatar.gif).
-          (function(){
-            var img=document.getElementById('avatarImg');
-            var candidates=['/avatar.png','/avatar.gif'];
-            (function tryNext(i){
-              if(i>=candidates.length) return;
-              var t=new Image();
-              t.onload=function(){ img.src=candidates[i]; };
-              t.onerror=function(){ tryNext(i+1); };
-              t.src=candidates[i];
-            })(0);
-          })();
-          </script>
-          <div class="scan"></div>
         </div>
-      </div>
-      <div style="text-align:center">
         <div class="slabel" id="moontag">MOON IS ACTIVE AND AWARE</div>
-        <div>STATE: <strong id="state">IDLE</strong></div>
+        <div class="statestr">STATE: <strong id="state">IDLE</strong></div>
         <div class="sicons">
           <div class="si" data-s="idle">IDLE</div><div class="si" data-s="listening">LISTEN</div>
           <div class="si" data-s="thinking">THINK</div><div class="si" data-s="working">EXEC</div>
           <div class="si" data-s="speaking">SPEAK</div>
         </div>
-        <canvas id="wave"></canvas>
+        <canvas id="flow"></canvas>
       </div>
       <div class="chat">
         <div class="chatwin mono" id="chat"></div>
-        <div class="composer">
-          <input id="input" placeholder="MOON > Type your command or ask MOON..." onkeydown="if(event.key==='Enter')send()"/>
-          <button onclick="send()">SEND</button>
+        <div class="composer"><input id="input" placeholder="MOON > Type your command or ask MOON..." onkeydown="if(event.key==='Enter')send()"/><button onclick="send()">SEND</button></div>
+      </div>
+      <div class="panel"><div class="panel-title">Command Palette</div>
+        <div class="composer"><input id="cp" placeholder="MOON > command..." onkeydown="if(event.key==='Enter')quick(this.value)"/><button onclick="quick(document.getElementById('cp').value)">SEND</button></div>
+        <div class="tags">
+          <span onclick="quick('system status')">system status</span><span onclick="quick('analyze workflow')">analyze workflow</span>
+          <span onclick="quick('memory search')">memory search</span><span onclick="quick('open diagnostics')">open diagnostics</span>
+          <span onclick="quick('run automation')">run automation</span><span onclick="quick('help')">help</span>
         </div>
       </div>
     </div>
@@ -233,67 +166,29 @@ body[data-moon="listening"] #avatarImg{filter:brightness(1.18) drop-shadow(0 0 1
         <div class="gline"><small>EMOT</small><div class="gauge" style="--v:60%"><span>●</span></div><span class="standby">CALM</span></div>
         <div class="gline"><small>LEARN</small><div class="gauge" style="--v:96%"><span>●</span></div><span class="active">ACTIVE</span></div>
       </div>
-      <div class="panel"><div class="panel-title">Workflow Process</div>
-        <div class="wf" id="wfGrid">
-          <div class="w" data-s="input">INPUT</div><div class="w" data-s="memory">MEMORY</div>
-          <div class="w" data-s="knowledge">KNOW</div><div class="w" data-s="reasoning">REASON</div>
-          <div class="w" data-s="planner">PLAN</div><div class="w" data-s="tools">TOOLS</div>
-          <div class="w" data-s="execution">EXEC</div><div class="w" data-s="verify">VERIFY</div>
+      <div class="panel"><div class="panel-title">Command</div>
+        <div class="composer"><input id="cmd2" placeholder="MOON > Type your command or ask MOON..." onkeydown="if(event.key==='Enter'){input.value=this.value;send()}"/><button onclick="input.value=document.getElementById('cmd2').value;send()">SEND</button></div>
+        <div class="tabs" id="tabs">
+          <div class="t on">DASHBOARD</div><div class="t">DIAGNOSTICS</div><div class="t">MEMORY</div><div class="t">KNOWLEDGE</div>
+          <div class="t">TOOLS</div><div class="t">AUTOMATION</div><div class="t">SECURITY</div><div class="t">NETWORK</div><div class="t">SETTINGS</div>
         </div>
       </div>
-      <div class="panel"><div class="panel-title">Agent Roster (<span id="agents">0</span>)</div>
-        <div id="agentList"></div>
+      <div class="panel"><div class="panel-title">Quick Actions</div>
+        <button class="qa" onclick="runAction('system status')">SYSTEM STATUS</button>
+        <button class="qa" onclick="runAction('run diagnostics on your subsystems')">RUN DIAGNOSTICS</button>
+        <button class="qa" onclick="runAction('show active workflow steps')">ACTIVE WORKFLOW</button>
+        <button class="qa" onclick="runAction('memory search')">MEMORY SEARCH</button>
+        <button class="qa" onclick="runAction('query knowledge base')">KNOWLEDGE BASE</button>
+        <button class="qa" onclick="runAction('stop current tasks')">STOP TASKS</button>
       </div>
-      <div class="panel"><div class="panel-title">Environment</div>
-        <div class="row"><span>EARTH</span><span class="active">ONLINE</span></div>
-        <div class="row"><span>SYS TEMP</span><span id="temp">42&deg;C</span></div>
-        <div class="row"><span>ENERGY</span><span class="bar"><i style="width:87%"></i></span></div>
-        <div class="row"><span>UPTIME</span><span id="uptime">—</span></div>
-        <div class="row"><span>QLINK</span><span class="active">STABLE</span></div>
+      <div class="panel"><div class="panel-title">MOON AI Agent</div>
+        <div class="row"><span>VERSION</span><span id="ver">2.1.0</span></div>
+        <div class="row"><span>STATUS</span><span class="active">ONLINE</span></div>
+        <div class="row"><span>MODEL</span><span id="model">—</span></div>
+        <div class="row"><span>LEARNING</span><span class="active">CONTINUOUS</span></div>
+        <div class="row"><span>LOCK</span><span id="lockState" class="standby">LOCKED</span></div>
       </div>
       <div class="panel"><div class="panel-title">Live Events</div><div class="events mono" id="log"></div></div>
-    </div>
-  </div>
-
-  <!-- FOOTER DECK -->
-  <div class="tabs" id="tabs">
-    <div class="t on">DASHBOARD</div><div class="t">DIAGNOSTICS</div><div class="t">MEMORY</div><div class="t">KNOWLEDGE</div>
-    <div class="t">TOOLS</div><div class="t">AUTOMATION</div><div class="t">SECURITY</div><div class="t">NETWORK</div><div class="t">SETTINGS</div>
-  </div>
-  <div class="deck">
-    <div class="panel">
-      <div class="panel-title">Voice Control</div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <div class="viz"><span class="mic">🎙</span></div>
-        <div style="flex:1"><div class="row"><span>MODE</span><span id="voiceMode">AUTO</span></div>
-          <button class="qa" id="muteBtn" onclick="toggleMute()">MUTE: OFF</button></div>
-      </div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">Command Palette</div>
-      <div class="composer"><input id="cp" placeholder="MOON > command..." onkeydown="if(event.key==='Enter')quick(this.value)"/><button onclick="quick(document.getElementById('cp').value)">SEND</button></div>
-      <div class="tags">
-        <span onclick="quick('system status')">system status</span><span onclick="quick('analyze workflow')">analyze workflow</span>
-        <span onclick="quick('memory search')">memory search</span><span onclick="quick('open diagnostics')">open diagnostics</span>
-        <span onclick="quick('run automation')">run automation</span><span onclick="quick('help')">help</span>
-      </div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">Quick Actions</div>
-      <button class="qa" onclick="runAction('system status')">SYSTEM STATUS</button>
-      <button class="qa" onclick="runAction('run diagnostics on your subsystems')">RUN DIAGNOSTICS</button>
-      <button class="qa" onclick="runAction('show active workflow steps')">ACTIVE WORKFLOW</button>
-      <button class="qa" onclick="runAction('memory search')">MEMORY SEARCH</button>
-      <button class="qa" onclick="runAction('query knowledge base')">KNOWLEDGE BASE</button>
-      <button class="qa" onclick="runAction('stop current tasks')">STOP TASKS</button>
-    </div>
-    <div class="panel">
-      <div class="panel-title">MOON AI Agent</div>
-      <div class="row"><span>VERSION</span><span id="ver">2.1.0</span></div>
-      <div class="row"><span>STATUS</span><span class="active">ONLINE</span></div>
-      <div class="row"><span>MODEL</span><span id="model">—</span></div>
-      <div class="row"><span>LEARNING</span><span class="active">CONTINUOUS</span></div>
-      <div class="row"><span>LOCK</span><span id="lockState" class="standby">LOCKED</span></div>
     </div>
   </div>
 
@@ -301,100 +196,74 @@ body[data-moon="listening"] #avatarImg{filter:brightness(1.18) drop-shadow(0 0 1
 </div>
 
 <script>
-const WS = (()=>{const p=location.protocol==='https:'?'wss':'ws';return `${p}://${location.hostname||'127.0.0.1'}:8777/ws`;})();
-let ws, connected=false;
-const chat=document.getElementById('chat'), input=document.getElementById('input'),
-      log=document.getElementById('log'), stateEl=document.getElementById('state'),
-      slabel=document.getElementById('moontag');
+const WS=(()=>{const p=location.protocol==='https:'?'wss':'ws';return `${p}://${location.hostname||'127.0.0.1'}:8777/ws`;})();
+let ws,connected=false;
+const chat=document.getElementById('chat'),input=document.getElementById('input'),log=document.getElementById('log'),stateEl=document.getElementById('state');
 const MAP={input:'input',routing:'input',memory:'memory',thinking:'reasoning',tool_call:'tools',reflection:'verify',consistency:'verify',speaking:'execution'};
-function setMoon(s){ stateEl.textContent=s.toUpperCase(); document.body.dataset.moon=s;
-  document.querySelectorAll('.sicons .si').forEach(e=>e.classList.toggle('on',e.dataset.s===s)); }
-function hlWF(stage){ const k=MAP[stage]||stage;
-  document.querySelectorAll('#wfGrid .w').forEach(e=>e.classList.toggle('on',e.dataset.s===k && stage!=='speaking')); }
-function push(s){ const d=document.createElement('div'); d.textContent=`[${new Date().toLocaleTimeString()}] ${s}`; log.prepend(d); }
-function addMsg(role,c){ const m=document.createElement('div'); m.className='msg '+(role==='user'?'u':'a');
-  const b=document.createElement('div'); b.className='b'; b.textContent=c; m.appendChild(b); chat.appendChild(m); chat.scrollTop=chat.scrollHeight; return b; }
+function setMoon(s){stateEl.textContent=s.toUpperCase();document.body.dataset.moon=s;
+  document.querySelectorAll('.sicons .si').forEach(e=>e.classList.toggle('on',e.dataset.s===s));}
+function hlWF(stage){const k=MAP[stage]||stage;document.querySelectorAll('.wf .w').forEach(e=>e.classList.toggle('on',e.dataset.s===k));}
+function push(s){const d=document.createElement('div');d.textContent=`[${new Date().toLocaleTimeString()}] ${s}`;log.prepend(d);}
+function addMsg(role,c){const m=document.createElement('div');m.className='msg '+(role==='user'?'u':'a');const b=document.createElement('div');b.className='b';b.textContent=c;m.appendChild(b);chat.appendChild(m);chat.scrollTop=chat.scrollHeight;return b;}
 function connect(){
   ws=new WebSocket(WS);
   ws.onopen=()=>{connected=true;push('[CONNECT] terminal linked');ws.send(JSON.stringify({action:'status'}));};
   ws.onclose=()=>{connected=false;push('[DISCONNECT] retrying...');setTimeout(connect,2000);};
-  ws.onmessage=e=>{ let d; try{d=JSON.parse(e.data);}catch{return;}
+  ws.onmessage=e=>{let d;try{d=JSON.parse(e.data);}catch{return;}
     if(d.type==='ready')push('[READY] '+d.message);
     else if(d.type==='status')apply(d);
     else if(d.type==='wake'){setMoon('listening');push('[WAKE] '+d.message);if(d.locked)setMoon('locked');}
-    else if(d.type==='workflow'){if(d.stage!=='speaking')push('[WF] '+d.stage+(d.detail?': '+d.detail:''));hlWF(d.stage);
-      if(d.stage==='speaking')setMoon('speaking'); if(d.stage==='locked')setMoon('locked');}
-    else if(d.type==='forward'){ // button routed to a real sub-action
-      if(ws&&connected)ws.send(JSON.stringify({action:d.action,query:d.query||'summary'})); }
+    else if(d.type==='workflow'){if(d.stage!=='speaking')push('[WF] '+d.stage+(d.detail?': '+d.detail:''));if(d.stage==='speaking')setMoon('speaking');if(d.stage==='locked')setMoon('locked');}
+    else if(d.type==='forward'){if(ws&&connected)ws.send(JSON.stringify({action:d.action,query:d.query||'summary'}));}
     else if(d.type==='assistant_start'){setMoon('thinking');addMsg('assistant','');}
     else if(d.type==='assistant_chunk'){const ms=chat.querySelectorAll('.msg.a .b');const l=ms[ms.length-1];if(l)l.textContent+=d.content;chat.scrollTop=chat.scrollHeight;}
     else if(d.type==='assistant_done'){setMoon(d.locked?'locked':'idle');push('[DONE] '+d.elapsed+'s');}
     else if(d.type==='error')push('[ERR] '+d.error);
   };
 }
-function send(){ const t=input.value.trim(); if(!t)return;
+function send(){const t=input.value.trim();if(!t)return;
   if(/^moon\b/i.test(t))ws.send(JSON.stringify({action:'wake'}));
-  addMsg('user',t); if(ws&&connected)ws.send(JSON.stringify({action:'send_message',text:t})); else push('not connected'); input.value=''; }
-function quick(t){ t=(t||'').trim(); if(!t)return; input.value=t; send(); }
-function runAction(c){ addMsg('user','▶ '+c); if(ws&&connected)ws.send(JSON.stringify({action:'run',command:c})); else push('not connected'); }
+  addMsg('user',t);if(ws&&connected)ws.send(JSON.stringify({action:'send_message',text:t}));else push('not connected');input.value='';}
+function quick(t){t=(t||'').trim();if(!t)return;input.value=t;send();}
+function runAction(c){addMsg('user','▶ '+c);if(ws&&connected)ws.send(JSON.stringify({action:'run',command:c}));else push('not connected');}
 function apply(s){
-  document.getElementById('agents').textContent=s.agents;
   document.getElementById('ver').textContent=s.version;
-  document.getElementById('model').textContent=s.model + (s.strong_model?(' / '+s.strong_model):'');
-  const ls=document.getElementById('lockState'); ls.textContent=s.locked?'LOCKED':'UNLOCKED'; ls.className=s.locked?'standby':'active';
+  document.getElementById('model').textContent=s.model+(s.strong_model?(' / '+s.strong_model):'');
+  const ls=document.getElementById('lockState');ls.textContent=s.locked?'LOCKED':'UNLOCKED';ls.className=s.locked?'standby':'active';
   if(s.locked)setMoon('locked');
-  // real memory counts
   const m=s.memory||{};
-  const ltm=document.getElementById('ltmCount'); if(ltm)ltm.textContent=m.long_term||0;
+  document.getElementById('ltmCount').textContent=m.long_term||0;
   document.getElementById('ltmBar').style.width=Math.min(100,(m.long_term||0)*4)+'%';
-  document.getElementById('epCount').textContent=m.episodic||0;
-  document.getElementById('vecCount').textContent=m.vector||0;
-  document.getElementById('kbCount').textContent=m.kb_docs||0;
-  const kc2=document.getElementById('kbCount2'); if(kc2)kc2.textContent=m.kb_docs||0;
-  document.getElementById('stmCount').textContent=m.short_term||0;
-  // real system metrics -> gauges
-  const sys=s.system||{};
-  setGauge('gCpu',sys.cpu||0); setGauge('gRam',sys.ram_pct||0);
-  document.getElementById('temp').textContent=(sys.temp_c||0)+'°C';
-  document.getElementById('netTxt').textContent=(sys.net||0)+'MB';
-  document.getElementById('ramTxt').textContent=(sys.ram_used_mb||0)+'/'+(sys.ram_total_mb||0)+'MB';
-  document.getElementById('uptime').textContent=(parseFloat(s.uptime||0)/86400).toFixed(2)+'d';
-  // agent list (real)
-  const al=document.getElementById('agentList'); if(al){ al.innerHTML=(s.agent_list||[]).map(n=>`<span class="atag">${n}</span>`).join(''); }
+  document.getElementById('epBar').style.width=Math.min(100,(m.episodic||0)*12)+'%';
+  document.getElementById('vecBar').style.width=Math.min(100,(m.vector||0)/8)+'%';
+  document.getElementById('stmBar2').style.width=Math.min(100,(m.short_term||0)*10)+'%';
 }
-function setGauge(id,v){ const g=document.getElementById(id); if(!g)return; g.style.setProperty('--v',Math.max(2,Math.min(100,v))+'%'); const sp=g.querySelector('span'); if(sp)sp.textContent=Math.round(v)+'%'; }
-function switchTab(name){
-  document.querySelectorAll('#tabs .t').forEach(x=>x.classList.toggle('on',x.textContent.toUpperCase()===name));
-  const views={DASHBOARD:0,DIAGNOSTICS:1,MEMORY:2,KNOWLEDGE:3,TOOLS:4,AUTOMATION:5,SECURITY:6,NETWORK:7,SETTINGS:8};
-  push('[VIEW] '+name);
-  // route to a real action where one exists
+function setGauge(id,v){const g=document.getElementById(id);if(!g)return;g.style.setProperty('--v',Math.max(2,Math.min(100,v))+'%');const sp=g.querySelector('span');if(sp)sp.textContent=Math.round(v)+'%';}
+function switchTab(name){document.querySelectorAll('#tabs .t').forEach(x=>x.classList.toggle('on',x.textContent.toUpperCase()===name));push('[VIEW] '+name);
   const map={DIAGNOSTICS:'diagnostics',MEMORY:'memory_search',KNOWLEDGE:'knowledge',SECURITY:'diagnostics'};
-  if(map[name]&&ws&&connected){ ws.send(JSON.stringify({action:map[name],query:'summary'})); }
-}
-function toggleMute(){ const b=document.getElementById('muteBtn'); const on=b.textContent.includes('OFF'); b.textContent='MUTE: '+(on?'ON':'OFF'); push('[VOICE] mute '+(on?'on':'off')); }
+  if(map[name]&&ws&&connected)ws.send(JSON.stringify({action:map[name],query:'summary'}));}
+function toggleMute(){const b=document.getElementById('muteBtn');const on=b.textContent.includes('OFF');b.textContent='MUTE: '+(on?'ON':'OFF');push('[VOICE] mute '+(on?'on':'off'));}
 document.querySelectorAll('#tabs .t').forEach(t=>t.onclick=()=>switchTab(t.textContent.trim().toUpperCase()));
-function tick(){ const n=new Date(); document.getElementById('date').textContent=n.toLocaleDateString('en-GB'); document.getElementById('time').textContent=n.toLocaleTimeString(); }
-setInterval(tick,1000); tick();
-// heartbeat: keep HUD live with real data
-setInterval(()=>{ if(ws&&connected)ws.send(JSON.stringify({action:'status'})); }, 5000);
-
-/* neural synapse particle web */
-(function(){ const c=document.getElementById('synapse'),x=c.getContext('2d'); let W,H,pts;
-  function init(){ const r=c.getBoundingClientRect(); W=c.width=r.width; H=c.height=r.height;
-    pts=Array.from({length:46},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25})); }
-  function loop(){ if(!W)init(); x.clearRect(0,0,W,H);
-    for(const p of pts){ p.x+=p.vx;p.y+=p.vy; if(p.x<0||p.x>W)p.vx*=-1; if(p.y<0||p.y>H)p.vy*=-1;
-      x.beginPath();x.arc(p.x,p.y,1.6,0,7);x.fillStyle='rgba(0,243,255,.8)';x.fill(); }
-    for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){ const a=pts[i],b=pts[j],
-      dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy); if(d<120){x.beginPath();x.moveTo(a.x,a.y);x.lineTo(b.x,b.y);
-        x.strokeStyle=`rgba(189,0,255,${.18*(1-d/120)})`;x.lineWidth=1;x.stroke();} }
-    requestAnimationFrame(loop); }
-  init(); loop(); window.addEventListener('resize',init); })();
-/* waveform */
-(function(){ const c=document.getElementById('wave'),x=c.getContext('2d'); const DPR=window.devicePixelRatio||1;
-  const w=c.width=800*DPR,h=c.height=42*DPR;c.style.width='100%';c.style.height='42px';let ph=0;
-  const g=x.createLinearGradient(0,0,w,0);g.addColorStop(0,'#00f3ff');g.addColorStop(1,'#bd00ff');
-  (function l(){ x.clearRect(0,0,w,h); for(let y=0;y<3;y++){x.beginPath(); for(let px=0;px<w;px++){ const v=Math.sin((px/w)*Math.PI*4+ph+y)*(11-y*3)*DPR; if(px===0)x.moveTo(px,h/2+v);else x.lineTo(px,h/2+v);} x.strokeStyle=g;x.lineWidth=1.3*DPR-y*.3*DPR;x.stroke();} ph+=.06; requestAnimationFrame(l); })(); })();
+function tick(){const n=new Date();document.getElementById('date').textContent=n.toLocaleDateString('en-GB');document.getElementById('time').textContent=n.toLocaleTimeString();}
+setInterval(tick,1000);tick();
+setInterval(()=>{if(ws&&connected)ws.send(JSON.stringify({action:'status'}));},5000);
+/* neural activity waves */
+(function(){const c=document.getElementById('waves'),x=c.getContext('2d');let W,H;
+  function init(){const r=c.getBoundingClientRect();W=c.width=r.width;H=c.height=r.height;}
+  function loop(){if(!W)init();x.clearRect(0,0,W,H);
+    for(let y=0;y<3;y++){x.beginPath();for(let px=0;px<W;px++){const v=Math.sin(px/W*Math.PI*3+(performance.now()/600)+y)*(26-y*6);if(px===0)x.moveTo(px,H/2+v);else x.lineTo(px,H/2+v);}
+      const g=x.createLinearGradient(0,0,W,0);g.addColorStop(0,'#00f3ff');g.addColorStop(.5,'#bd00ff');g.addColorStop(1,'#ff3dcb');
+      x.strokeStyle=g;x.lineWidth=2.2-y*.4;x.globalAlpha=.7-y*.15;x.stroke();x.globalAlpha=1;}
+    requestAnimationFrame(loop);}
+  init();loop();window.addEventListener('resize',init);})();
+/* flowing lines under state */
+(function(){const c=document.getElementById('flow'),x=c.getContext('2d');let W,H;
+  function init(){const r=c.getBoundingClientRect();W=c.width=r.width;H=c.height=r.height;}
+  function loop(){if(!W)init();x.clearRect(0,0,W,H);
+    for(let k=0;k<3;k++){x.beginPath();for(let px=0;px<W;px++){const v=Math.sin(px/W*Math.PI*2+(performance.now()/800)+k*1.3)*(8-k*2);if(px===0)x.moveTo(px,H/2+v);else x.lineTo(px,H/2+v);}
+      x.strokeStyle=k===1?'#ff3dcb':(k===0?'#00f3ff':'#bd00ff');x.lineWidth=1.4;x.globalAlpha=.6;x.stroke();x.globalAlpha=1;}
+    requestAnimationFrame(loop);}
+  init();loop();window.addEventListener('resize',init);})();
 connect();
 </script>
 </body>
