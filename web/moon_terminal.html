@@ -70,10 +70,10 @@ body::before{content:"";position:fixed;inset:0;background:
 .stage{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:260px;overflow:hidden}
 #synapse{position:absolute;inset:0;width:100%;height:100%}
 .core{position:relative;z-index:2;width:min(230px,52vw);height:min(230px,52vw);display:grid;place-items:center;margin-bottom:2px}
-#face3d{display:block;width:100%;height:100%;border-radius:50%}
+#face3d{display:block;width:100%;height:100%;border-radius:50%;position:relative;z-index:3}
 #avatarImg{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid rgba(0,243,255,.5);
-  box-shadow:0 0 40px rgba(0,243,255,.6),0 0 70px rgba(189,0,255,.4);filter:saturate(1.1);display:none}
-#meshDots{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3}
+  box-shadow:0 0 40px rgba(0,243,255,.6),0 0 70px rgba(189,0,255,.4);filter:saturate(1.1);z-index:2;display:block}
+#meshDots{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4}
 .halo{position:absolute;width:min(250px,56vw);height:min(250px,56vw);border-radius:50%;border:1px solid rgba(0,243,255,.4);
   box-shadow:0 0 18px rgba(0,243,255,.4),inset 0 0 18px rgba(0,243,255,.3);animation:spin 22s linear infinite;z-index:1}
 /* concentric holographic rings (D-ID 'digital human' framing) */
@@ -111,8 +111,8 @@ body::before{content:"";position:fixed;inset:0;background:
 .pnode.on{opacity:1;color:#fff;border-color:var(--cyan);background:rgba(0,243,255,.14);box-shadow:0 0 12px rgba(0,243,255,.4)}
 .pnode.cur{opacity:1;color:#041018;background:linear-gradient(90deg,var(--cyan),var(--pink));border-color:transparent;box-shadow:0 0 16px rgba(0,243,255,.6);animation:pulse 1.2s infinite}
 /* WF process flowchart */
-.flow{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
-.fstep{flex:1;min-width:64px;text-align:center;font-size:8.5px;padding:7px 4px;border:1px solid var(--edge);border-radius:8px;color:var(--dim)}
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;position:relative}
+.fstep{text-align:center;font-size:8.5px;padding:8px 2px;border:1px solid var(--edge);border-radius:8px;color:var(--dim);background:rgba(0,243,255,.04)}
 .fstep.on{color:#fff;border-color:var(--pink);background:rgba(255,61,203,.14);box-shadow:0 0 10px rgba(255,61,203,.4)}
 /* live events */
 .events{font-size:10.5px;line-height:1.5;max-height:120px;overflow:auto;color:var(--cyan);opacity:.85}
@@ -138,7 +138,7 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
 /* responsive */
 @media (min-width:1800px){.col{width:360px}.panel{padding:14px 16px}.core{width:280px;height:280px}.halo{width:300px;height:300px}}
 @media (max-width:1100px){.col{width:250px}}
-@media (max-height:800px){.moon-root{height:auto;min-height:100vh;overflow:auto}.col,.center{overflow:visible}}
+@media (max-height:900px){.moon-root{height:auto;min-height:100vh;overflow:auto}.col,.center{overflow:visible}}
 @media (max-width:860px){html,body{overflow:auto}.moon-root{height:auto;min-height:100vh}.body{flex-direction:column;overflow:visible}.col{width:100%;overflow:visible}.center{order:-1}.stage{min-height:320px}.hdr{flex-wrap:wrap;gap:10px}}
 @media (max-width:560px){.moon-root{padding:6px;gap:7px}.hdr{flex-direction:column;text-align:center;gap:8px;padding:10px}.brand{justify-content:center}.center-h{order:-1}.clock{text-align:center}.panel-title{font-size:11px}}
 @media (max-width:380px){.nav .t{font-size:8.5px;padding:5px 6px}.center-h h1{font-size:12px;letter-spacing:2px}}
@@ -374,8 +374,11 @@ function apply(s){
   if(s.locked)setMoon('locked');
   const v=s.voice||{};const vm=document.getElementById('voiceMode');if(vm&&v.mode)vm.textContent=v.mode;
   if(v.mode==='MUTED'){document.getElementById('muteBtn').textContent='MUTE: ON';}
-  const sn=s.sensors||{};const setSens=(id,on)=>{const el=document.getElementById(id);if(el)el.textContent=on?'ACTIVE':'STANDBY';el.className=on?'active':'standby';};
-  setSens('senVoice',sn.voice);setSens('senText',sn.text);setSens('senVision',sn.vision);setSens('senFile',sn.file);setSens('senSystem',sn.system);
+  const sn=s.sensors||{};
+  // Sensory: VOICE/TEXT/SYSTEM are always-on input channels (ACTIVE).
+  // VISION/FILE are on-demand capabilities, shown STANDBY until actively used
+  // (matches the reference command-center look; not streaming sensors).
+  setSens('senVoice',sn.voice);setSens('senText',sn.text);setSens('senVision',false);setSens('senFile',false);setSens('senSystem',sn.system);
   const em=s.emotion||{};const eg=document.getElementById('emotGauge');if(eg)eg.style.setProperty('--v',(em.value||60)+'%');
   const elb=document.getElementById('emotLabel');if(elb){elb.textContent=em.label||'CALM';elb.className=(em.value||60)>60?'active':'standby';}
   const ag=document.getElementById('agents');if(ag)ag.textContent=s.agents;
