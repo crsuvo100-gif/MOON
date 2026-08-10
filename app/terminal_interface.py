@@ -386,31 +386,29 @@ async def _run_diagnostics(orch) -> dict:
 async def ws_endpoint(ws: WebSocket):
     await ws.accept()
     global _voice_muted
-    try:
-        await ws.send_json({"type": "ready", "message": "MOON terminal connected."})
-        orch = await _get_orchestrator()
+    orch = await _get_orchestrator()
+    # Serialize outbound frames so concurrent message-tasks never interleave.
+    _send_lock = asyncio.Lock()
 
-        async def stream_event(ev: dict):
-            # surface MOON's real workflow through the avatar (her "body")
+    async def send(**msg):
+        async with _send_lock:
             try:
-                await ws.send_json({"type": "workflow", "stage": ev.get("stage"), "detail": ev.get("detail", "")})
+                await ws.send_json(msg)
             except Exception:
                 pass
 
-        while True:
-            data = await ws.receive_json()
-            action = data.get("action")
+    async def stream_event(ev: dict):
+        # surface MOON's real workflow through the avatar (her "body")
+        await send(type="workflow", stage=ev.get("stage"), detail=ev.get("detail", ""))
 
-            if action == "wake":
-                # Wake word "Moon": avatar opens her eyes / enters listening state.
-                # Wake does NOT unlock -- only "love you 3000 Moon" unlocks.
-                await ws.send_json({"type": "wake", "message": "🌙 MOON is listening...", "locked": orch._lock.locked})
-                continue
-
-            elif action == "send_message":
+    async def _handle(data: dict):
+        """Process one user action in its own task (keeps the read loop free)."""
+        action = data.get("action")
+        try:
+            if action == "send_message":
                 text = data.get("text", "").strip()
                 if not text:
-                    continue
+                    return
                 # The unlock phrase (e.g. "love you 3000 Moon") must actually
                 # unlock MOON through the terminal. observe() returns a notice if
                 # the phrase is present and clears the lock; otherwise None.
@@ -419,17 +417,15 @@ async def ws_endpoint(ws: WebSocket):
                     unlock_notice = orch._lock.observe(text)
                 except Exception:
                     unlock_notice = None
-                await ws.send_json({"type": "assistant_start"})
+                await send(type="assistant_start")
                 t0 = 0.0
                 if orch._lock.locked:
                     # Still locked: MOON converses (wife persona / status /
                     # knowledge) but does NOT execute active operations.
+                    await send(type="workflow", stage="locked", detail="conversing (locked)")
                     if unlock_notice:
-                        # Phrase seen but lock still set (shouldn't happen) -- inform.
-                        await ws.send_json({"type": "workflow", "stage": "locked", "detail": "conversing (locked)"})
                         answer = unlock_notice
                     else:
-                        await ws.send_json({"type": "workflow", "stage": "locked", "detail": "conversing (locked)"})
                         try:
                             answer = await orch.quick_reply(text)
                         except Exception as e:  # noqa: BLE001
@@ -447,74 +443,71 @@ async def ws_endpoint(ws: WebSocket):
                         answer = result_task.result or "(no response)"
                     except Exception as e:  # noqa: BLE001
                         answer = f"[MOON error: {e}]"
-                await ws.send_json({"type": "workflow", "stage": "speaking", "detail": "forming response"})
+                await send(type="workflow", stage="speaking", detail="forming response")
                 for chunk in _stream_text(answer):
-                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
+                    await send(type="assistant_chunk", content=chunk)
                 audio = await _speak(answer)
                 if audio:
-                    await ws.send_json({"type": "audio", "format": "wav", "data": audio})
-                await ws.send_json({
-                    "type": "assistant_done",
-                    "elapsed": round(time.time() - t0, 2) if not orch._lock.locked else 0.0,
-                    "locked": orch._lock.locked,
-                })
+                    await send(type="audio", format="wav", data=audio)
+                await send(type="assistant_done",
+                           elapsed=round(time.time() - t0, 2) if not orch._lock.locked else 0.0,
+                           locked=orch._lock.locked)
             elif action == "diagnostics":
-                # Real self-check across MOON's subsystems.
-                await ws.send_json({"type": "assistant_start"})
-                await ws.send_json({"type": "workflow", "stage": "tools", "detail": "running diagnostics"})
+                await send(type="assistant_start")
+                await send(type="workflow", stage="tools", detail="running diagnostics")
                 diag = await _run_diagnostics(orch)
-                await ws.send_json({"type": "workflow", "stage": "speaking", "detail": "reporting"})
+                await send(type="workflow", stage="speaking", detail="reporting")
                 report = diag["summary"] + "\n" + "\n".join(f"[{s[1]}] {s[0]}: {s[2]}" for s in diag["checks"])
                 for chunk in _stream_text(report):
-                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
-                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "memory_search":
                 q = (data.get("query") or data.get("text") or "").strip()
                 if not q:
-                    continue
-                await ws.send_json({"type": "assistant_start"})
-                await ws.send_json({"type": "workflow", "stage": "memory", "detail": f"recalling '{q}'"})
+                    return
+                await send(type="assistant_start")
+                await send(type="workflow", stage="memory", detail=f"recalling '{q}'")
                 try:
                     hits = await orch._memory.recall(q, limit=5)
                     out = (f"Found {len(hits)} memory hit(s):\n" + "\n".join(f"- {h[:160]}" for h in hits)) if hits else "No matching memories."
                 except Exception as e:  # noqa: BLE001
                     out = f"[memory error: {e}]"
-                await ws.send_json({"type": "workflow", "stage": "speaking", "detail": "reporting"})
+                await send(type="workflow", stage="speaking", detail="reporting")
                 for chunk in _stream_text(out):
-                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
-                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "knowledge":
                 q = (data.get("query") or data.get("text") or "").strip()
                 if not q:
-                    continue
-                await ws.send_json({"type": "assistant_start"})
-                await ws.send_json({"type": "workflow", "stage": "knowledge", "detail": f"querying KB '{q}'"})
+                    return
+                await send(type="assistant_start")
+                await send(type="workflow", stage="knowledge", detail=f"querying KB '{q}'")
                 try:
                     hits = await orch._memory.semantic_recall(q, top_k=5)
                     out = (f"KB returned {len(hits)} chunk(s):\n" + "\n".join(f"- {h.get('chunk', str(h))[:160]}" for h in hits)) if hits else "No KB matches."
                 except Exception as e:  # noqa: BLE001
                     out = f"[kb error: {e}]"
-                await ws.send_json({"type": "workflow", "stage": "speaking", "detail": "reporting"})
+                await send(type="workflow", stage="speaking", detail="reporting")
                 for chunk in _stream_text(out):
-                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
-                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "run":
                 # Quick-action buttons: route to MOON's real subsystems when a
                 # direct function applies, else run through her brain.
                 cmd = (data.get("command") or "").strip().lower()
                 if not cmd:
-                    continue
+                    return
                 if "diagnostic" in cmd:
-                    await ws.send_json({"type": "forward", "action": "diagnostics"})
-                    continue
+                    await _handle({"action": "diagnostics"})
+                    return
                 if "memory" in cmd and "search" in cmd:
-                    await ws.send_json({"type": "forward", "action": "memory_search", "query": "recent"})
-                    continue
+                    await _handle({"action": "memory_search", "query": "recent"})
+                    return
                 if "knowledge" in cmd:
-                    await ws.send_json({"type": "forward", "action": "knowledge", "query": "summary"})
-                    continue
+                    await _handle({"action": "knowledge", "query": "summary"})
+                    return
                 # default: run through MOON's real brain
-                await ws.send_json({"type": "assistant_start"})
+                await send(type="assistant_start")
                 from app.models.task import Task
                 task = Task.create(data.get("command") or "", agent_name="auto")
                 t0 = time.time()
@@ -524,82 +517,104 @@ async def ws_endpoint(ws: WebSocket):
                 except Exception as e:  # noqa: BLE001
                     answer = f"[MOON error: {e}]"
                     _last_error = True
-                await ws.send_json({"type": "workflow", "stage": "speaking", "detail": "forming response"})
+                await send(type="workflow", stage="speaking", detail="forming response")
                 for chunk in _stream_text(answer):
-                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
+                    await send(type="assistant_chunk", content=chunk)
                 audio = await _speak(answer)
                 if audio:
-                    await ws.send_json({"type": "audio", "format": "wav", "data": audio})
-                await ws.send_json({"type": "assistant_done", "elapsed": round(time.time() - t0, 2), "locked": orch._lock.locked})
-            elif action == "status":
-                payload = await _moon_status(orch)
-                payload["voice"] = {
-                    "mode": "MUTED" if _voice_muted else "AUTO",
-                    "available": bool(_get_voice()),
-                }
-                await ws.send_json({"type": "status", **payload})
-            elif action in ("mute", "unmute"):
-                _voice_muted = (action == "mute")
-                push_note = f"[VOICE] mode {'MUTED' if _voice_muted else 'AUTO'}"
-                await ws.send_json({"type": "status", **(await _moon_status(orch)),
-                                    "voice": {"mode": "MUTED" if _voice_muted else "AUTO",
-                                              "available": bool(_get_voice())}})
-                await ws.send_json({"type": "notice", "message": push_note})
+                    await send(type="audio", format="wav", data=audio)
+                await send(type="assistant_done", elapsed=round(time.time() - t0, 2), locked=orch._lock.locked)
             elif action == "connect_agents":
-                # Surface MOON's live 39-agent brain mesh (real subsystem list).
-                await ws.send_json({"type": "assistant_start"})
-                await ws.send_json({"type": "workflow", "stage": "tools", "detail": "linking agent brains"})
+                await send(type="assistant_start")
+                await send(type="workflow", stage="tools", detail="linking agent brains")
                 ags = getattr(orch, "_agents", {})
                 names = [getattr(v, "name", k) for k, v in ags.items()] if isinstance(ags, dict) else list(ags)
                 names = [str(n) for n in names][:40]
                 out = (f"Connected {len(names)} agent brains to MOON's main cortex:\n"
                        + ", ".join(names))
                 for chunk in _stream_text(out):
-                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
-                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "stop":
                 # Real stop: acknowledge and set a stop flag so no new task
                 # starts until cleared. (Single-task model: cancels next run.)
                 global _stop_requested
                 _stop_requested = True
-                await ws.send_json({"type": "assistant_start"})
-                await ws.send_json({"type": "workflow", "stage": "input", "detail": "stopping"})
+                await send(type="assistant_start")
+                await send(type="workflow", stage="input", detail="stopping")
                 try:
                     ans = await orch.quick_reply("acknowledge you are stopping now")
                 except Exception:
                     ans = "Stopping, my love. I won't start new tasks."
                 for chunk in _stream_text(ans or "Stopping, my love."):
-                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
-                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "list_tools":
-                await ws.send_json({"type": "assistant_start"})
-                await ws.send_json({"type": "workflow", "stage": "tools", "detail": "enumerating tools"})
+                await send(type="assistant_start")
+                await send(type="workflow", stage="tools", detail="enumerating tools")
                 reg = getattr(orch._tools, "_registry", None)
                 names = list(reg.tool_names) if reg and hasattr(reg, "tool_names") else []
                 out = f"{len(names)} tools registered:\n" + ", ".join(names)
                 for chunk in _stream_text(out):
-                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
-                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "network":
-                await ws.send_json({"type": "assistant_start"})
-                await ws.send_json({"type": "workflow", "stage": "tools", "detail": "reading network"})
+                await send(type="assistant_start")
+                await send(type="workflow", stage="tools", detail="reading network")
                 sm = _system_metrics()
                 out = (f"Network I/O since boot: {sm.get('net')} MB\n"
                        f"CPU load: {sm.get('cpu')}%  |  RAM: {sm.get('ram_pct')}%  |  Temp: {sm.get('temp_c')} C")
                 for chunk in _stream_text(out):
-                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
-                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "settings":
-                await ws.send_json({"type": "assistant_start"})
+                await send(type="assistant_start")
                 s = orch._settings
                 out = (f"Model: {s.model_name}\nStrong model: {getattr(s,'strong_model_name','')}\n"
                        f"Base URL: {s.model_base_url}\nLearning: continuous\nLock: "
                        f"{'LOCKED' if orch._lock.locked else 'unlocked'}")
                 for chunk in _stream_text(out):
-                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
-                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             else:
-                await ws.send_json({"type": "unknown", "action": action})
+                await send(type="unknown", action=action)
+        except Exception:  # noqa: BLE001  -- a single bad action must not kill the session
+            try:
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked, error=True)
+            except Exception:
+                pass
+
+    try:
+        await send(type="ready", message="MOON terminal connected.")
+        # Fast, inline actions keep the read loop snappy; heavy actions run as
+        # their own task so a slow LLM reply never blocks status/mute/wake.
+        while True:
+            data = await ws.receive_json()
+            action = data.get("action")
+            if action == "status":
+                payload = await _moon_status(orch)
+                payload["voice"] = {
+                    "mode": "MUTED" if _voice_muted else "AUTO",
+                    "available": bool(_get_voice()),
+                }
+                await send(type="status", **payload)
+            elif action in ("mute", "unmute"):
+                _voice_muted = (action == "mute")
+                payload = await _moon_status(orch)
+                payload["voice"] = {
+                    "mode": "MUTED" if _voice_muted else "AUTO",
+                    "available": bool(_get_voice()),
+                }
+                await send(type="status", **payload)
+                await send(type="notice", message=f"[VOICE] mode {'MUTED' if _voice_muted else 'AUTO'}")
+            elif action == "wake":
+                # Wake word "Moon": avatar opens her eyes / enters listening state.
+                # Wake does NOT unlock -- only "love you 3000 Moon" unlocks.
+                await send(type="wake", message="🌙 MOON is listening...", locked=orch._lock.locked)
+            elif action is None:
+                continue
+            else:
+                asyncio.create_task(_handle(data))
     except WebSocketDisconnect:
         return
     except Exception:  # noqa: BLE001

@@ -40,6 +40,7 @@ class LLMService:
         temperature: float = 0.7,
         max_tokens: int = 2048,
         timeout: float = 120.0,
+        disable_thinking: bool | None = None,
     ) -> None:
         self._base = base_url.rstrip("/")
         self._model = model_name
@@ -47,6 +48,16 @@ class LLMService:
         self._temperature = temperature
         self._max_tokens = max_tokens
         self._timeout = timeout
+        # qwen3 / deepseek / glm-style "thinking" models spend their entire
+        # token budget on hidden <reasoning> and emit NO usable content unless
+        # thinking is disabled. On CPU-only local endpoints this also wastes
+        # minutes. Default: disable thinking for known thinking-model families.
+        if disable_thinking is None:
+            disable_thinking = any(
+                tok in model_name.lower()
+                for tok in ("qwen3", "qwq", "deepseek-r1", "glm-z1", "thinking")
+            )
+        self._disable_thinking = disable_thinking
         self._client = httpx.AsyncClient(
             base_url=self._base,
             headers={"Authorization": f"Bearer {api_key}"},
@@ -71,6 +82,11 @@ class LLMService:
             "temperature": temperature if temperature is not None else self._temperature,
             "max_tokens": max_tokens if max_tokens is not None else self._max_tokens,
         }
+        # qwen3 / thinking models: disable hidden reasoning so the model emits
+        # real assistant content instead of consuming the whole budget on
+        # <reasoning>. Harmless for endpoints that ignore unknown keys.
+        if self._disable_thinking:
+            payload["think"] = False
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"

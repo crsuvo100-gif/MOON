@@ -130,6 +130,12 @@ body::before{content:"";position:fixed;inset:0;background:
 .fstep.on:not(:nth-child(4)):not(:nth-child(8))::after{background:linear-gradient(90deg,var(--cyan),var(--pink));box-shadow:0 0 8px var(--cyan)}
 /* live events */
 .events{font-size:10.5px;line-height:1.5;max-height:120px;overflow:auto;color:var(--cyan);opacity:.85}
+/* conversation log (real user/assistant messages) */
+.chat{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow:auto;padding-right:4px}
+.chat .msg{max-width:92%;padding:6px 9px;border-radius:10px;font-size:11px;line-height:1.45;border:1px solid var(--edge)}
+.chat .msg.u{align-self:flex-end;background:rgba(0,243,255,.12);border-color:rgba(0,243,255,.35);color:#eafdff}
+.chat .msg.a{align-self:flex-start;background:rgba(189,0,255,.12);border-color:rgba(189,0,255,.35);color:#f3eaff}
+.chat .msg .b{white-space:pre-wrap;word-break:break-word}
 /* command palette / bottom nav */
 .nav{display:flex;gap:5px;flex-wrap:wrap}
 .nav .t{font-size:9.5px;padding:6px 9px;border:1px solid var(--edge);border-radius:8px;cursor:pointer;opacity:.7;letter-spacing:1px}
@@ -170,6 +176,8 @@ body::before{content:"";position:fixed;inset:0;background:
 .agent-extra .op{color:var(--green);font-size:10px}
 .agent-extra .lr{color:var(--cyan);font-size:10px}
 .portrait{width:34px;height:34px;border-radius:50%;border:1px solid rgba(0,243,255,.5);box-shadow:0 0 10px rgba(0,243,255,.4)}
+.roster{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;max-height:64px;overflow:auto}
+.atag{font-size:9px;padding:1px 6px;border:1px solid var(--edge);border-radius:8px;color:var(--cyan);background:rgba(0,243,255,.06);white-space:nowrap}
 .qa{margin:3px 0;width:100%;padding:6px;border-radius:8px;border:1px solid var(--edge);background:rgba(0,243,255,.07);color:var(--txt);cursor:pointer;font-size:11px;letter-spacing:1px;font-family:inherit}
 .qa:hover{background:rgba(0,243,255,.18);box-shadow:0 0 10px rgba(0,243,255,.3)}
 .voice-ico{width:54px;height:54px;border-radius:50%;border:2px solid var(--edge);display:grid;place-items:center;box-shadow:0 0 14px rgba(0,243,255,.3);background:radial-gradient(circle,rgba(0,243,255,.12),transparent);font-size:20px}
@@ -275,6 +283,7 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         </div>
       </div>
       <div class="panel"><div class="panel-title">Live Events</div><div class="events mono" id="log"></div></div>
+      <div class="panel"><div class="panel-title">Conversation</div><div class="chat" id="chat"></div></div>
     </div>
 
     <!-- RIGHT -->
@@ -289,6 +298,7 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
       </div>
       <div class="panel"><div class="panel-title">MOON AI Agent</div>
         <div class="row"><span>STATUS</span><span class="active">ONLINE</span></div>
+        <div class="row"><span>AGENTS</span><span id="agents" class="active">0</span></div>
         <div class="row"><span>VERSION</span><span id="ver">2.1.0</span></div>
         <div class="row"><span>MODEL</span><span id="model">—</span></div>
         <div class="row"><span>UPTIME</span><span id="uptime">0d 0h 0m</span></div>
@@ -297,6 +307,7 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         <div class="row"><span>LOCK</span><span id="lockState" class="standby">LOCKED</span></div>
         <div class="agent-extra"><span class="op">● FULLY OPERATIONAL</span><span class="lr">LEARNING: CONTINUOUS</span></div>
         <div style="display:flex;justify-content:flex-end;margin-top:4px"><img class="portrait" src="/avatar.svg" alt="MOON" onerror="this.style.display='none'"/></div>
+        <div class="roster" id="agentList"></div>
       </div>
       <div class="panel"><div class="panel-title">Environment</div>
         <div class="brainwrap" style="justify-content:flex-start">
