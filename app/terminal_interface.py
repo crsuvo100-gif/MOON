@@ -411,22 +411,34 @@ async def ws_endpoint(ws: WebSocket):
                 text = data.get("text", "").strip()
                 if not text:
                     continue
-                # The unlock phrase "love you 3000 Moon" (case-insensitive) is
-                # handled inside the orchestrator's lock -- it unlocks MOON herself.
+                # The unlock phrase (e.g. "love you 3000 Moon") must actually
+                # unlock MOON through the terminal. observe() returns a notice if
+                # the phrase is present and clears the lock; otherwise None.
+                unlock_notice = None
+                try:
+                    unlock_notice = orch._lock.observe(text)
+                except Exception:
+                    unlock_notice = None
                 await ws.send_json({"type": "assistant_start"})
                 t0 = 0.0
                 if orch._lock.locked:
-                    # Locked: MOON still talks (wife persona / status / knowledge)
-                    # but does NOT execute active operations. Unlock for those.
-                    await ws.send_json({"type": "workflow", "stage": "locked", "detail": "conversing (locked)"})
-                    try:
-                        answer = await orch.quick_reply(text)
-                    except Exception as e:  # noqa: BLE001
-                        answer = f"[MOON error: {e}]"
-                        _last_error = True
-                    if not answer:
-                        answer = "I'm here, my love. Say the phrase to let me act."
+                    # Still locked: MOON converses (wife persona / status /
+                    # knowledge) but does NOT execute active operations.
+                    if unlock_notice:
+                        # Phrase seen but lock still set (shouldn't happen) -- inform.
+                        await ws.send_json({"type": "workflow", "stage": "locked", "detail": "conversing (locked)"})
+                        answer = unlock_notice
+                    else:
+                        await ws.send_json({"type": "workflow", "stage": "locked", "detail": "conversing (locked)"})
+                        try:
+                            answer = await orch.quick_reply(text)
+                        except Exception as e:  # noqa: BLE001
+                            answer = f"[MOON error: {e}]"
+                            _last_error = True
+                        if not answer:
+                            answer = "I'm here, my love. Say the phrase to let me act."
                 else:
+                    # Unlocked (phrase observed) -- run the real brain on the text.
                     from app.models.task import Task
                     task = Task.create(text, agent_name="auto")
                     t0 = time.time()

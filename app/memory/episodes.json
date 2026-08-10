@@ -22,5 +22,11 @@
     "outcome": "I can do X and Y, my love.",
     "lesson": "Missing concrete problems: The answer lacks specific details about the problems being referred to; Vagueness: The answer is too general, not providing specific information about the problems; SATISFACTORY",
     "success": false
+  },
+  {
+    "goal": "what is 2+2",
+    "outcome": "The calculation is 2 + (2 / 2) = 3.",
+    "lesson": "The answer is missing the concrete problem statement",
+    "success": false
   }
 ]
