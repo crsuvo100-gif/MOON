@@ -6,7 +6,6 @@ variables, never hardcoded.
 
 from __future__ import annotations
 
-import os
 import requests
 from datetime import datetime
 from app.tools.base import BaseTool

@@ -8,7 +8,6 @@ import os
 import time
 import uuid
 import pickle
-import threading
 from app.tools.base import BaseTool
 
 MULTIMODAL_DIR = os.path.join(os.path.dirname(__file__), "..", "logs", "moon_multimodal_memory")

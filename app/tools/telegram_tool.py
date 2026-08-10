@@ -7,7 +7,6 @@ gracefully when the library/token is absent so it never crashes MOON.
 from __future__ import annotations
 
 import os
-import asyncio
 import logging
 from app.tools.base import BaseTool
 
