@@ -14,17 +14,8 @@ from app.config.settings import get_settings
 
 logger = get_logger(__name__)
 
-_APP_MODULE = "app.api.main:" + "app"
 
 
-def _start_http() -> None:
-    import subprocess
-    import sys
-    logger.info("Starting MOON at http://localhost:8000/brain")
-    subprocess.run([
-        sys.executable, "-m", "uvicorn", _APP_MODULE,
-        "--host", "127.0.0.1", "--port", "8000", "--log-level", "info",
-    ])
 
 
 async def _prefetch_models():
@@ -88,7 +79,7 @@ def _run_terminal() -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(prog="moon", description="Standalone AI Agent")
     sub = ap.add_subparsers(dest="cmd")
-    sub.add_parser("start", help="Run the web backend + Neural Brain Command Center")
+    sub.add_parser("start", help="Launch MOON's terminal interface (animated avatar UI)")
     run_p = sub.add_parser("run", help="Run a single task")
     run_p.add_argument("task", nargs="?", default="Say hello.")
     run_p.add_argument("--agent", default="auto")
@@ -97,7 +88,7 @@ def main() -> None:
     sub.add_parser("terminal", help="Launch MOON's own terminal interface (animated avatar UI)")
     args = ap.parse_args()
     if args.cmd == "start":
-        _start_http()
+        _run_terminal()
     elif args.cmd == "run":
         asyncio.run(_run(args.task, args.agent))
     elif args.cmd == "models":
