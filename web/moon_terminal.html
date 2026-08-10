@@ -482,9 +482,10 @@ function apply(s){
   const lb=document.getElementById('loadBar');if(lb)lb.style.width=Math.min(100,(sy.load||0))+'%';
   // Environment panel (real data)
   const st=document.getElementById('envTemp');if(st)st.textContent=(sy.temp_c||0)+'°C';
-  const er=document.getElementById('envEnergy');if(er)er.style.width=Math.min(100,100-(sy.ram_pct||0))+'%';
-  const eng=document.getElementById('envGauge');if(eng)eng.style.setProperty('--v',Math.min(100,100-(sy.ram_pct||0))+'%');
-  const eet=document.getElementById('envEnergyTxt');if(eet)eet.textContent=Math.min(100,100-(sy.ram_pct||0))+'%';
+  const envPct = Math.max(0, Math.min(100, 100 - (sy.ram_pct||0)));
+  const er=document.getElementById('envEnergy');if(er)er.style.width=envPct.toFixed(1)+'%';
+  const eng=document.getElementById('envGauge');if(eng)eng.style.setProperty('--v',envPct.toFixed(1)+'%');
+  const eet=document.getElementById('envEnergyTxt');if(eet)eet.textContent=envPct.toFixed(1)+'%';
   const eu=document.getElementById('envUptime');if(eu)eu.textContent=s.uptime_fmt||'0d 0h 0m';
   const en=document.getElementById('envNodes');if(en)en.textContent=(12500000+Math.round((s.agents||0)*30000)).toLocaleString();
   const sc=document.getElementById('synCount');if(sc)sc.textContent=(12500000+Math.round((s.agents||0)*30000)).toLocaleString();
