@@ -28,5 +28,11 @@
     "outcome": "The calculation is 2 + (2 / 2) = 3.",
     "lesson": "The answer is missing the concrete problem statement",
     "success": false
+  },
+  {
+    "goal": "what is your name in one line",
+    "outcome": "My name is MOON.",
+    "lesson": "Factual errors: The answer includes a line about needing help, which is not part of the",
+    "success": false
   }
 ]

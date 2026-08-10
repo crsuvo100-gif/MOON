@@ -46,13 +46,15 @@ body::before{content:"";position:fixed;inset:0;background:
 #wfHead{width:90px;height:26px}
 /* body */
 .body{display:flex;gap:10px;flex:1;min-height:0}
-.col{width:300px;display:flex;flex-direction:column;gap:8px;overflow:auto}
-.col .panel-title{margin-bottom:4px}
+.col{width:300px;display:flex;flex-direction:column;gap:7px;overflow:auto}
+.col .panel-title{margin-bottom:3px}
 .col .gline{margin:1px 0}
 .col .row{font-size:11px;margin:2px 0}
 .col .grow{gap:5px}
 .col::-webkit-scrollbar{width:0}
-.center{flex:1;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto}
+.center{flex:1;display:flex;flex-direction:column;gap:7px;min-height:0;overflow:auto}
+.center .panel{padding:8px 11px}
+.center .panel-title{margin-bottom:4px}
 .row{display:flex;justify-content:space-between;align-items:center;margin:3px 0;font-size:12px}
 .active{color:var(--cyan);text-shadow:0 0 6px rgba(0,243,255,.6)}
 .standby{color:var(--amber)}
@@ -67,9 +69,9 @@ body::before{content:"";position:fixed;inset:0;background:
 .gauge-lab{font-size:9px;color:var(--dim);text-align:center;margin-top:2px}
 .grow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 /* avatar stage */
-.stage{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:260px;overflow:hidden}
+.stage{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px;overflow:hidden}
 #synapse{position:absolute;inset:0;width:100%;height:100%}
-.core{position:relative;z-index:2;width:min(230px,52vw);height:min(230px,52vw);display:grid;place-items:center;margin-bottom:2px}
+.core{position:relative;z-index:2;width:min(190px,46vw);height:min(190px,46vw);display:grid;place-items:center;margin-bottom:2px}
 #face3d{display:block;width:100%;height:100%;border-radius:50%;position:relative;z-index:3}
 #avatarImg{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid rgba(0,243,255,.5);
   box-shadow:0 0 40px rgba(0,243,255,.6),0 0 70px rgba(189,0,255,.4);filter:saturate(1.1);z-index:2;display:block}
@@ -130,6 +132,31 @@ body::before{content:"";position:fixed;inset:0;background:
 .botrow{display:flex;gap:12px;margin-top:9px;flex-wrap:wrap}
 .qa-grp{flex:1;min-width:260px}
 .voice-grp{flex:1;min-width:220px}
+/* compact bottom dock: voice | command | quick actions in one row */
+.dock{display:flex;gap:8px;align-items:stretch;margin-top:8px;flex-wrap:nowrap}
+.dock-voice{width:140px;flex:none;display:flex;gap:8px;align-items:center;border:1px solid var(--edge);border-radius:10px;padding:6px 8px;background:rgba(0,243,255,.04)}
+.dock-voice .voice-ico{width:38px;height:38px;font-size:15px;flex:none}
+.dock-cmd{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:5px}
+.dock-qa{flex:1 1 0;min-width:0;display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.dock-qa .qa{padding:5px 2px;font-size:10px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* sensory active waveform + standby dashed */
+.swave{display:inline-block;width:34px;height:9px;margin-left:6px;vertical-align:middle}
+.swave i{display:inline-block;width:3px;height:100%;margin:0 1px;background:var(--cyan);border-radius:1px;animation:eq .9s ease-in-out infinite}
+.swave i:nth-child(2){animation-delay:.15s}.swave i:nth-child(3){animation-delay:.3s}.swave i:nth-child(4){animation-delay:.45s}.swave i:nth-child(5){animation-delay:.6s}
+@keyframes eq{0%,100%{height:25%}50%{height:100%}}
+.sdash{display:inline-block;width:34px;height:9px;margin-left:6px;border-bottom:1px dashed var(--dim);vertical-align:middle;opacity:.5}
+/* workflow step icons */
+.fstep .fic{font-size:13px;display:block;margin-bottom:3px;filter:drop-shadow(0 0 4px var(--cyan))}
+/* environment gauge + temp sparkline */
+.env-wrap{display:flex;gap:8px;align-items:center}
+.env-gauge{width:54px;height:54px;border-radius:50%;background:conic-gradient(var(--cyan) var(--v,80%),rgba(255,255,255,.08) 0);display:grid;place-items:center;box-shadow:0 0 10px rgba(0,243,255,.35)}
+.env-gauge b{width:38px;height:38px;border-radius:50%;background:#04101a;display:grid;place-items:center;font-size:11px;color:#fff}
+.tempspark{width:64px;height:26px}
+/* MOON AI agent extras */
+.agent-extra{display:flex;align-items:center;justify-content:space-between;margin-top:4px}
+.agent-extra .op{color:var(--green);font-size:10px}
+.agent-extra .lr{color:var(--cyan);font-size:10px}
+.portrait{width:34px;height:34px;border-radius:50%;border:1px solid rgba(0,243,255,.5);box-shadow:0 0 10px rgba(0,243,255,.4)}
 .qa{margin:3px 0;width:100%;padding:6px;border-radius:8px;border:1px solid var(--edge);background:rgba(0,243,255,.07);color:var(--txt);cursor:pointer;font-size:11px;letter-spacing:1px;font-family:inherit}
 .qa:hover{background:rgba(0,243,255,.18);box-shadow:0 0 10px rgba(0,243,255,.3)}
 .voice-ico{width:54px;height:54px;border-radius:50%;border:2px solid var(--edge);display:grid;place-items:center;box-shadow:0 0 14px rgba(0,243,255,.3);background:radial-gradient(circle,rgba(0,243,255,.12),transparent);font-size:20px}
@@ -137,8 +164,8 @@ body::before{content:"";position:fixed;inset:0;background:
 code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(--cyan)}
 /* responsive */
 @media (min-width:1800px){.col{width:360px}.panel{padding:14px 16px}.core{width:280px;height:280px}.halo{width:300px;height:300px}}
-@media (max-width:1100px){.col{width:250px}}
-@media (max-height:900px){.moon-root{height:auto;min-height:100vh;overflow:auto}.col,.center{overflow:visible}}
+@media (max-width:1100px){.col{width:264px}}
+@media (max-height:900px){.moon-root{height:auto;min-height:100vh;overflow:auto}.col,.center{overflow:visible}.col{gap:6px}.center{gap:6px}.panel{padding:7px 10px}.stage{min-height:200px}.foot{height:22px}}
 @media (max-width:860px){html,body{overflow:auto}.moon-root{height:auto;min-height:100vh}.body{flex-direction:column;overflow:visible}.col{width:100%;overflow:visible}.center{order:-1}.stage{min-height:320px}.hdr{flex-wrap:wrap;gap:10px}}
 @media (max-width:560px){.moon-root{padding:6px;gap:7px}.hdr{flex-direction:column;text-align:center;gap:8px;padding:10px}.brand{justify-content:center}.center-h{order:-1}.clock{text-align:center}.panel-title{font-size:11px}}
 @media (max-width:380px){.nav .t{font-size:8.5px;padding:5px 6px}.center-h h1{font-size:12px;letter-spacing:2px}}
@@ -157,11 +184,11 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
     <!-- LEFT -->
     <div class="col">
       <div class="panel"><div class="panel-title">Sensory Input</div>
-        <div class="row"><span>VOICE</span><span class="active" id="senVoice">ACTIVE</span></div>
-        <div class="row"><span>TEXT</span><span class="active" id="senText">ACTIVE</span></div>
-        <div class="row"><span>VISION</span><span class="standby" id="senVision">STANDBY</span></div>
-        <div class="row"><span>FILE</span><span class="standby" id="senFile">STANDBY</span></div>
-        <div class="row"><span>SYSTEM</span><span class="active" id="senSystem">ACTIVE</span></div>
+        <div class="row"><span>VOICE</span><span class="active" id="senVoice">ACTIVE<span class="swave"><i></i><i></i><i></i><i></i><i></i></span></span></div>
+        <div class="row"><span>TEXT</span><span class="active" id="senText">ACTIVE<span class="swave"><i></i><i></i><i></i><i></i><i></i></span></span></div>
+        <div class="row"><span>VISION</span><span class="standby" id="senVision">STANDBY<span class="sdash"></span></span></div>
+        <div class="row"><span>FILE</span><span class="standby" id="senFile">STANDBY<span class="sdash"></span></span></div>
+        <div class="row"><span>SYSTEM</span><span class="active" id="senSystem">ACTIVE<span class="swave"><i></i><i></i><i></i><i></i><i></i></span></span></div>
       </div>
       <div class="panel"><div class="panel-title">Memory Core</div>
         <div class="row"><span>EPISODIC</span><span class="bar"><i id="epBar" style="width:0%"></i></span></div>
@@ -210,7 +237,7 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
             <div class="row"><span>NEURAL ACTIVITY</span><span id="naVal" class="active">0%</span></div>
             <div class="bar"><i id="naBar" style="width:0%"></i></div>
             <div class="row" style="margin-top:8px"><span>SYNAPSE NETWORK</span><span class="active" id="synCount">0</span></div>
-            <canvas id="syn2" style="width:100%;height:90px;margin-top:4px"></canvas>
+            <canvas id="syn2" style="width:100%;height:60px;margin-top:4px"></canvas>
           </div>
           <div style="flex:1;min-width:120px">
             <div class="panel-title" style="font-size:9px;margin-bottom:2px">BRAINWAVE SYNC</div>
@@ -220,7 +247,16 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         </div>
       </div>
       <div class="panel"><div class="panel-title">Workflow Process</div>
-        <div class="flow" id="flowSteps"></div>
+        <div class="flow" id="flowSteps">
+          <div class="fstep" data-k="input"><span class="fic">➤</span>INPUT</div>
+          <div class="fstep" data-k="memory"><span class="fic">🗄</span>MEMORY</div>
+          <div class="fstep" data-k="knowledge"><span class="fic">📚</span>KNOWLEDGE</div>
+          <div class="fstep" data-k="reasoning"><span class="fic">⚙</span>REASONING</div>
+          <div class="fstep" data-k="planner"><span class="fic">📋</span>PLANNER</div>
+          <div class="fstep" data-k="tools"><span class="fic">🔧</span>TOOLS</div>
+          <div class="fstep" data-k="execution"><span class="fic">▶</span>EXECUTION</div>
+          <div class="fstep" data-k="verify"><span class="fic">✔</span>VERIFY</div>
+        </div>
       </div>
       <div class="panel"><div class="panel-title">Live Events</div><div class="events mono" id="log"></div></div>
     </div>
@@ -242,13 +278,17 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         <div class="row"><span>UPTIME</span><span id="uptime">0d 0h 0m</span></div>
         <div class="row"><span>LOAD</span><span id="loadTxt" class="active">0%</span></div>
         <div class="row"><span>LOCK</span><span id="lockState" class="standby">LOCKED</span></div>
+        <div class="agent-extra"><span class="op">● FULLY OPERATIONAL</span><span class="lr">LEARNING: CONTINUOUS</span></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:4px"><img class="portrait" src="/avatar.svg" alt="MOON" onerror="this.style.display='none'"/></div>
       </div>
       <div class="panel"><div class="panel-title">Environment</div>
         <div class="brainwrap" style="justify-content:flex-start">
           <canvas id="globe" class="globe"></canvas>
           <div style="flex:1;min-width:120px">
             <div class="row"><span>SYS TEMP</span><span id="envTemp" class="active">0&deg;C</span></div>
-            <div class="row"><span>ENERGY</span><span class="bar"><i id="envEnergy" style="width:0%"></i></span></div>
+            <canvas id="tempSpark" class="tempspark"></canvas>
+            <div class="row"><span>ENERGY</span><span class="env-gauge" id="envGauge" style="--v:80%"><b id="envEnergyTxt">80%</b></span></div>
+            <div class="row"><span>UPTIME</span><span id="envUptime" class="active">0d 0h 0m</span></div>
             <div class="row"><span>QUANTUM LINK</span><span id="envQ" class="active">SYNCED</span></div>
             <div class="row"><span>NODES</span><span id="envNodes" class="active">0</span></div>
           </div>
@@ -263,34 +303,30 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
       <div class="t on">DASHBOARD</div><div class="t">DIAGNOSTICS</div><div class="t">MEMORY</div><div class="t">KNOWLEDGE</div>
       <div class="t">TOOLS</div><div class="t">AUTOMATION</div><div class="t">SECURITY</div><div class="t">NETWORK</div><div class="t">SETTINGS</div>
     </div>
-    <div class="composer" style="margin-top:8px"><input id="cp" placeholder="MOON > Type your command or ask MOON..." onkeydown="if(event.key==='Enter')quick(this.value)"/><button onclick="quick(document.getElementById('cp').value)">SEND</button></div>
-    <div class="tags">
-      <span onclick="quick('system status')">system status</span><span onclick="quick('analyze workflow')">analyze workflow</span>
-      <span onclick="quick('memory search')">memory search</span><span onclick="quick('open diagnostics')">open diagnostics</span>
-      <span onclick="quick('run automation')">run automation</span><span onclick="quick('help')">help</span>
-    </div>
-    <div class="botrow">
-      <div class="qa-grp">
-        <div class="panel-title" style="margin:0 0 5px">Quick Actions</div>
-        <button class="qa" onclick="runAction('wake moon')">WAKE MOON</button>
-        <button class="qa" onclick="quick('system status')">SYSTEM STATUS</button>
-        <button class="qa" onclick="runAction('run diagnostics on your subsystems')">RUN DIAGNOSTICS</button>
-        <button class="qa" onclick="runAction('show active workflow steps')">ACTIVE WORKFLOW</button>
-        <button class="qa" onclick="runAction('memory search')">MEMORY SEARCH</button>
-        <button class="qa" onclick="runAction('query knowledge base')">KNOWLEDGE BASE</button>
-        <button class="qa" onclick="runAction('connect all my agents')">CONNECT AGENTS</button>
-        <button class="qa" onclick="runAction('list all tools')">LIST TOOLS</button>
-        <button class="qa" onclick="runAction('stop all tasks')">STOP TASKS</button>
+    <div class="dock">
+      <div class="dock-voice">
+        <div class="voice-ico">🎙</div>
+        <div style="flex:1"><div class="row" style="margin:0"><span>MODE</span><span id="voiceMode">AUTO</span></div>
+          <button class="qa" id="muteBtn" style="margin-top:3px" onclick="toggleMute()">MUTE: OFF</button></div>
       </div>
-      <div class="voice-grp">
-        <div class="panel-title" style="margin:0 0 5px">Voice Control</div>
-        <div style="display:flex;gap:10px;align-items:center">
-          <div class="voice-ico">🎙</div>
-          <div style="flex:1"><div class="row"><span>MODE</span><span id="voiceMode">AUTO</span></div>
-            <button class="qa" id="muteBtn" onclick="toggleMute()">MUTE: OFF</button></div>
+      <div class="dock-cmd">
+        <div class="composer"><input id="cp" placeholder="MOON > Type your command or ask MOON..." onkeydown="if(event.key==='Enter')quick(this.value)"/><button onclick="quick(document.getElementById('cp').value)">SEND</button></div>
+        <div class="tags">
+          <span onclick="quick('system status')">system status</span><span onclick="quick('analyze workflow')">analyze workflow</span>
+          <span onclick="quick('memory search')">memory search</span><span onclick="quick('open diagnostics')">open diagnostics</span>
+          <span onclick="quick('run automation')">run automation</span><span onclick="quick('help')">help</span>
         </div>
       </div>
+      <div class="dock-qa">
+        <button class="qa" onclick="runAction('wake moon')">WAKE</button>
+        <button class="qa" onclick="quick('system status')">STATUS</button>
+        <button class="qa" onclick="runAction('run diagnostics on your subsystems')">DIAG</button>
+        <button class="qa" onclick="runAction('show active workflow steps')">WORKFLOW</button>
+        <button class="qa" onclick="runAction('memory search')">MEM</button>
+        <button class="qa" onclick="runAction('stop all tasks')">STOP</button>
+      </div>
     </div>
+  </div>
   </div>
 
   <div class="foot">Say <code>Moon</code> to wake her &middot; <code>love you 3000 Moon</code> to unlock &middot; her avatar is her body</div>
@@ -395,19 +431,23 @@ function apply(s){
   // Environment panel (real data)
   const st=document.getElementById('envTemp');if(st)st.textContent=(sy.temp_c||0)+'°C';
   const er=document.getElementById('envEnergy');if(er)er.style.width=Math.min(100,100-(sy.ram_pct||0))+'%';
+  const eg=document.getElementById('envGauge');if(eg)eg.style.setProperty('--v',Math.min(100,100-(sy.ram_pct||0))+'%');
+  const eet=document.getElementById('envEnergyTxt');if(eet)eet.textContent=Math.min(100,100-(sy.ram_pct||0))+'%';
+  const eu=document.getElementById('envUptime');if(eu)eu.textContent=s.uptime_fmt||'0d 0h 0m';
   const en=document.getElementById('envNodes');if(en)en.textContent=(12500000+Math.round((s.agents||0)*30000)).toLocaleString();
+  if(window.pushTemp)window.pushTemp(sy.temp_c||0);
   // neural activity proxy = cognitive load
   const na=Math.min(100,Math.round((sy.cpu||0)*0.7+30));setBar('naBar',na);document.getElementById('naVal').textContent=na+'%';
   // brainwave sync bars from neural activity (real-ish, smoothed)
   if(window.setBrainwave)window.setBrainwave(na);
   buildPipeline(s.pipeline||[]);
 }
-function buildPipeline(p){const wrap=document.getElementById('pipeline');if(!wrap||wrap.childElementCount)return;
-  PIPE_KEYS.forEach(k=>{const n=document.createElement('div');n.className='pnode';n.dataset.k=k;
-    n.textContent=STEP_LABELS[k]||k.toUpperCase();wrap.appendChild(n);});
+function buildPipeline(p){const wrap=document.getElementById('pipeline');if(!wrap)return;
+  if(!wrap.childElementCount){PIPE_KEYS.forEach(k=>{const n=document.createElement('div');n.className='pnode';n.dataset.k=k;
+    n.textContent=STEP_LABELS[k]||k.toUpperCase();wrap.appendChild(n);});}
   const fs=document.getElementById('flowSteps');
-  ['input','memory','knowledge','reasoning','planner','tools','execution','verify'].forEach(k=>{
-    const d=document.createElement('div');d.className='fstep';d.dataset.k=k;d.textContent=STEP_LABELS[k];fs.appendChild(d);});}
+  if(fs && !fs.childElementCount){['input','memory','knowledge','reasoning','planner','tools','execution','verify'].forEach(k=>{
+    const d=document.createElement('div');d.className='fstep';d.dataset.k=k;d.textContent=STEP_LABELS[k];fs.appendChild(d);});}}
 function switchTab(name){document.querySelectorAll('#tabs .t').forEach(x=>x.classList.toggle('on',x.textContent.toUpperCase()===name));push('[VIEW] '+name);
   const map={DIAGNOSTICS:'diagnostics',MEMORY:'memory_search',KNOWLEDGE:'knowledge',SECURITY:'diagnostics',
     TOOLS:'list_tools',NETWORK:'network',SETTINGS:'settings',AUTOMATION:'run'};
@@ -487,6 +527,16 @@ wave(document.getElementById('wfHead'),'rgba(92,255,154,.9)');
     x.beginPath();x.arc(cx,cy,R,0,7);x.strokeStyle='rgba(0,243,255,.35)';x.lineWidth=1;x.stroke();
     for(const d of dots){const lo=d.lo+rot;const X=cx+Math.cos(d.la)*Math.cos(lo)*R;const Y=cy+Math.sin(d.la)*R;const Z=Math.cos(d.la)*Math.sin(lo);
       if(Z>-0.2){x.beginPath();x.arc(X,Y,1.3,0,7);x.fillStyle='rgba(0,243,255,'+(0.4+Z*0.6)+')';x.fill();}}
+    requestAnimationFrame(loop);}init();loop();window.addEventListener('resize',init);})();
+/* environment temp sparkline (real temp history) */
+(function(){const c=document.getElementById('tempSpark'),x=c.getContext('2d');let W,H,hist=[];
+  window.pushTemp=function(t){hist.push(t);if(hist.length>20)hist.shift();};
+  function init(){const r=c.getBoundingClientRect();W=c.width=r.width||64;H=c.height=r.height||26;}
+  function loop(){if(!W)init();x.clearRect(0,0,W,H);
+    if(hist.length>1){const mn=Math.min.apply(null,hist),mx=Math.max.apply(null,hist),rng=(mx-mn)||1;
+      x.beginPath();hist.forEach((v,i)=>{const px=i/(hist.length-1)*W;const py=H-((v-mn)/rng)*(H-4)-2;
+        if(i===0)x.moveTo(px,py);else x.lineTo(px,py);});
+      x.strokeStyle='rgba(0,243,255,.9)';x.lineWidth=1.3;x.stroke();}
     requestAnimationFrame(loop);}init();loop();window.addEventListener('resize',init);})();
 connect();
 </script>
