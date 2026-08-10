@@ -19,6 +19,8 @@ env/
 # Runtime logs & state
 app/logs/*.log
 app/logs/long_term.jsonl
+app/logs/lessons.jsonl
+app/logs/episodes.json
 app/logs/moon_lock.txt
 app/logs/agent.log.*
 app/logs/agent_brains/

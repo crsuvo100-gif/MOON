@@ -2,6 +2,11 @@
 
 import asyncio
 import sys
+from pathlib import Path
+
+# Ensure the project root (containing the `app` package) is importable when this
+# script is launched directly (e.g. `make live` -> `python scripts/live_smoke_pipeline.py`).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.brain.orchestrator import Orchestrator
 from app.config.settings import get_settings

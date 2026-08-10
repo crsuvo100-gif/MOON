@@ -538,15 +538,15 @@ async def ws_endpoint(ws: WebSocket):
             elif action == "stop":
                 # Real stop: acknowledge and set a stop flag so no new task
                 # starts until cleared. (Single-task model: cancels next run.)
+                # Does NOT call the LLM -- a model call can hang on a locked/in-
+                # active model, which would leave the UI with no response. Send a
+                # direct, honest acknowledgment instead.
                 global _stop_requested
                 _stop_requested = True
                 await send(type="assistant_start")
                 await send(type="workflow", stage="input", detail="stopping")
-                try:
-                    ans = await orch.quick_reply("acknowledge you are stopping now")
-                except Exception:
-                    ans = "Stopping, my love. I won't start new tasks."
-                for chunk in _stream_text(ans or "Stopping, my love."):
+                ans = "Stopping, my love. I won't start any new tasks until you tell me otherwise."
+                for chunk in _stream_text(ans):
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "list_tools":
@@ -573,6 +573,95 @@ async def ws_endpoint(ws: WebSocket):
                 out = (f"Model: {s.model_name}\nStrong model: {getattr(s,'strong_model_name','')}\n"
                        f"Base URL: {s.model_base_url}\nLearning: continuous\nLock: "
                        f"{'LOCKED' if orch._lock.locked else 'unlocked'}")
+                for chunk in _stream_text(out):
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
+            elif action == "security":
+                # Real authorization posture (defensive/offensive gate status).
+                await send(type="assistant_start")
+                await send(type="workflow", stage="tools", detail="reading security posture")
+                try:
+                    from app.security.authorization import _authorized_set
+                    auth = sorted(_authorized_set())
+                    lock_state = "LOCKED" if orch._lock.locked else "unlocked"
+                    out = (
+                        "SECURITY POSTURE\n"
+                        f"- Lock state: {lock_state}\n"
+                        f"- Active-ops authorization gate: ENABLED\n"
+                        f"- Authorized targets ({len(auth)}): "
+                        + (", ".join(auth) if auth else "none configured")
+                        + "\n- Mode: active offensive ops require authorized targets or "
+                          "runtime operator confirmation. Defensive/passive analysis needs no auth."
+                    )
+                except Exception as e:  # noqa: BLE001
+                    out = f"[security error: {e}]"
+                await send(type="workflow", stage="speaking", detail="reporting")
+                for chunk in _stream_text(out):
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
+            elif action == "automation":
+                # Real self-improvement status: surface MOON's continuous-learning /
+                # autonomous-improvement pipeline state from the running brain.
+                await send(type="assistant_start")
+                await send(type="workflow", stage="tools", detail="checking automation")
+                try:
+                    lessons = 0
+                    lp = getattr(orch, "_logs_dir", None)
+                    import os as _os
+                    lessons_path = _os.path.join(str(getattr(orch, "_base_dir", ".")), "logs", "lessons.jsonl")
+                    if _os.path.exists(lessons_path):
+                        with open(lessons_path) as _fh:
+                            lessons = sum(1 for _ in _fh)
+                    auto = getattr(getattr(orch, "_settings", None), "enable_auto_learning", True)
+                    out = (
+                        "AUTONOMOUS AUTOMATION\n"
+                        f"- Continuous self-learning: {'ON' if auto else 'OFF'}\n"
+                        f"- Lessons recorded (self-improvement corpus): {lessons}\n"
+                        f"- Per-agent brains connected: {getattr(orch, '_agents', {}).__len__() if hasattr(orch, '_agents') else 0}\n"
+                        "- Loop: every interaction consolidates facts into long-term memory + "
+                          "knowledge base; PromptTuner applies past lessons to agent personas."
+                    )
+                except Exception as e:  # noqa: BLE001
+                    out = f"[automation error: {e}]"
+                await send(type="workflow", stage="speaking", detail="reporting")
+                for chunk in _stream_text(out):
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
+            elif action == "dashboard":
+                # Real aggregated HUD summary (same source as the live panels).
+                await send(type="assistant_start")
+                st = await _moon_status(orch)
+                mem = st.get("memory", {})
+                sys_ = st.get("system", {})
+                out = (
+                    "MOON COMMAND CENTER\n"
+                    f"- Version: {st.get('version')}  Model: {st.get('model')}\n"
+                    f"- State: {'LOCKED' if st.get('locked') else 'UNLOCKED'}\n"
+                    f"- Agents connected: {st.get('agents')}  Tools: {st.get('n_tools')}\n"
+                    f"- Memory: LTM {mem.get('long_term')} | episodic {mem.get('episodic')} | "
+                    f"vector {mem.get('vector')}\n"
+                    f"- Knowledge docs: {mem.get('kb_docs')}\n"
+                    f"- Host: CPU {sys_.get('cpu')}% | RAM {sys_.get('ram_pct')}% | "
+                    f"temp {sys_.get('temp_c')}C | uptime {st.get('uptime_fmt')}\n"
+                    "Use the tabs/quick actions to drill in, or type a command."
+                )
+                await send(type="workflow", stage="speaking", detail="reporting")
+                for chunk in _stream_text(out):
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
+            elif action == "help":
+                await send(type="assistant_start")
+                out = (
+                    "MOON COMMANDS\n"
+                    "- Say 'Moon' (or WAKE) to wake me; 'love you 3000 Moon' to unlock.\n"
+                    "- Tabs: DASHBOARD, DIAGNOSTICS, MEMORY, KNOWLEDGE, TOOLS, AUTOMATION, "
+                      "SECURITY, NETWORK, SETTINGS.\n"
+                    "- Quick actions: SYSTEM STATUS, RUN DIAGNOSTICS, ACTIVE WORKFLOW, "
+                      "MEMORY SEARCH, KNOWLEDGE BASE, STOP TASKS.\n"
+                    "- Buttons: WAKE MOON, CONNECT AGENTS, LIST TOOLS, MUTE/UNMUTE.\n"
+                    "- Just type anything to talk to me (when unlocked I run my real brain)."
+                )
+                await send(type="workflow", stage="speaking", detail="reporting")
                 for chunk in _stream_text(out):
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)

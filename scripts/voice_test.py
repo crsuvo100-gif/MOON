@@ -2,6 +2,11 @@
 
 import asyncio
 import sys
+from pathlib import Path
+
+# Ensure the project root (containing the `app` package) is importable when this
+# script is launched directly (e.g. `make voice-test`).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.voice import Voice
 

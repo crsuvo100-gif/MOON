@@ -340,16 +340,19 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
       <div class="dock-cmd">
         <div class="composer"><input id="cp" placeholder="MOON > Type your command or ask MOON..." onkeydown="if(event.key==='Enter')quick(this.value)"/><button onclick="quick(document.getElementById('cp').value)">SEND</button></div>
         <div class="tags">
-          <span onclick="quick('system status')">system status</span><span onclick="quick('analyze workflow')">analyze workflow</span>
-          <span onclick="quick('memory search')">memory search</span><span onclick="quick('open diagnostics')">open diagnostics</span>
-          <span onclick="quick('run automation')">run automation</span><span onclick="quick('help')">help</span>
+          <span onclick="quick('system status')">system status</span><span onclick="runAction('show active workflow steps')">analyze workflow</span>
+          <span onclick="runAction('memory search')">memory search</span><span onclick="quick('open diagnostics')">open diagnostics</span>
+          <span onclick="runAction('automation status')">run automation</span><span onclick="runAction('help')">help</span>
         </div>
       </div>
       <div class="dock-qa">
+        <button class="qa" onclick="runAction('wake moon')">WAKE MOON</button>
         <button class="qa" onclick="quick('system status')">SYSTEM STATUS</button>
         <button class="qa" onclick="runAction('run diagnostics on your subsystems')">RUN DIAGNOSTICS</button>
         <button class="qa" onclick="runAction('show active workflow steps')">ACTIVE WORKFLOW</button>
         <button class="qa" onclick="runAction('memory search')">MEMORY SEARCH</button>
+        <button class="qa" onclick="runAction('connect agent brains')">CONNECT AGENTS</button>
+        <button class="qa" onclick="runAction('list available tools')">LIST TOOLS</button>
         <button class="qa" onclick="quick('open knowledge base')">KNOWLEDGE BASE</button>
         <button class="qa stop" onclick="runAction('stop all tasks')">STOP TASKS ✕</button>
       </div>
@@ -440,6 +443,10 @@ function runAction(c){addMsg('user','▶ '+c);const t=c.toLowerCase();
   if(/stop/.test(t)){if(ws&&connected)ws.send(JSON.stringify({action:'stop'}));return;}
   if(/connect.*agent/.test(t)){if(ws&&connected)ws.send(JSON.stringify({action:'connect_agents'}));return;}
   if(/list.*tool/.test(t)){if(ws&&connected)ws.send(JSON.stringify({action:'list_tools'}));return;}
+  if(/automation/.test(t)){if(ws&&connected)ws.send(JSON.stringify({action:'automation'}));return;}
+  if(/^help/.test(t)){if(ws&&connected)ws.send(JSON.stringify({action:'help'}));return;}
+  if(/workflow|diagnostic|active workflow/.test(t)){if(ws&&connected)ws.send(JSON.stringify({action:'diagnostics',query:'workflow'}));return;}
+  if(/memory/.test(t)){if(ws&&connected)ws.send(JSON.stringify({action:'memory_search',query:'recent'}));return;}
   if(ws&&connected)ws.send(JSON.stringify({action:'run',command:c}));else push('not connected');}
 function setSens(elId, on){
   const el=document.getElementById(elId); if(!el) return;
@@ -495,8 +502,8 @@ function buildPipeline(p){const wrap=document.getElementById('pipeline');if(!wra
   if(fs && !fs.childElementCount){['input','memory','knowledge','reasoning','planner','tools','execution','verify'].forEach(k=>{
     const d=document.createElement('div');d.className='fstep';d.dataset.k=k;d.textContent=STEP_LABELS[k];fs.appendChild(d);});}}
 function switchTab(name){document.querySelectorAll('#tabs .t').forEach(x=>x.classList.toggle('on',x.textContent.toUpperCase()===name));push('[VIEW] '+name);
-  const map={DIAGNOSTICS:'diagnostics',MEMORY:'memory_search',KNOWLEDGE:'knowledge',SECURITY:'diagnostics',
-    TOOLS:'list_tools',NETWORK:'network',SETTINGS:'settings',AUTOMATION:'run'};
+  const map={DIAGNOSTICS:'diagnostics',MEMORY:'memory_search',KNOWLEDGE:'knowledge',SECURITY:'security',
+    TOOLS:'list_tools',NETWORK:'network',SETTINGS:'settings',AUTOMATION:'automation',DASHBOARD:'dashboard'};
   if(map[name]&&ws&&connected)ws.send(JSON.stringify({action:map[name],query:'summary'}));}
 function toggleMute(){const b=document.getElementById('muteBtn');const on=b.textContent.includes('OFF');
   b.textContent='MUTE: '+(on?'ON':'OFF');push('[VOICE] sending '+(on?'mute':'unmute'));
