@@ -66,7 +66,7 @@ body::before{content:"";position:fixed;inset:0;background:
   background:conic-gradient(var(--green) var(--v,80%),rgba(255,255,255,.08) 0);box-shadow:0 0 10px rgba(92,255,154,.35)}
 .gauge::before{content:"";position:absolute;inset:5px;border-radius:50%;background:#04101a}
 .gauge span{position:relative;font-size:10px;color:#fff}
-.gauge-lab{font-size:9px;color:var(--dim);text-align:center;margin-top:2px}
+.pct{font-size:10px;color:var(--cyan);min-width:34px;text-align:right;font-variant-numeric:tabular-nums}
 .grow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 /* avatar stage */
 .stage{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px;overflow:hidden}
@@ -194,17 +194,17 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         <div class="row"><span>SYSTEM</span><span class="active" id="senSystem">ACTIVE<span class="swave"><i></i><i></i><i></i><i></i><i></i></span></span></div>
       </div>
       <div class="panel"><div class="panel-title">Memory Core</div>
-        <div class="row"><span>EPISODIC</span><span class="bar"><i id="epBar" style="width:0%"></i></span></div>
-        <div class="row"><span>VECTOR DB</span><span class="bar"><i id="vecBar" style="width:0%"></i></span></div>
-        <div class="row"><span>WORKING</span><span class="bar"><i id="stmBar2" style="width:0%"></i></span></div>
-        <div class="row"><span>LONG TERM</span><span class="bar"><i id="ltmBar" style="width:0%"></i></span></div>
+        <div class="row"><span>EPISODIC</span><span class="bar"><i id="epBar" style="width:0%"></i></span><b class="pct" id="epPct">0%</b></div>
+        <div class="row"><span>VECTOR DB</span><span class="bar"><i id="vecBar" style="width:0%"></i></span><b class="pct" id="vecPct">0%</b></div>
+        <div class="row"><span>WORKING</span><span class="bar"><i id="stmBar2" style="width:0%"></i></span><b class="pct" id="stmPct">0%</b></div>
+        <div class="row"><span>LONG TERM</span><span class="bar"><i id="ltmBar" style="width:0%"></i></span><b class="pct" id="ltmPct">0%</b></div>
         <div class="row" style="opacity:.7"><span>ENTRIES</span><span id="ltmCount">0</span></div>
       </div>
       <div class="panel"><div class="panel-title">Knowledge Base</div>
-        <div class="row"><span>GRAPH NET</span><span class="bar"><i id="kbGraph" style="width:0%"></i></span></div>
-        <div class="row"><span>DOC STORE</span><span class="bar"><i id="kbDoc" style="width:0%"></i></span></div>
-        <div class="row"><span>REAL TIME</span><span class="bar"><i id="kbRt" style="width:0%"></i></span></div>
-        <div class="row"><span>CONTEXT</span><span class="bar"><i id="kbCtx" style="width:0%"></i></span></div>
+        <div class="row"><span>GRAPH NET</span><span class="bar"><i id="kbGraph" style="width:0%"></i></span><b class="pct" id="kbGraphPct">0%</b></div>
+        <div class="row"><span>DOC STORE</span><span class="bar"><i id="kbDoc" style="width:0%"></i></span><b class="pct" id="kbDocPct">0%</b></div>
+        <div class="row"><span>REAL TIME</span><span class="bar"><i id="kbRt" style="width:0%"></i></span><b class="pct" id="kbRtPct">0%</b></div>
+        <div class="row"><span>CONTEXT</span><span class="bar"><i id="kbCtx" style="width:0%"></i></span><b class="pct" id="kbCtxPct">0%</b></div>
       </div>
       <div class="panel"><div class="panel-title">System Overview</div>
         <div class="grow">
@@ -270,12 +270,12 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
     <!-- RIGHT -->
     <div class="col">
       <div class="panel"><div class="panel-title">Cognition Core</div>
-        <div class="gline"><small>RSON</small><div class="gauge" id="gRson" style="--v:95%"><span>●</span></div><span class="active">ACTIVE</span></div>
-        <div class="gline"><small>PLAN</small><div class="gauge" id="gPlan" style="--v:90%"><span>●</span></div><span class="active">ACTIVE</span></div>
-        <div class="gline"><small>GOAL</small><div class="gauge" id="gGoal" style="--v:88%"><span>●</span></div><span class="active">ACTIVE</span></div>
-        <div class="gline"><small>DECIS</small><div class="gauge" id="gDecis" style="--v:92%"><span>●</span></div><span class="active">ACTIVE</span></div>
-        <div class="gline"><small>EMOT</small><div class="gauge" id="emotGauge" style="--v:60%"><span>●</span></div><span class="standby" id="emotLabel">CALM</span></div>
-        <div class="gline"><small>LEARN</small><div class="gauge" id="gLearn" style="--v:96%"><span>●</span></div><span class="active">ACTIVE</span></div>
+        <div class="gline"><small>REASONING ENGINE</small><div class="gauge" id="gRson" style="--v:95%"><span>●</span></div><span class="active">ACTIVE</span></div>
+        <div class="gline"><small>PLANNER</small><div class="gauge" id="gPlan" style="--v:90%"><span>●</span></div><span class="active">ACTIVE</span></div>
+        <div class="gline"><small>GOAL MANAGER</small><div class="gauge" id="gGoal" style="--v:88%"><span>●</span></div><span class="active">ACTIVE</span></div>
+        <div class="gline"><small>DECISION ENGINE</small><div class="gauge" id="gDecis" style="--v:92%"><span>●</span></div><span class="active">ACTIVE</span></div>
+        <div class="gline"><small>EMOTION ENGINE</small><div class="gauge" id="emotGauge" style="--v:60%"><span>●</span></div><span class="standby" id="emotLabel">CALM</span></div>
+        <div class="gline"><small>SELF LEARNING</small><div class="gauge" id="gLearn" style="--v:96%"><span>●</span></div><span class="active">ACTIVE</span></div>
       </div>
       <div class="panel"><div class="panel-title">MOON AI Agent</div>
         <div class="row"><span>STATUS</span><span class="active">ONLINE</span></div>
@@ -429,10 +429,10 @@ function apply(s){
   const elb=document.getElementById('emotLabel');if(elb){elb.textContent=em.label||'CALM';elb.className=(em.value||60)>60?'active':'standby';}
   const ag=document.getElementById('agents');if(ag)ag.textContent=s.agents;
   const roster=document.getElementById('agentList');if(roster&&s.agent_list)roster.innerHTML=s.agent_list.slice(0,24).map(n=>`<span class="atag">${n}</span>`).join('');
-  const m=s.memory||{};const setBar=(id,pc)=>{const e=document.getElementById(id);if(e)e.style.width=Math.min(100,pc)+'%';};
+  const m=s.memory||{};const setBar=(id,pc,pid)=>{const e=document.getElementById(id);if(e)e.style.width=Math.min(100,pc)+'%';if(pid){const t=document.getElementById(pid);if(t)t.textContent=Math.round(Math.min(100,pc))+'%';}};
   setBar('ltmCount',0);document.getElementById('ltmCount').textContent=m.long_term||0;
-  setBar('ltmBar',(m.long_term||0)*4);setBar('epBar',(m.episodic||0)*12);setBar('vecBar',(m.vector||0)/8);setBar('stmBar2',(m.short_term||0)*10);
-  const kb=s.knowledge||{};setBar('kbGraph',kb.graph||0);setBar('kbDoc',kb.doc_store||0);setBar('kbRt',kb.rt||0);setBar('kbCtx',kb.context||0);
+  setBar('ltmBar',(m.long_term||0)*4,'ltmPct');setBar('epBar',(m.episodic||0)*12,'epPct');setBar('vecBar',(m.vector||0)/8,'vecPct');setBar('stmBar2',(m.short_term||0)*10,'stmPct');
+  const kb=s.knowledge||{};setBar('kbGraph',kb.graph||0,'kbGraphPct');setBar('kbDoc',kb.doc_store||0,'kbDocPct');setBar('kbRt',kb.rt||0,'kbRtPct');setBar('kbCtx',kb.context||0,'kbCtxPct');
   const sy=s.system||{};setBar('gCpu',sy.cpu||0);document.getElementById('cpuTxt').textContent=(sy.cpu||0)+'%';
   setBar('gRam',sy.ram_pct||0);document.getElementById('ramTxt').textContent=(sy.ram_pct||0)+'%';
   setBar('gGpu',sy.gpu||0);document.getElementById('gpuTxt').textContent=(sy.gpu||0)+'%';

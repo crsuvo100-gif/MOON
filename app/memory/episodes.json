@@ -34,5 +34,11 @@
     "outcome": "My name is MOON.",
     "lesson": "Factual errors: The answer includes a line about needing help, which is not part of the",
     "success": false
+  },
+  {
+    "goal": "say one sentence",
+    "outcome": "> I'm excited to launch this innovative tool.",
+    "lesson": "",
+    "success": true
   }
 ]
