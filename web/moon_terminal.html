@@ -166,17 +166,19 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         <div class="gline"><small>PLAN</small><div class="gauge" style="--v:90%"><span>●</span></div><span class="active">ACTIVE</span></div>
         <div class="gline"><small>GOAL</small><div class="gauge" style="--v:88%"><span>●</span></div><span class="active">ACTIVE</span></div>
         <div class="gline"><small>DECIS</small><div class="gauge" style="--v:92%"><span>●</span></div><span class="active">ACTIVE</span></div>
-        <div class="gline"><small>EMOT</small><div class="gauge" style="--v:60%"><span>●</span></div><span class="standby">CALM</span></div>
+        <div class="gline"><small>EMOT</small><div class="gauge" id="emotGauge" style="--v:60%"><span>●</span></div><span class="standby" id="emotLabel">CALM</span></div>
         <div class="gline"><small>LEARN</small><div class="gauge" style="--v:96%"><span>●</span></div><span class="active">ACTIVE</span></div>
       </div>
       <div class="panel"><div class="panel-title">Quick Actions</div>
-        <button class="qa" onclick="runAction('system status')">SYSTEM STATUS</button>
+        <button class="qa" onclick="runAction('wake moon')">WAKE MOON</button>
+        <button class="qa" onclick="quick('system status')">SYSTEM STATUS</button>
         <button class="qa" onclick="runAction('run diagnostics on your subsystems')">RUN DIAGNOSTICS</button>
         <button class="qa" onclick="runAction('show active workflow steps')">ACTIVE WORKFLOW</button>
         <button class="qa" onclick="runAction('memory search')">MEMORY SEARCH</button>
         <button class="qa" onclick="runAction('query knowledge base')">KNOWLEDGE BASE</button>
         <button class="qa" onclick="runAction('connect all my agents')">CONNECT AGENTS</button>
-        <button class="qa" onclick="runAction('stop current tasks')">STOP TASKS</button>
+        <button class="qa" onclick="runAction('list all tools')">LIST TOOLS</button>
+        <button class="qa" onclick="runAction('stop all tasks')">STOP TASKS</button>
       </div>
       <div class="panel"><div class="panel-title">Agent Roster (<span id="agents">0</span>)</div>
         <div id="agentList"></div>
@@ -234,7 +236,11 @@ function send(){const t=input.value.trim();if(!t)return;
   addMsg('user',t);if(ws&&connected)ws.send(JSON.stringify({action:'send_message',text:t}));else push('not connected');input.value='';}
 function quick(t){t=(t||'').trim();if(!t)return;input.value=t;send();}
 function runAction(c){addMsg('user','▶ '+c);
-  if(/connect.*agent/i.test(c)){if(ws&&connected)ws.send(JSON.stringify({action:'connect_agents'}));return;}
+  const t=c.toLowerCase();
+  if(/^wake/.test(t)){if(ws&&connected)ws.send(JSON.stringify({action:'wake'}));return;}
+  if(/stop/.test(t)){if(ws&&connected)ws.send(JSON.stringify({action:'stop'}));return;}
+  if(/connect.*agent/.test(t)){if(ws&&connected)ws.send(JSON.stringify({action:'connect_agents'}));return;}
+  if(/list.*tool/.test(t)){if(ws&&connected)ws.send(JSON.stringify({action:'list_tools'}));return;}
   if(ws&&connected)ws.send(JSON.stringify({action:'run',command:c}));else push('not connected');}
 function apply(s){
   document.getElementById('ver').textContent=s.version;
@@ -248,6 +254,9 @@ function apply(s){
   const setSens=(id,on)=>{const el=document.getElementById(id);if(el)el.textContent=on?'ACTIVE':'STANDBY';el.className=on?'active':'standby';};
   setSens('senVoice',sn.voice);setSens('senText',sn.text);setSens('senVision',sn.vision);
   setSens('senFile',sn.file);setSens('senSystem',sn.system);
+  const em=s.emotion||{};
+  const eg=document.getElementById('emotGauge');if(eg)eg.style.setProperty('--v',(em.value||60)+'%');
+  const elb=document.getElementById('emotLabel');if(elb){elb.textContent=em.label||'CALM';elb.className=(em.value||60)>60?'active':'standby';}
   const agents=s.agents||0;
   const ag=document.getElementById('agents');if(ag)ag.textContent=agents;
   const roster=document.getElementById('agentList');
@@ -260,7 +269,8 @@ function apply(s){
   document.getElementById('stmBar2').style.width=Math.min(100,(m.short_term||0)*10)+'%';
 }
 function switchTab(name){document.querySelectorAll('#tabs .t').forEach(x=>x.classList.toggle('on',x.textContent.toUpperCase()===name));push('[VIEW] '+name);
-  const map={DIAGNOSTICS:'diagnostics',MEMORY:'memory_search',KNOWLEDGE:'knowledge',SECURITY:'diagnostics'};
+  const map={DIAGNOSTICS:'diagnostics',MEMORY:'memory_search',KNOWLEDGE:'knowledge',SECURITY:'diagnostics',
+    TOOLS:'list_tools',NETWORK:'network',SETTINGS:'settings',AUTOMATION:'run'};
   if(map[name]&&ws&&connected)ws.send(JSON.stringify({action:map[name],query:'summary'}));}
 function toggleMute(){const b=document.getElementById('muteBtn');const on=b.textContent.includes('OFF');
   b.textContent='MUTE: '+(on?'ON':'OFF');push('[VOICE] sending '+(on?'mute':'unmute'));

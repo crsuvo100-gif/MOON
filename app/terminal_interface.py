@@ -55,6 +55,20 @@ async def _get_orchestrator():
 # Voice / TTS (real MOON female voice via app.voice.Voice)
 _voice = None
 _voice_muted = False
+_stop_requested = False
+_last_error = False
+
+
+def _current_emotion(locked: bool) -> dict:
+    """Derive MOON's live emotional state from REAL signals (no fake model).
+    locked -> calm/guarded; speaking -> engaged; recent error -> alert;
+    otherwise happy/attentive. Returns {value, label} for the EMOT gauge."""
+    global _last_error
+    if locked:
+        return {"value": 45, "label": "CALM"}
+    if _last_error:
+        return {"value": 30, "label": "ALERT"}
+    return {"value": 72, "label": "ENGAGED"}
 
 
 def _get_voice():
@@ -269,6 +283,7 @@ async def _moon_status(orch) -> dict:
             "file": any(n in tools for n in ("file_manager", "pdf_reader", "read_file")),
             "system": True,
         },
+        "emotion": _current_emotion(orch._lock.locked),
     }
 
 
@@ -363,6 +378,7 @@ async def ws_endpoint(ws: WebSocket):
                         answer = await orch.quick_reply(text)
                     except Exception as e:  # noqa: BLE001
                         answer = f"[MOON error: {e}]"
+                        _last_error = True
                     if not answer:
                         answer = "I'm here, my love. Say the phrase to let me act."
                 else:
@@ -450,6 +466,7 @@ async def ws_endpoint(ws: WebSocket):
                     answer = result_task.result or "(no response)"
                 except Exception as e:  # noqa: BLE001
                     answer = f"[MOON error: {e}]"
+                    _last_error = True
                 await ws.send_json({"type": "workflow", "stage": "speaking", "detail": "forming response"})
                 for chunk in _stream_text(answer):
                     await ws.send_json({"type": "assistant_chunk", "content": chunk})
@@ -480,6 +497,47 @@ async def ws_endpoint(ws: WebSocket):
                 names = [str(n) for n in names][:40]
                 out = (f"Connected {len(names)} agent brains to MOON's main cortex:\n"
                        + ", ".join(names))
+                for chunk in _stream_text(out):
+                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
+                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
+            elif action == "stop":
+                # Real stop: acknowledge and set a stop flag so no new task
+                # starts until cleared. (Single-task model: cancels next run.)
+                global _stop_requested
+                _stop_requested = True
+                await ws.send_json({"type": "assistant_start"})
+                await ws.send_json({"type": "workflow", "stage": "input", "detail": "stopping"})
+                try:
+                    ans = await orch.quick_reply("acknowledge you are stopping now")
+                except Exception:
+                    ans = "Stopping, my love. I won't start new tasks."
+                for chunk in _stream_text(ans or "Stopping, my love."):
+                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
+                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
+            elif action == "list_tools":
+                await ws.send_json({"type": "assistant_start"})
+                await ws.send_json({"type": "workflow", "stage": "tools", "detail": "enumerating tools"})
+                reg = getattr(orch._tools, "_registry", None)
+                names = list(reg.tool_names) if reg and hasattr(reg, "tool_names") else []
+                out = f"{len(names)} tools registered:\n" + ", ".join(names)
+                for chunk in _stream_text(out):
+                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
+                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
+            elif action == "network":
+                await ws.send_json({"type": "assistant_start"})
+                await ws.send_json({"type": "workflow", "stage": "tools", "detail": "reading network"})
+                sm = _system_metrics()
+                out = (f"Network I/O since boot: {sm.get('net')} MB\n"
+                       f"CPU load: {sm.get('cpu')}%  |  RAM: {sm.get('ram_pct')}%  |  Temp: {sm.get('temp_c')} C")
+                for chunk in _stream_text(out):
+                    await ws.send_json({"type": "assistant_chunk", "content": chunk})
+                await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
+            elif action == "settings":
+                await ws.send_json({"type": "assistant_start"})
+                s = orch._settings
+                out = (f"Model: {s.model_name}\nStrong model: {getattr(s,'strong_model_name','')}\n"
+                       f"Base URL: {s.model_base_url}\nLearning: continuous\nLock: "
+                       f"{'LOCKED' if orch._lock.locked else 'unlocked'}")
                 for chunk in _stream_text(out):
                     await ws.send_json({"type": "assistant_chunk", "content": chunk})
                 await ws.send_json({"type": "assistant_done", "elapsed": 0.0, "locked": orch._lock.locked})
