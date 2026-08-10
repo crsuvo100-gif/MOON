@@ -15,6 +15,7 @@ drop one in). MOON's brain is the orchestrator already built in this project.
 from __future__ import annotations
 
 import asyncio
+import base64
 import os
 import time
 from pathlib import Path
@@ -49,6 +50,50 @@ async def _get_orchestrator():
             await o.setup()
             _ORCH = o
         return _ORCH
+
+
+# Voice / TTS (real MOON female voice via app.voice.Voice)
+_voice = None
+_voice_muted = False
+
+
+def _get_voice():
+    global _voice
+    if _voice is None:
+        try:
+            from app.voice import Voice
+            _voice = Voice()
+        except Exception:
+            _voice = False  # unavailable -> cached so we don't retry forever
+    return _voice or None
+
+
+async def _speak(text: str):
+    """Synthesize MOON's reply with her real female voice and return base64 WAV.
+    Returns None when muted or TTS unavailable."""
+    global _voice_muted
+    if _voice_muted:
+        return None
+    v = _get_voice()
+    if not v:
+        return None
+    try:
+        wav = await v.speak(text)
+        if not wav or not os.path.exists(wav):
+            return None
+        b64 = base64.b64encode(Path(wav).read_bytes()).decode("ascii")
+        try:
+            os.remove(wav)
+        except OSError:
+            pass
+        return b64
+    except Exception:
+        return None
+
+
+@app.on_event("startup")
+async def _term_startup():
+    _get_voice()  # probe TTS availability at boot so MODE reflects truth
 
 
 def _stream_text(text: str):
@@ -213,6 +258,10 @@ async def _moon_status(orch) -> dict:
         },
         "system": sys_metrics,
         "uptime": _proc_uptime(),
+        "voice": {
+            "mode": "MUTED" if _voice_muted else "AUTO",
+            "available": bool(_get_voice()),
+        },
     }
 
 
@@ -269,6 +318,7 @@ async def _run_diagnostics(orch) -> dict:
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
     await ws.accept()
+    global _voice_muted
     try:
         await ws.send_json({"type": "ready", "message": "MOON terminal connected."})
         orch = await _get_orchestrator()
@@ -290,7 +340,7 @@ async def ws_endpoint(ws: WebSocket):
                 await ws.send_json({"type": "wake", "message": "🌙 MOON is listening...", "locked": orch._lock.locked})
                 continue
 
-            if action == "send_message":
+            elif action == "send_message":
                 text = data.get("text", "").strip()
                 if not text:
                     continue
@@ -310,6 +360,9 @@ async def ws_endpoint(ws: WebSocket):
                 await ws.send_json({"type": "workflow", "stage": "speaking", "detail": "forming response"})
                 for chunk in _stream_text(answer):
                     await ws.send_json({"type": "assistant_chunk", "content": chunk})
+                audio = await _speak(answer)
+                if audio:
+                    await ws.send_json({"type": "audio", "format": "wav", "data": audio})
                 await ws.send_json({
                     "type": "assistant_done",
                     "elapsed": round(time.time() - t0, 2),
@@ -383,9 +436,24 @@ async def ws_endpoint(ws: WebSocket):
                 await ws.send_json({"type": "workflow", "stage": "speaking", "detail": "forming response"})
                 for chunk in _stream_text(answer):
                     await ws.send_json({"type": "assistant_chunk", "content": chunk})
+                audio = await _speak(answer)
+                if audio:
+                    await ws.send_json({"type": "audio", "format": "wav", "data": audio})
                 await ws.send_json({"type": "assistant_done", "elapsed": round(time.time() - t0, 2), "locked": orch._lock.locked})
             elif action == "status":
-                await ws.send_json({"type": "status", **(await _moon_status(orch))})
+                payload = await _moon_status(orch)
+                payload["voice"] = {
+                    "mode": "MUTED" if _voice_muted else "AUTO",
+                    "available": bool(_get_voice()),
+                }
+                await ws.send_json({"type": "status", **payload})
+            elif action in ("mute", "unmute"):
+                _voice_muted = (action == "mute")
+                push_note = f"[VOICE] mode {'MUTED' if _voice_muted else 'AUTO'}"
+                await ws.send_json({"type": "status", **(await _moon_status(orch)),
+                                    "voice": {"mode": "MUTED" if _voice_muted else "AUTO",
+                                              "available": bool(_get_voice())}})
+                await ws.send_json({"type": "notice", "message": push_note})
             elif action == "get_history":
                 await ws.send_json({"type": "history", "messages": []})
             else:

@@ -144,10 +144,13 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
       </div>
       <div class="chat">
         <div class="chatwin mono" id="chat"></div>
-        <div class="composer"><input id="input" placeholder="MOON > Type your command or ask MOON..." onkeydown="if(event.key==='Enter')send()"/><button onclick="send()">SEND</button></div>
       </div>
       <div class="panel"><div class="panel-title">Command Palette</div>
-        <div class="composer"><input id="cp" placeholder="MOON > command..." onkeydown="if(event.key==='Enter')quick(this.value)"/><button onclick="quick(document.getElementById('cp').value)">SEND</button></div>
+        <div class="tabs" id="tabs">
+          <div class="t on">DASHBOARD</div><div class="t">DIAGNOSTICS</div><div class="t">MEMORY</div><div class="t">KNOWLEDGE</div>
+          <div class="t">TOOLS</div><div class="t">AUTOMATION</div><div class="t">SECURITY</div><div class="t">NETWORK</div><div class="t">SETTINGS</div>
+        </div>
+        <div class="composer"><input id="cp" placeholder="MOON > Type your command or ask MOON..." onkeydown="if(event.key==='Enter')quick(this.value)"/><button onclick="quick(document.getElementById('cp').value)">SEND</button></div>
         <div class="tags">
           <span onclick="quick('system status')">system status</span><span onclick="quick('analyze workflow')">analyze workflow</span>
           <span onclick="quick('memory search')">memory search</span><span onclick="quick('open diagnostics')">open diagnostics</span>
@@ -165,13 +168,6 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
         <div class="gline"><small>DECIS</small><div class="gauge" style="--v:92%"><span>●</span></div><span class="active">ACTIVE</span></div>
         <div class="gline"><small>EMOT</small><div class="gauge" style="--v:60%"><span>●</span></div><span class="standby">CALM</span></div>
         <div class="gline"><small>LEARN</small><div class="gauge" style="--v:96%"><span>●</span></div><span class="active">ACTIVE</span></div>
-      </div>
-      <div class="panel"><div class="panel-title">Command</div>
-        <div class="composer"><input id="cmd2" placeholder="MOON > Type your command or ask MOON..." onkeydown="if(event.key==='Enter'){input.value=this.value;send()}"/><button onclick="input.value=document.getElementById('cmd2').value;send()">SEND</button></div>
-        <div class="tabs" id="tabs">
-          <div class="t on">DASHBOARD</div><div class="t">DIAGNOSTICS</div><div class="t">MEMORY</div><div class="t">KNOWLEDGE</div>
-          <div class="t">TOOLS</div><div class="t">AUTOMATION</div><div class="t">SECURITY</div><div class="t">NETWORK</div><div class="t">SETTINGS</div>
-        </div>
       </div>
       <div class="panel"><div class="panel-title">Quick Actions</div>
         <button class="qa" onclick="runAction('system status')">SYSTEM STATUS</button>
@@ -198,7 +194,7 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
 <script>
 const WS=(()=>{const p=location.protocol==='https:'?'wss':'ws';return `${p}://${location.hostname||'127.0.0.1'}:8777/ws`;})();
 let ws,connected=false;
-const chat=document.getElementById('chat'),input=document.getElementById('input'),log=document.getElementById('log'),stateEl=document.getElementById('state');
+const chat=document.getElementById('chat'),input=document.getElementById('cp'),log=document.getElementById('log'),stateEl=document.getElementById('state');
 const MAP={input:'input',routing:'input',memory:'memory',thinking:'reasoning',tool_call:'tools',reflection:'verify',consistency:'verify',speaking:'execution'};
 function setMoon(s){stateEl.textContent=s.toUpperCase();document.body.dataset.moon=s;
   document.querySelectorAll('.sicons .si').forEach(e=>e.classList.toggle('on',e.dataset.s===s));}
@@ -217,9 +213,18 @@ function connect(){
     else if(d.type==='assistant_start'){setMoon('thinking');addMsg('assistant','');}
     else if(d.type==='assistant_chunk'){const ms=chat.querySelectorAll('.msg.a .b');const l=ms[ms.length-1];if(l)l.textContent+=d.content;chat.scrollTop=chat.scrollHeight;}
     else if(d.type==='assistant_done'){setMoon(d.locked?'locked':'idle');push('[DONE] '+d.elapsed+'s');}
+    else if(d.type==='audio'){playAudio(d.data,d.format);}
+    else if(d.type==='notice'){push(d.message);}
     else if(d.type==='error')push('[ERR] '+d.error);
   };
 }
+let _audioCtx=null;
+function playAudio(b64,fmt){try{
+  const bin=atob(b64),len=bin.length,buf=new Uint8Array(len);
+  for(let i=0;i<len;i++)buf[i]=bin.charCodeAt(i);
+  const blob=new Blob([buf],{type:'audio/wav'});const url=URL.createObjectURL(blob);
+  const a=new Audio(url);a.play().catch(()=>{});a.onended=()=>URL.revokeObjectURL(url);
+}catch(e){push('[AUDIO] play failed');}}
 function send(){const t=input.value.trim();if(!t)return;
   if(/^moon\b/i.test(t))ws.send(JSON.stringify({action:'wake'}));
   addMsg('user',t);if(ws&&connected)ws.send(JSON.stringify({action:'send_message',text:t}));else push('not connected');input.value='';}
@@ -230,6 +235,9 @@ function apply(s){
   document.getElementById('model').textContent=s.model+(s.strong_model?(' / '+s.strong_model):'');
   const ls=document.getElementById('lockState');ls.textContent=s.locked?'LOCKED':'UNLOCKED';ls.className=s.locked?'standby':'active';
   if(s.locked)setMoon('locked');
+  const v=s.voice||{};
+  const vm=document.getElementById('voiceMode');if(vm&&v.mode)vm.textContent=v.mode;
+  if(v.mode==='MUTED'){document.getElementById('muteBtn').textContent='MUTE: ON';}
   const m=s.memory||{};
   document.getElementById('ltmCount').textContent=m.long_term||0;
   document.getElementById('ltmBar').style.width=Math.min(100,(m.long_term||0)*4)+'%';
@@ -240,7 +248,9 @@ function apply(s){
 function switchTab(name){document.querySelectorAll('#tabs .t').forEach(x=>x.classList.toggle('on',x.textContent.toUpperCase()===name));push('[VIEW] '+name);
   const map={DIAGNOSTICS:'diagnostics',MEMORY:'memory_search',KNOWLEDGE:'knowledge',SECURITY:'diagnostics'};
   if(map[name]&&ws&&connected)ws.send(JSON.stringify({action:map[name],query:'summary'}));}
-function toggleMute(){const b=document.getElementById('muteBtn');const on=b.textContent.includes('OFF');b.textContent='MUTE: '+(on?'ON':'OFF');push('[VOICE] mute '+(on?'on':'off'));}
+function toggleMute(){const b=document.getElementById('muteBtn');const on=b.textContent.includes('OFF');
+  b.textContent='MUTE: '+(on?'ON':'OFF');push('[VOICE] sending '+(on?'mute':'unmute'));
+  if(ws&&connected)ws.send(JSON.stringify({action:on?'mute':'unmute'}));}
 document.querySelectorAll('#tabs .t').forEach(t=>t.onclick=()=>switchTab(t.textContent.trim().toUpperCase()));
 function tick(){const n=new Date();document.getElementById('date').textContent=n.toLocaleDateString('en-GB');document.getElementById('time').textContent=n.toLocaleTimeString();}
 setInterval(tick,1000);tick();
