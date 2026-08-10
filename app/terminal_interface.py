@@ -25,6 +25,7 @@ WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 TERMINAL_HTML = WEB_DIR / "moon_terminal.html"
 AVATAR_SVG = WEB_DIR / "avatar.svg"
 AVATAR_GIF = WEB_DIR / "avatar.gif"
+AVATAR_PNG = WEB_DIR / "avatar.png"
 
 app = FastAPI(title="MOON Terminal")
 
@@ -75,6 +76,16 @@ async def avatar_gif():
     if AVATAR_GIF.exists():
         return FileResponse(str(AVATAR_GIF), media_type="image/gif")
     # fallback to svg if no gif provided
+    if AVATAR_SVG.exists():
+        return FileResponse(str(AVATAR_SVG), media_type="image/svg+xml")
+    return HTMLResponse("<svg/>", status_code=404)
+
+
+@app.get("/avatar.png")
+async def avatar_png():
+    if AVATAR_PNG.exists():
+        return FileResponse(str(AVATAR_PNG), media_type="image/png")
+    # fallback to svg if no png provided
     if AVATAR_SVG.exists():
         return FileResponse(str(AVATAR_SVG), media_type="image/svg+xml")
     return HTMLResponse("<svg/>", status_code=404)

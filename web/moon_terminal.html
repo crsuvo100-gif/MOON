@@ -185,6 +185,20 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
             <div class="pt" style="left:40%;top:70%"></div>
             <div class="pt" style="left:60%;top:70%"></div>
           </div>
+          <script>
+          // Prefer a real photo if the operator drops one in (web/avatar.png or web/avatar.gif).
+          (function(){
+            var img=document.getElementById('avatarImg');
+            var candidates=['/avatar.png','/avatar.gif'];
+            (function tryNext(i){
+              if(i>=candidates.length) return;
+              var t=new Image();
+              t.onload=function(){ img.src=candidates[i]; };
+              t.onerror=function(){ tryNext(i+1); };
+              t.src=candidates[i];
+            })(0);
+          })();
+          </script>
           <div class="scan"></div>
         </div>
       </div>
