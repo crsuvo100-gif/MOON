@@ -91,7 +91,10 @@ class LLMService:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
         try:
-            resp = await self._client.post("/chat/completions", json=payload)
+            resp = await self._client.post(
+                "/chat/completions", json=payload,
+                timeout=min(45.0, self._timeout),
+            )
             resp.raise_for_status()
             data = resp.json()
             choice = data["choices"][0]["message"]

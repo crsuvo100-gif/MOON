@@ -40,5 +40,29 @@
     "outcome": "> I'm excited to launch this innovative tool.",
     "lesson": "",
     "success": true
+  },
+  {
+    "goal": "Moon, say hi",
+    "outcome": "Moon, hi! \ud83c\udf0c",
+    "lesson": "Factual errors: No factual errors in the answer; Vagueness: The answer is too brief and lacks specific details; Concrete problems: The answer is too short and lacks specific details; SATISFACTORY",
+    "success": false
+  },
+  {
+    "goal": "Moon, say hi",
+    "outcome": "Hi, Moon! \ud83d\ude0a  \nLet me know if there's anything I can do for you!",
+    "lesson": "Answer is too long (missing parts; Vagueness: The response doesn't specify what the user needs; Factual errors: None",
+    "success": false
+  },
+  {
+    "goal": "Moon, say hi",
+    "outcome": "Hi! I'm Moon! Let me know how I can help! \ud83c\udf1f",
+    "lesson": "",
+    "success": true
+  },
+  {
+    "goal": "Moon, say hi",
+    "outcome": "Moon, say hi!",
+    "lesson": "Missing parts: The answer is too short and lacks context or additional details; Vagueness: The prompt is very general, and the answer doesn't provide specific information or a reason",
+    "success": false
   }
 ]

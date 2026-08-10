@@ -335,7 +335,10 @@ code{background:rgba(0,243,255,.12);padding:1px 5px;border-radius:4px;color:var(
       <div class="dock-voice">
         <div class="voice-ico">🎙</div>
         <div style="flex:1"><div class="row" style="margin:0"><span>MODE</span><span id="voiceMode">AUTO</span></div>
-          <button class="qa" id="muteBtn" style="margin-top:3px" onclick="toggleMute()">MUTE: OFF</button></div>
+          <div style="display:flex;gap:6px;margin-top:3px">
+            <button class="qa" id="muteBtn" onclick="toggleMute()">MUTE: OFF</button>
+            <button class="qa" id="micBtn" onclick="toggleMic()" title="Push to talk (Web Speech)">🎙 TALK</button>
+          </div></div>
       </div>
       <div class="dock-cmd">
         <div class="composer"><input id="cp" placeholder="MOON > Type your command or ask MOON..." onkeydown="if(event.key==='Enter')quick(this.value)"/><button onclick="quick(document.getElementById('cp').value)">SEND</button></div>
@@ -416,14 +419,28 @@ function connect(){
   };
 }
 let _audioCtx=null,_analyser=null,_lipRAF=0;
+// Pre-create + unlock the AudioContext on the first user gesture (browser
+// autoplay policy: a context built lazily during playback stays 'suspended'
+// and silently drops audio). We resume it on any click/keydown below.
+function _ensureAudioCtx(){
+  try{
+    if(!_audioCtx)_audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(_audioCtx.state==='suspended')_audioCtx.resume();
+  }catch(e){}
+}
+window.addEventListener('click',_ensureAudioCtx,{once:false});
+window.addEventListener('keydown',_ensureAudioCtx,{once:false});
 function playAudio(b64,fmt){try{
+  _ensureAudioCtx();
   const bin=atob(b64),len=bin.length,buf=new Uint8Array(len);
   for(let i=0;i<len;i++)buf[i]=bin.charCodeAt(i);
   const blob=new Blob([buf],{type:'audio/wav'});const url=URL.createObjectURL(blob);
-  const a=new Audio(url);a.play().catch(()=>{});
+  const a=new Audio(url);
+  a.play().catch(()=>{ // retry once context is unlocked by a gesture
+    setTimeout(()=>{_ensureAudioCtx();a.play().catch(()=>{});},300);
+  });
   a.onended=()=>{URL.revokeObjectURL(url);if(window.setMouthOpen)window.setMouthOpen(0);};
   try{
-    if(!_audioCtx)_audioCtx=new (window.AudioContext||window.webkitAudioContext)();
     if(!_analyser){_analyser=_audioCtx.createAnalyser();_analyser.fftSize=256;}
     const src=_audioCtx.createMediaElementSource(a);src.connect(_analyser);_analyser.connect(_audioCtx.destination);
     const data=new Uint8Array(_analyser.frequencyBinCount);
@@ -509,6 +526,32 @@ function switchTab(name){document.querySelectorAll('#tabs .t').forEach(x=>x.clas
 function toggleMute(){const b=document.getElementById('muteBtn');const on=b.textContent.includes('OFF');
   b.textContent='MUTE: '+(on?'ON':'OFF');push('[VOICE] sending '+(on?'mute':'unmute'));
   if(ws&&connected)ws.send(JSON.stringify({action:on?'mute':'unmute'}));}
+/* Voice INPUT: push-to-talk via the browser Web Speech API (no backend cost).
+   Recognized speech is fed to MOON exactly like typed text (unlock phrase,
+   wake word, or a real command). Falls back gracefully if unsupported. */
+let _recog=null,_micOn=false;
+function _initRecog(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR)return null;
+  const r=new SR();r.lang='en-US';r.interimResults=false;r.maxAlternatives=1;r.continuous=false;
+  r.onresult=(e)=>{const txt=e.results[0][0].transcript.trim();if(txt){push('[🎙] '+txt);input.value=txt;send();}};
+  r.onerror=(e)=>{push('[🎙] mic error: '+(e.error||'unknown'));setMic(false);};
+  r.onend=()=>{if(_micOn)setMic(false);};
+  return r;
+}
+function setMic(on){
+  _micOn=on;const b=document.getElementById('micBtn');
+  if(b){b.classList.toggle('on',on);b.textContent=on?'🎙 LISTENING…':'🎙 TALK';}
+  setMoon(on?'listening':'idle');
+}
+function toggleMic(){
+  _ensureAudioCtx();
+  if(!_recog)_recog=_initRecog();
+  if(!_recog){push('[🎙] voice input not supported in this browser');return;}
+  if(_micOn){_recog.stop();setMic(false);return;}
+  setMic(true);push('[🎙] listening… say your command or the unlock phrase');
+  try{_recog.start();}catch(e){ /* already started */ }
+}
 document.querySelectorAll('#tabs .t').forEach(t=>t.onclick=()=>switchTab(t.textContent.trim().toUpperCase()));
 function tick(){const n=new Date();document.getElementById('date').textContent=n.toLocaleDateString('en-GB');document.getElementById('time').textContent=n.toLocaleTimeString();}
 setInterval(tick,1000);tick();
