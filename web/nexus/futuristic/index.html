@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MOON NEXUS v3 — Animated Avatar Command Center</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="scanlines"></div><div class="vignette"></div><div id="particles"></div>
+<header class="topbar">
+  <div class="brand"><span class="brand-orb">◈</span><b>MOON NEXUS</b><small>v3.0</small><em>AI AGENT TERMINAL INTERFACE</em></div>
+  <nav>
+    <button class="nav active" data-panel="terminal">▣ TERMINAL</button><button class="nav" data-panel="chat">⌁ NEXUS CHAT</button><button class="nav" data-panel="memory">◇ MEMORY CORE</button><button class="nav" data-panel="tools">⚒ TOOLS</button><button class="nav" data-panel="tasks">▣ TASKS</button><button class="nav" data-panel="vault">▤ DATA VAULT</button><button class="nav" data-panel="settings">⚙ SETTINGS</button>
+  </nav>
+  <div class="clock"><strong id="clock">00:00:00</strong><span id="date">--</span></div><div class="online"><i></i><span id="conn">OFFLINE</span></div><button class="window">—</button><button class="window">□</button><button class="window close">×</button>
+</header>
+
+<main class="dashboard">
+<section class="leftcol">
+  <div class="panel connection"><div class="title">MOON CONNECTION <span>STATUS: <b id="statusText">DISCONNECTED</b> ●</span></div><div class="conn-grid"><div><label>MOON CORE LINK</label><code>ws://127.0.0.1:8765/moon</code><label>LATENCY <b id="latency">-- ms</b></label><label>HEARTBEAT <b class="green">ACTIVE</b></label><label>UPTIME <b id="uptime">00h 00m</b></label></div><div class="planet"><div class="planet-ring r1"></div><div class="planet-ring r2"></div><div class="planet-core">◉</div></div></div></div>
+  <div class="panel"><div class="title">MOON AGENT STATUS</div><ul class="status-list" id="agentStatus"><li>◉ BRAIN <b>ONLINE</b><i></i></li><li>◉ MEMORY <b>ONLINE</b><i></i></li><li>◉ RETRIEVER <b>ONLINE</b><i></i></li><li>◉ PLANNER <b>ONLINE</b><i></i></li><li>✂ TOOLS <b>ONLINE</b><i></i></li><li>◎ FUNCTIONS <b>ONLINE</b><i></i></li><li>◉ VISION <b>ONLINE</b><i></i></li><li>◉ LISTENER <b>ACTIVE</b><i></i></li></ul></div>
+  <div class="panel overview"><div class="title">SYSTEM OVERVIEW</div><div class="gauges"><div><span>CPU</span><b id="cpu">18%</b><small>2.4 GHz</small></div><div><span>RAM</span><b id="ram">43%</b><small>1.7 / 4 GB</small></div><div><span>DISK</span><b id="disk">31%</b><small>98 / 298 GB</small></div><div><span>NET</span><b id="net">18%</b><small>120 Mbps</small></div></div></div>
+  <div class="panel graph"><div class="title">PERFORMANCE GRAPH <span>━ CPU　━ RAM　━ NET</span></div><canvas id="perf"></canvas><small>60 SEC</small></div>
+  <div class="panel quick"><div class="title">QUICK LAUNCH</div><div class="quick-grid"><button data-command="pwd">▣<span>Terminal</span></button><button data-command="echo $SHELL">⌘<span>Shell</span></button><button data-command="python --version">⌬<span>Python</span></button><button data-command="ls -la">▤<span>Files</span></button><button data-command="uname -a">◫<span>Scanner</span></button><button data-command="whoami">⚒<span>Tools</span></button><button data-command="pwd && ls">▤<span>Browser</span></button><button data-command="df -h">⚙<span>Data Vault</span></button></div></div>
+</section>
+
+<section class="centercol">
+  <div class="panel avatar-panel">
+    <div class="avatar-header"><span>MOON AVATAR INTERFACE</span><b id="avatarState">IDLE</b></div>
+    <div class="avatar-layout">
+      <div class="side-widget mood"><div class="widget-title">MOOD / EMOTION</div><button class="mood active" data-mood="warm">♡ WARM</button><button class="mood" data-mood="focused">☻ FOCUSED</button><button class="mood" data-mood="curious">◌ CURIOUS</button><button class="mood" data-mood="calm">♢ CALM</button></div>
+      <div class="avatar-stage" id="avatarStage"><div class="rings"><i></i><i></i><i></i><i></i></div><div class="scanbeam"></div><div class="energy-orbit"></div><img id="avatar" src="assets/moon_avatar_reference.png" alt="MOON Avatar"><div class="avatar-particles"></div><div class="face-reticle">+</div><div class="mouth-sync"></div><div class="core-pulse"></div><div class="avatar-status"><span id="voiceState">READY</span><span class="wave" id="wave"></span></div></div>
+      <div class="side-widget attention"><div class="widget-title">ATTENTION</div><strong id="attention">100%</strong><div class="target">◎</div></div>
+      <div class="side-widget voice"><div class="widget-title">VOICE STATUS</div><strong id="voiceLabel">STANDBY</strong><div class="mini-wave" id="miniWave"></div><span>◉</span></div>
+      <div class="side-widget thinking"><div class="widget-title">THINKING CORE</div><div class="brain">◉</div><b id="thinkingState">ACTIVE</b><div class="bars"><i></i><i></i><i></i><i></i><i></i></div></div>
+    </div>
+    <div class="statebar"><div>♩<span>LISTENING</span><div class="tiny-wave"></div></div><div>♧<span>THINKING</span><div class="dots">••••</div></div><div class="moon-name"><b>MOON</b><small>Online &amp; Ready</small></div><div>◖<span>SPEAKING</span><div class="tiny-wave"></div></div><div>ϟ<span>EXECUTING</span><div class="tiny-wave"></div></div></div>
+    <div class="avatar-actions"><button data-state="listening">🎙 LISTEN</button><button data-state="thinking">◉ THINK</button><button data-state="speaking">◖ SPEAK</button><button data-state="executing">ϟ EXECUTE</button><button data-state="idle">RESET</button></div>
+  </div>
+  <div class="panel terminal-panel" id="terminalPanel">
+    <div class="tabs"><button class="tab active">TERMINAL</button><button class="tab">SHELL</button><button class="tab">PYTHON</button><button class="tab">LOGS</button><button class="tab">OUTPUT</button><div class="terminal-actions"><button id="clear">CLEAR</button><button id="stop">◉ STOP</button><button id="execute">EXECUTE</button></div></div>
+    <div class="terminal-body"><div class="terminal-left"><pre id="terminalOutput">MOON NEXUS v3.0 — TERMINAL ONLINE\nType a command for MOON…\n\nmoon@nexus:~$ </pre></div><div class="terminal-right"><div class="output-head">TERMINAL OUTPUT <span>AUTO SCROLL ●</span></div><div id="eventOutput"></div></div></div>
+    <div class="command"><span>moon@nexus:~$</span><input id="cmd" autocomplete="off" placeholder="Type a command for MOON…"><button id="send">➤</button></div>
+  </div>
+</section>
+
+<section class="rightcol">
+  <div class="panel events"><div class="title">LIVE EVENT STREAM <span>FILTER: ALL⌄</span></div><div id="events"></div></div>
+  <div class="panel functions"><div class="title">MOON FUNCTIONS <span>TOTAL: <b id="fnTotal">312</b>⌄</span></div><ul><li>◉ system_control <b>48</b></li><li>◉ web_automation <b>62</b></li><li>◉ data_analysis <b>55</b></li><li>◉ ai_retrieval <b>41</b></li><li>◉ file_manager <b>36</b></li><li>◉ network_tools <b>38</b></li><li>◉ security_tools <b>32</b></li><li>＋ ... and more</li></ul></div>
+  <div class="panel voice-control"><div class="title">VOICE CONTROL</div><div class="big-wave" id="bigWave"></div><button id="mic">◉</button><span>TAP TO SPEAK</span><div class="toggles"><label>VOICE INPUT <i class="toggle on"></i></label><label>VOICE OUTPUT <i class="toggle on"></i></label></div></div>
+  <div class="panel moods"><div class="title">QUICK MOOD SELECTOR</div><div class="mood-grid"><button data-mood="warm">♡<span>Warm</span></button><button data-mood="focused">◎<span>Focused</span></button><button data-mood="curious">?<span>Curious</span></button><button data-mood="calm">♧<span>Calm</span></button></div></div>
+</section>
+</main>
+<footer><div><b>◉ MOON CORE</b><span>ONLINE</span></div><div><b>♧ SECURITY SHIELD</b><span>ACTIVE</span></div><div class="dataflow">DATA FLOW <span id="dataFlow">2.4 TB / 10 TB</span></div><div class="core-symbol">◉</div><div>TEMP <b id="temp">42°C</b></div><div>FAN SPEED <b id="fan">1280 RPM</b></div><div>POWER <b>AC CONNECTED</b></div><div>THEME <b>RED NEXUS</b>⌄</div></footer>
+<script src="app.js"></script>
+</body></html>

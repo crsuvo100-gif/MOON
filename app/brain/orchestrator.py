@@ -708,14 +708,14 @@ class Orchestrator:
                         tool_outputs.append(out)
                 continue
             final_text = resp.content
-            self._history.append(Message.assistant(final_text))
+            self._history.append(Message.assistant(final_text or ""))
             break
         else:
             final_text = "(model did not produce a final answer within iteration budget)"
         self._last_tool_outputs = tool_outputs
         return final_text, total_tokens
 
-    async def quick_reply(self, prompt: str, *, max_tokens: int = 320, temperature: float = 0.7) -> str:
+    async def quick_reply(self, prompt: str, *, max_tokens: int = 1024, temperature: float = 0.7) -> str:
         if self._llm is None:
             await self.setup()
         if self._llm is None:

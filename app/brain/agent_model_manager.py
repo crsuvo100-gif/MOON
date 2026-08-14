@@ -27,31 +27,114 @@ from app.services.llm_service import LLMService
 logger = logging.getLogger(__name__)
 
 
-# Preferred model per agent. Values are Ollama model ids. `None` => use the
-# global default (settings.model_name). On a CPU-only host, larger models are
-# pulled only if Ollama can fetch + load them; otherwise we fall back.
+# ---------------------------------------------------------------------------
+# Per-agent AI model map  (THE core of "every agent runs on its own model").
+#
+# Each MOON agent is assigned a model best-suited to its FUNCTION. Model ids are
+# Ollama tags. `None` => use the global default (settings.model_name).
+#
+# CPU-only host constraint: the active assignments below are restricted to the
+# small models that actually load on this box (~0.6b-3b). The
+# RECOMMENDED_FOR_CAPABLE_HW map lists the stronger models to use when MOON runs
+# on a machine with a GPU / >16 GB RAM -- set them in .env / agent overrides to
+# raise accuracy. The model manager pulls any tag lazily via `ollama pull`.
+# ---------------------------------------------------------------------------
+
+# Models that load comfortably on the current CPU-only host.
+_M_CPU = "qwen2.5:3b"
+_M_CPU_SMALL = "qwen2.5:1.5b"
+_M_CODER = "qwen2.5-coder:1.5b"
+_M_REASON = "deepseek-r1:1.5b"   # reasoning model for math/science/logic
+_M_TINY = "qwen2.5:1.5b"
+
 AGENT_MODELS: dict[str, str | None] = {
-    # General/default agents share the global model.
-    "coding": "qwen2.5-coder:1.5b",
-    "debug": "qwen2.5-coder:1.5b",
-    "math": "qwen2.5:3b",
-    "science": "qwen2.5:3b",
-    "data_science": "qwen2.5:3b",
-    "research": "qwen2.5:3b",
-    "security": "qwen2.5:3b",
-    "cyber": "qwen2.5:3b",
-    "red_team": "qwen2.5:3b",
-    "blue_team": "qwen2.5:3b",
-    "purple_team": "qwen2.5:3b",
-    "forensics": "qwen2.5:3b",
-    "reverse_eng": "qwen2.5:3b",
-    "threat_hunt": "qwen2.5:3b",
-    "siem": "qwen2.5:3b",
-    "translation": "qwen2.5:3b",
-    "legal": "qwen2.5:3b",
-    "medical": "qwen2.5:3b",
-    "finance": "qwen2.5:3b",
-    # Everyone else uses the global default.
+    # --- Code / engineering ------------------------------------------------
+    "coding": _M_CODER,
+    "debug": _M_CODER,
+    "toolsmith": _M_CODER,
+    "github_sync": _M_CODER,
+    "qa": _M_CODER,
+    "infra": _M_CPU,
+
+    # --- Reasoning / math / science ----------------------------------------
+    "math": _M_REASON,
+    "science": _M_REASON,
+    "data_science": _M_CPU,
+    "strategist": _M_CPU,
+
+    # --- Research / knowledge ----------------------------------------------
+    "research": _M_CPU,
+    "search": _M_CPU,
+    "fact_checker": _M_CPU,
+    "browser": _M_CPU,
+    "summarizer": _M_CPU_SMALL,
+    "memory": _M_CPU_SMALL,
+
+    # --- Language / writing ------------------------------------------------
+    "writing": _M_CPU_SMALL,
+    "design": _M_CPU_SMALL,
+    "translation": _M_CPU,
+    "legal": _M_CPU,
+    "medical": _M_CPU,
+    "finance": _M_CPU,
+
+    # --- Security / cyber (defensive + offensive, within authz gate) --------
+    "security": _M_CPU,
+    "cyber": _M_CPU,
+    "red_team": _M_CPU,
+    "blue_team": _M_CPU,
+    "purple_team": _M_CPU,
+    "forensics": _M_CPU,
+    "reverse_eng": _M_CPU,
+    "threat_hunt": _M_CPU,
+    "siem": _M_CPU,
+
+    # --- Coordination / meta -----------------------------------------------
+    "planning": _M_CPU,
+    "coordinator": _M_CPU,
+    "manager": _M_CPU,
+    "router": _M_TINY,          # pure classification -> smallest/fastest
+    "review": _M_CPU,
+    "critic": _M_CPU,
+    "audio": _M_CPU_SMALL,      # text-side reasoning; STT handled separately
+
+    # Agents NOT listed here (e.g. "vision", "voice") fall back to the global
+    # default model for their text reasoning; their multimodal models are set
+    # in AGENT_MULTIMODAL below.
+}
+
+# Multimodal models per agent. These are NOT pulled automatically on a CPU host
+# (they need a GPU to be useful); set them via .env / overrides when hardware
+# allows. The agent's text reasoning still uses AGENT_MODELS / the default.
+AGENT_MULTIMODAL: dict[str, dict[str, str | None]] = {
+    "vision": {"vision": "llava:7b", "fallback_text": _M_CPU},
+    "voice":  {"audio": "qwen2-audio", "fallback_text": _M_CPU_SMALL},
+    "audio":  {"audio": "qwen2-audio", "fallback_text": _M_CPU_SMALL},
+}
+
+# Stronger models recommended for capable hardware. Operators can copy these
+# into AGENT_MODELS (or set STRONG_MODEL_NAME) when MOON runs on a GPU host.
+RECOMMENDED_FOR_CAPABLE_HW: dict[str, str] = {
+    "coding": "qwen2.5-coder:7b",
+    "debug": "qwen2.5-coder:7b",
+    "math": "deepseek-r1:8b",
+    "science": "qwen3:8b",
+    "data_science": "qwen3:8b",
+    "research": "qwen3:8b",
+    "security": "qwen3:8b",
+    "cyber": "qwen3:8b",
+    "red_team": "qwen3:8b",
+    "blue_team": "qwen3:8b",
+    "purple_team": "qwen3:8b",
+    "forensics": "qwen3:8b",
+    "reverse_eng": "qwen3:8b",
+    "threat_hunt": "qwen3:8b",
+    "siem": "qwen3:8b",
+    "legal": "qwen3:8b",
+    "medical": "qwen3:8b",
+    "finance": "qwen3:8b",
+    "vision": "llava:13b",
+    "audio": "qwen2-audio:7b",
 }
 
 
@@ -84,7 +167,18 @@ class AgentModelManager:
             return set()
 
     def _preferred(self, agent: str) -> str:
+        """Resolve the text-reasoning model for an agent (covers ALL registered
+        agents: listed ones use their mapped model, everything else inherits the
+        global default)."""
         return AGENT_MODELS.get(agent) or self._default
+
+    def multimodal_for(self, agent: str) -> dict[str, str | None]:
+        """Return the multimodal model spec for an agent (may be empty)."""
+        return dict(AGENT_MULTIMODAL.get(agent, {}))
+
+    def recommended_for(self, agent: str) -> str | None:
+        """Recommended stronger model when running on capable hardware."""
+        return RECOMMENDED_FOR_CAPABLE_HW.get(agent)
 
     def ensure_model(self, model: str) -> bool:
         """Pull/install a model if missing. Returns True if available (best-effort)."""
@@ -126,13 +220,23 @@ class AgentModelManager:
     def status(self) -> dict[str, str]:
         return {a: (self._preferred(a)) for a in set(list(AGENT_MODELS) + [self._default])}
 
+    def all_preferred_models(self) -> set[str]:
+        """Every model the agent roster needs (text + multimodal fallbacks)."""
+        models: set[str] = {self._preferred(a) for a in AGENT_MODELS}
+        models.add(self._default)
+        for spec in AGENT_MULTIMODAL.values():
+            fb = spec.get("fallback_text")
+            if fb:
+                models.add(fb)
+        return {m for m in models if m}
+
     async def prefetch_all(self, max_parallel: int = 2) -> dict[str, bool]:
         """Startup routine: pull every distinct preferred model so agents are
         ready instantly. Best-effort; reports per-model success and never
         raises. Runs a few pulls concurrently to stay fast."""
         import asyncio
 
-        models = sorted({self._preferred(a) for a in AGENT_MODELS} | {self._default})
+        models = sorted(self.all_preferred_models())
         sem = asyncio.Semaphore(max_parallel)
         results: dict[str, bool] = {}
 

@@ -23,6 +23,7 @@ class CompletionResult:
     content: str | None
     has_tool_calls: bool
     tool_calls: list[dict[str, Any]] = None  # type: ignore[assignment]
+    reasoning: str | None = None  # thinking-model trace (real brain state)
 
     def __post_init__(self) -> None:
         if self.tool_calls is None:
@@ -48,15 +49,15 @@ class LLMService:
         self._temperature = temperature
         self._max_tokens = max_tokens
         self._timeout = timeout
-        # qwen3 / deepseek / glm-style "thinking" models spend their entire
-        # token budget on hidden <reasoning> and emit NO usable content unless
-        # thinking is disabled. On CPU-only local endpoints this also wastes
-        # minutes. Default: disable thinking for known thinking-model families.
+        # Thinking models (qwen3 / deepseek-r1 / glm-z1 / ...): KEEP thinking
+        # ENABLED for better reasoning + answer quality (per operator preference:
+        # "make it thinking capability for better perform"). We surface the
+        # reasoning trace separately so the UI can stream the real brain state,
+        # and we keep enough token budget for the final answer to appear in
+        # `content` (otherwise the model spends the whole budget on <reasoning>
+        # and emits an empty answer).
         if disable_thinking is None:
-            disable_thinking = any(
-                tok in model_name.lower()
-                for tok in ("qwen3", "qwq", "deepseek-r1", "glm-z1", "thinking")
-            )
+            disable_thinking = False
         self._disable_thinking = disable_thinking
         self._client = httpx.AsyncClient(
             base_url=self._base,
@@ -82,11 +83,11 @@ class LLMService:
             "temperature": temperature if temperature is not None else self._temperature,
             "max_tokens": max_tokens if max_tokens is not None else self._max_tokens,
         }
-        # qwen3 / thinking models: disable hidden reasoning so the model emits
-        # real assistant content instead of consuming the whole budget on
-        # <reasoning>. Harmless for endpoints that ignore unknown keys.
+        # qwen3 / deepseek-r1 / glm-z1 style "thinking" models: keep thinking
+        # ON for better performance (operator preference). The correct key is
+        # `enable_thinking`; Ollama/qwen3 ignores unknown `think` keys.
         if self._disable_thinking:
-            payload["think"] = False
+            payload["enable_thinking"] = False
         if tools:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
@@ -99,6 +100,15 @@ class LLMService:
             data = resp.json()
             choice = data["choices"][0]["message"]
             content = choice.get("content")
+            # Thinking models may leave `content` empty and place the answer in
+            # the reasoning trace when the token budget is exhausted; fall back
+            # to the tail of the reasoning as the answer if needed. Never return
+            # None: a nil content would later produce invalid (400) chat messages.
+            reasoning = choice.get("reasoning") or choice.get("reasoning_content")
+            if not content and reasoning:
+                content = reasoning.strip().splitlines()[-1].strip()
+            if content is None:
+                content = ""
             raw_calls = choice.get("tool_calls") or []
             tool_calls = []
             for tc in raw_calls:
@@ -108,6 +118,7 @@ class LLMService:
                 content=content,
                 has_tool_calls=bool(tool_calls),
                 tool_calls=tool_calls,
+                reasoning=reasoning,
             )
         except Exception as exc:  # noqa: BLE001
             logger.warning("LLM complete failed: %s", exc)
