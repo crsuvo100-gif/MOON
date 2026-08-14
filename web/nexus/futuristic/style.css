@@ -26,3 +26,12 @@
 .jaw-glow{position:absolute;left:24%;right:24%;bottom:22%;height:20%;border-radius:50%;background:radial-gradient(ellipse at center,rgba(255,40,55,.12),transparent 70%);filter:blur(12px);transform:translateZ(25px);pointer-events:none}
 .avatar-stage.avatar-speaking .mouth-sync{opacity:.95;transform:translateZ(58px) scaleY(var(--mouth-scale,1));}.avatar-stage.avatar-listening .avatar-head{filter:drop-shadow(0 0 12px rgba(0,220,255,.15))}.avatar-stage.avatar-thinking .avatar-head{filter:drop-shadow(0 0 16px rgba(255,150,40,.12))}.avatar-stage.avatar-executing .avatar-head{filter:drop-shadow(0 0 18px rgba(255,20,40,.16))}
 .avatar-interaction-hint{position:absolute;right:14px;bottom:10px;font-size:8px;letter-spacing:1.1px;color:#786d70;z-index:10;opacity:.75}.avatar-caption{z-index:13}
+
+/* Ultron 3D avatar (Three.js canvas) — sits behind the HUD rings, replaces the human SVG face */
+#ultronCanvas{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
+/* hide the previous human-line drawing face container; Ultron is the avatar now */
+.avatar-head{display:none}
+.avatar-stage.avatar-speaking #ultronCanvas{filter:drop-shadow(0 0 26px rgba(255,20,40,.35))}
+.avatar-stage.avatar-listening #ultronCanvas{filter:drop-shadow(0 0 22px rgba(0,220,255,.28))}
+.avatar-stage.avatar-thinking #ultronCanvas{filter:drop-shadow(0 0 24px rgba(255,160,48,.25))}
+.avatar-stage.avatar-executing #ultronCanvas{filter:drop-shadow(0 0 28px rgba(255,20,40,.34))}
