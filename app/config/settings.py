@@ -60,6 +60,17 @@ class Settings(BaseSettings):
         description='GitHub repo URL MOON is connected to for autonomous tool/asset pull (e.g. https://github.com/crsuvo100-gif/MOON).',
     )
 
+    # Global Connector: MOON can connect to external services, other AI agents,
+    # MCP servers, and webhooks. Egress is ALWAYS permission-gated (see
+    # app.connector.permission). allowlisted/private hosts are SAFE (auto);
+    # everything else requires operator confirmation. Disable the whole layer here.
+    enable_global_connector: bool = True
+    allowed_egress_hosts: str = Field(
+        default="",
+        description="Comma-separated hosts MOON may egress to WITHOUT confirmation "
+                    "(e.g. api.github.com,my-agent.example.com). Everything else is CONFIRMATION.",
+    )
+
     # Per-agent models: each agent can pull/install and run on its OWN model
     # (via Ollama) for domain-suited results, feeding its output up to the main
     # brain. Disable to force every agent to share the default model.

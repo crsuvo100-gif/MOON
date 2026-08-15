@@ -73,6 +73,7 @@ from app.tools.utility_tools import IpGeolocationTool, TimezoneConverterTool, Un
 from app.tools.vuln_scanner_tool import VulnScannerTool
 from app.tools.web_search import WebSearchTool
 from app.capability.tool import CapabilityManagerTool
+from app.connector.tool import GlobalConnectorTool
 
 logger = get_logger(__name__)
 
@@ -222,6 +223,7 @@ class Orchestrator:
             MalwareAnalysisTool(), ExploitIntelTool(),
             SystemInfoTool(), PowerShellTool(), DockerTool(), GitTool(), SelfEvolveTool(), ModelPullTool(), GitHubSyncTool(),
             CapabilityManagerTool(),
+            GlobalConnectorTool(),
         ):
             registry.register(tool)
 

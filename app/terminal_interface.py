@@ -601,6 +601,38 @@ async def ws_endpoint(ws: WebSocket):
                 for chunk in _stream_text(out):
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
+            elif action == "connect":
+                # NEW: MOON's global connection layer (additive).
+                await send(type="assistant_start")
+                await send(type="workflow", stage="tools", detail="global connector")
+                try:
+                    tool = getattr(orch._tools, "_registry", None)
+                    conn_tool = tool.get("global_connector") if tool else None
+                    if conn_tool is None:
+                        out = "[connect] Global Connector not registered."
+                    else:
+                        payload = (data.get("query") or data.get("text") or data.get("command") or "").strip()
+                        parts = payload.split()
+                        cmd = parts[0].lower() if parts else "list"
+                        if cmd == "list":
+                            out = await conn_tool.execute(action="list")
+                        elif cmd == "health":
+                            out = await conn_tool.execute(action="health")
+                        elif cmd == "connect" and len(parts) >= 3:
+                            # moon> connect <name> <url> [kind]
+                            out = await conn_tool.execute(action="connect", name=parts[1],
+                                                         url=parts[2], kind=(parts[3] if len(parts) > 3 else "service"))
+                        elif cmd == "call" and len(parts) >= 2:
+                            out = await conn_tool.execute(action="call", name=parts[1],
+                                                         message=" ".join(parts[2:]))
+                        else:
+                            out = (await conn_tool.execute(action="list"))
+                        out = out if isinstance(out, str) else str(out)
+                except Exception as e:  # noqa: BLE001
+                    out = f"[connect] error: {e}"
+                for chunk in _stream_text(out):
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "settings":
                 await send(type="assistant_start")
                 s = orch._settings

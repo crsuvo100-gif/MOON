@@ -31,6 +31,9 @@ capabilities/manifests/
 capabilities/installed/
 capabilities/cache/
 
+# Global Connector runtime connection registry (permission-gated; written at runtime)
+connections/registry.json
+
 # Test caches
 .pytest_cache/
 .mypy_cache/
