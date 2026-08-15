@@ -6,7 +6,6 @@ coordinator / task-decomposition path.
 
 from __future__ import annotations
 
-
 from app.services.llm_service import ChatMessage
 
 

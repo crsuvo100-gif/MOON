@@ -13,11 +13,11 @@ it; otherwise it binds to 127.0.0.1. No secrets are ever logged.
 
 from __future__ import annotations
 
-import os
-import time
 import asyncio
 import logging
+import os
 import threading
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +29,9 @@ BIND_PORT = int(os.environ.get("MOON_DASHBOARD_PORT", "5000"))
 def create_dashboard(run_fn) -> Flask:
     """run_fn(prompt: str) -> str  (coroutine) is MOON's orchestrator entry."""
     try:
-        from flask import Flask, Response, request
+        from flask import Flask
         from flask_socketio import SocketIO, emit
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise RuntimeError("Flask/SocketIO not installed: pip install flask flask-socketio") from e
     app = Flask("moon_dashboard")
     socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")

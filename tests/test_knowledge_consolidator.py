@@ -1,17 +1,13 @@
 """Tests for the autonomous KnowledgeConsolidator (MOON self-learning loop)."""
 
 import asyncio
-import json
-from pathlib import Path
-
-import pytest
 
 from app.brain.knowledge_consolidator import KnowledgeConsolidator
 from app.brain.memory_manager import MemoryManager
+from app.memory.knowledge_base import KnowledgeBase
 from app.memory.long_term import LongTermMemory
 from app.memory.short_term import ShortTermMemory
 from app.memory.vector_db import InMemoryVectorStore
-from app.memory.knowledge_base import KnowledgeBase
 from app.services.embedding_service import EmbeddingService
 
 

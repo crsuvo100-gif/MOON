@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import os
 import re
-
 from typing import ClassVar
 
 from app.tools.base import BaseTool

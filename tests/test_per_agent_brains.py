@@ -2,8 +2,6 @@
 
 import asyncio
 
-import pytest
-
 
 async def _make_orch():
     from app.brain.orchestrator import Orchestrator
@@ -33,7 +31,7 @@ def test_per_agent_brains_connected():
 
 
 def test_agent_registry_personas_present():
-    from app.brain.agent_registry import persona_for, build_agents
+    from app.brain.agent_registry import build_agents, persona_for
 
     tools = ["web_search", "browser", "api_requests", "file_manager", "ocr", "pdf_reader", "image_processing"]
     agents = build_agents(tools)
@@ -108,8 +106,7 @@ def test_two_phase_parse_logic():
 
 def test_every_agent_has_durable_brain_file():
     import asyncio
-    from app.brain.orchestrator import Orchestrator
-    from app.config.settings import get_settings
+
 
     o = asyncio.new_event_loop()
     try:
@@ -135,7 +132,6 @@ def test_majority_answer_logic():
 
 
 def test_pick_llm_routing():
-    from app.brain.orchestrator import Orchestrator
     o = asyncio.new_event_loop()
     try:
         orch = o.run_until_complete(_make_orch())
@@ -148,7 +144,7 @@ def test_pick_llm_routing():
 
 
 def test_per_agent_model_manager_binding():
-    from app.brain.agent_model_manager import AGENT_MODELS, AgentModelManager
+    from app.brain.agent_model_manager import AgentModelManager
     from app.config.settings import get_settings
 
     s = get_settings()

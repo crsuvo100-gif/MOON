@@ -4,10 +4,10 @@
 
 PY := env -u PYTHONPATH .venv/bin/python
 
-.PHONY: help run serve terminal test live voice-test voice voice-install models nexus clean
+.PHONY: help run serve terminal test live voice-test voice voice-install models clean
 
 help:
-	@echo "Targets: run serve terminal test live voice-test models nexus clean"
+	@echo "Targets: run serve terminal test live voice-test models clean"
 
 run:
 	$(PY) main.py run "$(TASK)" --agent $(AGENT)
@@ -32,14 +32,6 @@ voice:
 
 models:
 	$(PY) main.py models
-
-# Additive NEXUS avatar-terminal bridge (wired to MOON's real brain).
-# Runs on :8765/:8787 by default; pass NEXUS_WS_PORT / NEXUS_UI_PORT to override.
-nexus:
-	$(PY) web/nexus/run_nexus_bridge.py --ws-port $(or $(NEXUS_WS_PORT),8765) --ui-port $(or $(NEXUS_UI_PORT),8787)
-
-nexus-ui-only:
-	$(PY) web/nexus/run_nexus_bridge.py --no-moon --ws-port $(or $(NEXUS_WS_PORT),8765) --ui-port $(or $(NEXUS_UI_PORT),8787)
 
 voice-install:
 	$(PY) install_moon.py

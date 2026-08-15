@@ -6,8 +6,9 @@ gracefully when the library/token is absent so it never crashes MOON.
 
 from __future__ import annotations
 
-import os
 import logging
+import os
+
 from app.tools.base import BaseTool
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,6 @@ class TelegramTool(BaseTool):
             return "[telegram] TELEGRAM_BOT_TOKEN not set in environment -- cannot use Telegram."
         try:
             from telegram import Bot
-            from telegram.error import TelegramError
         except Exception as e:  # noqa: BLE001
             return f"[telegram] python-telegram-bot not installed: {e}"
         bot = Bot(token=token)

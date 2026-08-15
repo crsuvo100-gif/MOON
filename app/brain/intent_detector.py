@@ -54,7 +54,7 @@ _INTENT_RULES: dict[str, list[str]] = {
 }
 
 # tokens that strongly imply a planning / decomposition request
-_DECOMPOSE_HINT = re.compile(r"(break (this|it|that) (down|into)|step[s]? by step|sub-?tasks?|decompose|how (do|would) i|plan (for|to)|roadmap)", re.I)
+_DECOMPOSE_HINT = re.compile(r"(break (this|it|that) (down|into)|step[s]? by step|sub-?tasks?|decompose|how (do|would) i|plan (for|to)|roadmap)", re.IGNORECASE)
 
 
 def detect_intent(prompt: str) -> tuple[str, float]:

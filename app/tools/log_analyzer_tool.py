@@ -7,7 +7,6 @@ web exploits, reverse-shell patterns) and summarizes counts. No auth needed.
 from __future__ import annotations
 
 import re
-
 from typing import ClassVar
 
 from app.tools.base import BaseTool

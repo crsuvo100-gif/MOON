@@ -2,7 +2,6 @@
 
 import importlib
 import pkgutil
-from pathlib import Path
 
 import app as app_pkg
 

@@ -5,9 +5,10 @@ and habit memory for MOON. Real implementations with safe fallbacks.
 from __future__ import annotations
 
 import os
+import pickle
 import time
 import uuid
-import pickle
+
 from app.tools.base import BaseTool
 
 MULTIMODAL_DIR = os.path.join(os.path.dirname(__file__), "..", "logs", "moon_multimodal_memory")
@@ -102,8 +103,8 @@ class AutonomousChainTool(BaseTool):
             # Simple decomposer: split the goal into ordered subtasks via the planner if present.
             try:
                 from app.brain.planner import Planner
-                from app.services.llm_service import LLMService
                 from app.config.settings import get_settings
+                from app.services.llm_service import LLMService
                 cfg = get_settings()
                 llm = LLMService(model_name=cfg.model_name, base_url=cfg.model_base_url, api_key=cfg.model_api_key)
                 await llm.setup()
