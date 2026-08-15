@@ -176,6 +176,24 @@ class Orchestrator:
             await self._llm_fallback.setup()
             logger.info("Fallback backend enabled: %s @ %s", self._settings.openai_model, self._settings.openai_base_url)
 
+        # --- OpenRouter FALLBACK backend (secondary) -------------------------
+        # Tried after the local endpoint and the primary OpenAI fallback. OpenRouter
+        # is OpenAI-compatible, so it reuses the LLMService client shape. Key comes
+        # from OPENROUTER_API_KEY (gitignored .env, never logged).
+        self._llm_fallback2: LLMService | None = None
+        if self._settings.openrouter_api_key.strip():
+            self._llm_fallback2 = LLMService(
+                base_url=self._settings.openrouter_base_url.strip() or "https://openrouter.ai/api/v1",
+                model_name=self._settings.openrouter_model.strip() or "openai/gpt-4o-mini",
+                api_key=self._settings.openrouter_api_key.strip(),
+                temperature=cfg.temperature,
+                max_tokens=cfg.max_tokens,
+                timeout=cfg.timeout,
+                disable_thinking=True,
+            )
+            await self._llm_fallback2.setup()
+            logger.info("Secondary fallback (OpenRouter) enabled: %s @ %s", self._settings.openrouter_model, self._settings.openrouter_base_url)
+
         self._embeddings = EmbeddingService(
             dim=ecfg.dim, enabled=ecfg.enabled,
             base_url=ecfg.base_url, model_name=ecfg.model_name,
@@ -771,9 +789,12 @@ class Orchestrator:
     async def _complete_with_fallback(
         self, messages, *, tools=None, max_tokens=None, temperature=None
     ) -> "CompletionResult":
-        """Run a completion on the primary (local) model, falling back to the
-        configured OpenAI-compatible backend if the local call fails or returns
-        no content. Never raises; returns a CompletionResult (possibly empty).
+        """Run a completion on the primary (local) model, falling back through the
+        configured hosted backends if the local call fails or returns no content.
+
+        Order: local -> OpenAI (OPENAI_API_KEY) -> OpenRouter (OPENROUTER_API_KEY).
+        Each fallback is tried only while the previous returned nothing. Never
+        raises; returns a CompletionResult (possibly empty).
 
         `messages` may be a list[ChatMessage] or a plain string (treated as a
         single user message)."""
@@ -795,10 +816,16 @@ class Orchestrator:
         primary = await _try(self._llm)
         if primary is not None and (primary.content or "").strip():
             return primary
-        if self._llm_fallback is not None:
-            logger.info("Primary model failed/empty -> falling back to %s", self._settings.openai_model)
-            fb = await _try(self._llm_fallback)
-            if fb is not None:
+        # Ordered fallback chain: primary OpenAI, then OpenRouter (both optional).
+        for llm, label in (
+            (self._llm_fallback, self._settings.openai_model),
+            (self._llm_fallback2, self._settings.openrouter_model),
+        ):
+            if llm is None:
+                continue
+            logger.info("Primary model failed/empty -> falling back to %s", label)
+            fb = await _try(llm)
+            if fb is not None and (fb.content or "").strip():
                 return fb
         return primary if primary is not None else CompletionResult(
             content=None, has_tool_calls=False, tool_calls=[]

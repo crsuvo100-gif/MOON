@@ -60,6 +60,24 @@ class Settings(BaseSettings):
         description="Model id to request from the fallback backend.",
     )
 
+    # --- OpenRouter FALLBACK backend (secondary) ---------------------------
+    # A second hosted OpenAI-compatible API, tried after the local endpoint and
+    # the primary OpenAI fallback. Useful when both local and OpenAI are down.
+    # Key from OPENROUTER_API_KEY (gitignored .env, never committed). OpenRouter
+    # is OpenAI-compatible, so it reuses the same LLMService client shape.
+    openrouter_api_key: str = Field(
+        default="",
+        description="API key for the OpenRouter fallback backend (OPENROUTER_API_KEY). Blank = no secondary fallback.",
+    )
+    openrouter_base_url: str = Field(
+        default="https://openrouter.ai/api/v1",
+        description="Base URL of the OpenRouter endpoint (OpenAI-compatible).",
+    )
+    openrouter_model: str = Field(
+        default="openai/gpt-4o-mini",
+        description="Model id to request from OpenRouter (e.g. openai/gpt-4o-mini, anthropic/claude-3.5-sonnet).",
+    )
+
     # Optional STRONG model for accuracy-critical work. When set, factual and
     # cyber-critical tasks (and the main-brain accuracy gate) are routed to it
     # for a higher-quality pass. Leave empty to use the default model only.
