@@ -171,6 +171,14 @@ async def moon_core_png():
     return HTMLResponse("<svg/>", status_code=404)
 
 
+@app.get("/core_ai.png")
+async def core_ai_png():
+    f = WEB_DIR / "core_ai.png"
+    if f.exists():
+        return FileResponse(str(f), media_type="image/png")
+    return HTMLResponse("<svg/>", status_code=404)
+
+
 @app.get("/avatar.svg")
 async def avatar_svg():
     if AVATAR_SVG.exists():
