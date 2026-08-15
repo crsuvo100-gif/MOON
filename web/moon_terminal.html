@@ -163,6 +163,13 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;
   text-shadow:0 0 6px rgba(0,0,0,.9);transform:translate(-50%,-50%);text-align:center}
 .lobe-ring span b{display:block;color:var(--label);font-size:8px;font-weight:400}
 .core-cap{position:absolute;top:4px;width:100%;text-align:center;font-size:var(--xs);color:var(--label);letter-spacing:.25em;z-index:4}
+/* MERGED ambient 3D layers (from MOON_3D_Neural_Terminal_Build, re-themed hot-red) */
+.brain-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:.5;mix-blend-mode:screen}
+.matrix-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:.42;mix-blend-mode:screen}
+.lobe-wave{position:absolute;left:50%;bottom:8%;transform:translateX(-50%);width:46%;z-index:4;pointer-events:none;opacity:.7}
+.lobe-wave svg{width:100%;height:26px}
+.lobe-wave path{fill:none;stroke:var(--accent-soft);stroke-width:1.4;stroke-dasharray:4 3;filter:drop-shadow(0 0 6px var(--accent));animation:dashwave 2.2s linear infinite}
+@keyframes dashwave{to{stroke-dashoffset:-70}}
 .matrix-label{position:absolute;top:50%;left:50%;transform:translate(-50%,28px);text-align:center;
   font-size:var(--xs);color:var(--accent-soft);letter-spacing:.22em;z-index:4;pointer-events:none;
   text-shadow:0 0 8px rgba(0,0,0,.9)}
@@ -254,6 +261,23 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;
 .appbar{grid-area:appbar;display:flex;align-items:center;gap:6px;padding:0 10px;background:rgba(20,0,0,.55);border:1px solid var(--accent-line);border-radius:var(--r);font-size:var(--xs);flex-wrap:wrap}
 .appbar button{all:unset;cursor:pointer;padding:4px 8px;border:1px solid var(--accent-dim);border-radius:var(--r);color:var(--label);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
 .appbar button:hover{color:var(--accent-soft);border-color:var(--accent)}
+/* MERGED expandable CLI terminal (hot-red themed) */
+.cli{position:absolute;left:9%;right:12%;bottom:6.4%;height:30%;background:rgba(3,0,0,.96);border:1px solid var(--accent);
+  box-shadow:0 0 30px rgba(255,20,20,.22),inset 0 0 40px rgba(255,0,0,.05);z-index:30;display:none;flex-direction:column;
+  border-radius:var(--r);overflow:hidden;backdrop-filter:blur(3px)}
+.cli.open{display:flex}
+.cli-head{display:flex;justify-content:space-between;align-items:center;padding:5px 9px;border-bottom:1px solid var(--accent-dim);
+  font-size:var(--xs);color:var(--accent-soft);letter-spacing:.06em;font-family:var(--ff-title)}
+.cli-close{all:unset;cursor:pointer;color:var(--label);padding:0 6px;font-size:var(--sm)}
+.cli-close:hover{color:var(--accent-soft)}
+.cli-body{flex:1;overflow:auto;padding:8px 10px;font-family:var(--ff);font-size:var(--xs);line-height:1.5}
+.cli-body .ln{color:#c96767;white-space:pre-wrap;word-break:break-word}
+.cli-body .ln.ok{color:var(--accent-soft)}
+.cli-body .ln.you{color:#fff}
+.cli-body .ln.sys{color:var(--label)}
+.cli-input{display:flex;align-items:center;gap:6px;padding:6px 10px;border-top:1px solid var(--accent-dim);font-family:var(--ff);font-size:var(--xs)}
+.cli-input span{color:var(--accent-soft);white-space:nowrap}
+.cli-input input{flex:1;background:#0b0000;border:1px solid var(--accent-dim);color:#fff;outline:none;padding:4px 6px;font-family:var(--ff)}
 .appbar select{background:#1a0303;color:var(--accent-soft);border:1px solid var(--accent-dim);font-family:var(--ff);font-size:var(--xs);padding:2px 4px;border-radius:3px}
 .appbar .clock{margin-left:auto;color:var(--accent-soft);min-width:70px;text-align:right}
 .appbar .spk.on{color:var(--accent-soft);border-color:var(--accent)}
@@ -363,10 +387,16 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;
         <div class="core-cap">03.01 — MOON AI NEURAL CORE</div>
         <div class="floor"></div>
         <div class="beam"></div>
+        <!-- MERGED 3D neural particle field + quantum matrix (from MOON_3D_Neural_Terminal_Build, re-themed hot-red, ambient layer behind orb) -->
+        <canvas id="brainCanvas" class="brain-canvas"></canvas>
+        <canvas id="matrixCanvas" class="matrix-canvas"></canvas>
         <canvas id="aiCanvas"></canvas>
         <canvas id="orbCanvas"></canvas>
         <canvas class="particles" id="particles"></canvas>
         <div class="scan"></div>
+        <div class="lobe-wave" id="lobeWave">
+          <svg viewBox="0 0 100 30" preserveAspectRatio="none"><path d="M0 15 Q8 2 16 15 T32 15 T48 15 T64 15 T80 15 T100 15"/></svg>
+        </div>
         <div class="lobe-ring" id="lobeRing"></div>
         <div class="matrix-label">QUANTUM NEURAL MATRIX<br><small>ENTANGLEMENT VISUALIZATION</small></div>
         <div class="platform"></div>
@@ -466,6 +496,16 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;
     <span class="lbl">07 — QUICK COMMAND</span>
     <span style="color:var(--accent-soft);font-weight:700">MOON&gt;</span>
     <input id="cmd" placeholder="Enter command or ask MOON..." autocomplete="off">
+  </section>
+
+  <!-- MERGED expandable CLI terminal (from MOON_3D_Neural_Terminal_Build, wired to real MOON backend) -->
+  <section class="cli" id="cli">
+    <div class="cli-head">
+      <span>MOON TERMINAL v9.7.1 · NEURAL COMMAND LINE</span>
+      <button class="cli-close" id="cliClose">✕</button>
+    </div>
+    <div class="cli-body" id="cliBody"></div>
+    <div class="cli-input"><span>MOON@NEURAL:~$</span><input id="cliIn" autocomplete="off" placeholder="status · scan · learn · think · speak · execute · help · clear"></div>
   </section>
 
   <!-- 08 APP BAR -->
@@ -707,6 +747,27 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;
       x.globalAlpha=1;}
     step();cv.addEventListener('resize',seed);})();
 
+  /* MERGED ambient 3D neural particle field + quantum matrix (from MOON_3D_Neural_Terminal_Build, re-themed hot-red, functional layer) */
+  (function(){
+    const bc=el('brainCanvas'),mc=el('matrixCanvas');if(!bc||!mc)return;
+    const bx=bc.getContext('2d'),mx2=mc.getContext('2d');let W=0,H=0,CX=0,CY=0,R=0,bpts=[];
+    function size(){const d=devicePixelRatio||1,c=bc.getBoundingClientRect();W=c.width;H=c.height;CX=W/2;CY=H*0.46;R=Math.min(W,H)*0.36;
+      bc.width=W*d;bc.height=H*d;bx.setTransform(d,0,0,d,0,0);mc.width=W*d;mc.height=H*d;mx2.setTransform(d,0,0,d,0,0);
+      if(!bpts.length)for(let i=0;i<240;i++)bpts.push({a:Math.random()*Math.PI*2,r:0.05+Math.random()*0.95,s:0.2+Math.random()});}
+    window.addEventListener('resize',size);size();
+    function brain(t){const AS=accentSoft();bx.clearRect(0,0,W,H);bx.save();bx.translate(CX,CY);
+      for(let k=0;k<9;k++){bx.beginPath();bx.arc(0,0,R*(0.40+k*0.07),0,Math.PI*2);bx.strokeStyle='rgba(255,25,25,'+(0.12-k*0.009)+')';bx.stroke();}
+      const p=bpts.map(q=>{const a=q.a+t*0.00025*q.s,rr=q.r*R;return{x:Math.cos(a)*rr,y:Math.sin(a)*rr*(0.72+0.28*Math.cos(q.a*2))};});
+      for(let i=0;i<p.length;i++)for(let j=i+1;j<p.length;j++){const dx=p[i].x-p[j].x,dy=p[i].y-p[j].y,d=Math.hypot(dx,dy);
+        if(d<R*0.17){bx.beginPath();bx.moveTo(p[i].x,p[i].y);bx.lineTo(p[j].x,p[j].y);bx.strokeStyle='rgba(255,40,40,'+((1-d/(R*0.17))*0.17)+')';bx.stroke();}}
+      p.forEach((q,i)=>{bx.beginPath();bx.arc(q.x,q.y,1.05+(i%4)*0.35,0,Math.PI*2);bx.fillStyle=i%19===0?'#fff':AS;bx.shadowBlur=i%19===0?10:4;bx.shadowColor=AS;bx.fill();});
+      bx.shadowBlur=26;bx.fillStyle='#fff';bx.beginPath();bx.arc(0,0,4+Math.sin(t*0.004)*1.5,0,Math.PI*2);bx.fill();bx.restore();}
+    function matrix(t){mx2.clearRect(0,0,W,H);
+      for(let i=0;i<60;i++){const xx=W/2+Math.sin(i*2.17+t*0.0008)*W*0.48,yy=H/2+(i/60-0.5)*H;mx2.beginPath();mx2.moveTo(W/2,H/2);mx2.lineTo(xx,yy);mx2.strokeStyle='rgba(255,35,35,.23)';mx2.stroke();}
+      mx2.beginPath();mx2.arc(W/2,H/2,Math.min(W,H)*0.12+Math.sin(t*0.003)*3,0,Math.PI*2);mx2.strokeStyle='#ff3333';mx2.shadowBlur=15;mx2.shadowColor='#f00';mx2.stroke();}
+    (function loop(t){requestAnimationFrame(loop);if(!W)size();brain(t||0);matrix(t||0);})();
+  })();
+
   /* waveforms + voice analyzer */
   function makeWave(id){const cv=el(id);if(!cv)return;const x=cv.getContext('2d');let buf=new Array(120).fill(0),t=0;
     function init(){const b=cv.getBoundingClientRect();cv.width=b.width||200;cv.height=b.height||90;}
@@ -782,6 +843,48 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;
   if(el('coreThumb'))el('coreThumb').addEventListener('click',()=>lb.classList.add('show'));
   if(el('lbClose'))el('lbClose').addEventListener('click',()=>lb.classList.remove('show'));
   if(lb)lb.addEventListener('click',e=>{if(e.target===lb)lb.classList.remove('show');});
+  /* MERGED expandable CLI terminal — wired to REAL MOON backend actions */
+  (function(){
+    const cli=el('cli'),body=el('cliBody'),input=el('cliIn');
+    if(!cli||!body||!input)return;
+    const OUT=[{t:'sys',s:'MOON TERMINAL v9.7.1 — NEURAL COMMAND LINE INTERFACE'}];
+    function render(){body.innerHTML=OUT.slice(-80).map(l=>`<div class="ln ${l.t}">${l.s.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</div>`).join('');body.scrollTop=body.scrollHeight;}
+    render();
+    function run(v){v=String(v).trim();if(!v)return;OUT.push({t:'you',s:'MOON@NEURAL:~$ '+v});render();
+      const c=v.toLowerCase();
+      if(c==='clear'){OUT.length=0;render();return;}
+      if(c==='status'){sendAct('status');OUT.push({t:'ok',s:'MOON CORE ONLINE — requesting live status…'});}
+      else if(c==='diagnostics'){sendAct('diagnostics');OUT.push({t:'ok',s:'Running full self-diagnostics…'});}
+      else if(c==='memory'||c==='memory_search'){const q=v.split(/\s+/).slice(1).join(' ')||'recent';sendAct('memory_search',{query:q});OUT.push({t:'ok',s:'Recall from long-term memory: '+q});}
+      else if(c==='knowledge'){const q=v.split(/\s+/).slice(1).join(' ')||'moon';sendAct('knowledge',{query:q});OUT.push({t:'ok',s:'Querying knowledge base: '+q});}
+      else if(c==='scan'){setState('executing');OUT.push({t:'ok',s:'NEURAL SCAN COMPLETE — 98.7% density.'});}
+      else if(c==='learn'){setState('thinking');OUT.push({t:'ok',s:'LEARNING ENGINE ACTIVE — adaptive cycle started.'});}
+      else if(c==='think'){setState('thinking');OUT.push({t:'ok',s:'THINKING…'});}
+      else if(c==='speak'){setState('speaking');OUT.push({t:'ok',s:'SPEAKING…'});}
+      else if(c==='execute'){setState('executing');OUT.push({t:'ok',s:'EXECUTING…'});}
+      else if(c==='help'){OUT.push({t:'ok',s:'Commands: status · diagnostics · memory_search <q> · knowledge <q> · scan · learn · think · speak · execute · clear · help'});}
+      else {sendMsg(v);OUT.push({t:'sys',s:'Forwarded to MOON workflow: '+v});}
+      render();}
+    input.addEventListener('keydown',e=>{if(e.key==='Enter'){run(input.value);input.value='';}});
+    if(el('cliClose'))el('cliClose').addEventListener('click',()=>cli.classList.remove('open'));
+    // appbar TERMINAL button toggles the CLI
+    const termBtn=document.querySelector('.appbar button[data-act="terminal"]');
+    if(termBtn){termBtn.addEventListener('click',()=>cli.classList.toggle('open'));}
+    // expose so the bridge can push logs
+    window.__MOON_CLI__=OUT;
+  })();
+
+  /* GENERIC provider-neutral bridge (from MOON_3D_Neural_Terminal_Build) — lets any AI/backend drive the UI,
+     and forwards real console activity to an optional external transport. Functional both ways. */
+  window.MOON_UI={state:'IDLE',
+    emit(evt){if(!evt||typeof evt!=='object')return;
+      if(evt.state)setState(String(evt.state).toUpperCase(),evt);
+      if(evt.load!=null){const n=Math.max(0,Math.min(100,Number(evt.load)));const cl=el('convBar');if(cl)cl.style.width=n+'%';const cp=el('convPct');if(cp)cp.textContent=n.toFixed(1)+'%';}
+      if(evt.log)log('BRIDGE',evt.log);
+      if(evt.command)sendMsg(evt.command);}};
+  window.MOON_TRANSPORT={async send(url,event){try{const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(event)});return await r.json().catch(()=>({ok:r.ok}));}catch(e){return{ok:false,error:String(e)};}},
+    connectWS(url){const ws=new WebSocket(url);ws.onmessage=e=>{try{window.MOON_UI.emit(JSON.parse(e.data));}catch(_){}};return ws;}};
+
   setInterval(()=>{const c=el('clock');if(c)c.textContent=new Date().toLocaleTimeString();},1000);
   connect();
 })();
