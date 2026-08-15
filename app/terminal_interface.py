@@ -1,15 +1,14 @@
-"""terminal_interface.py -- MOON's OWN terminal interface (additive).
+"""terminal_interface.py -- MOON's terminal interface backend (additive).
 
-A self-contained local terminal UI for MOON: a centered animated avatar +
-chat + cognition panels, served over HTTP, with a WebSocket that streams MOON's
-real brain output. Uses the existing Orchestrator (no modification of MOON core).
+Serves MOON's terminal over HTTP: a WebSocket (/ws) that streams MOON's real
+brain output to a front-end, plus /status (auth-gated when MOON_TERMINAL_TOKEN
+is set), /avatar.svg, and a root placeholder. The front-end frame
+(web/moon_terminal.html) was removed and is being rebuilt from scratch; this
+backend is the engine the new UI will connect to. Uses the existing
+Orchestrator (no modification of MOON core).
 
 Run:  python main.py terminal     (serves http://127.0.0.1:8777)
 Or:    uvicorn app.terminal_interface:app --port 8777
-
-The frontend (web/moon_terminal.html) is served at GET / and connects to /ws.
-An animated avatar is rendered from web/avatar.svg (or web/avatar.gif if you
-drop one in). MOON's brain is the orchestrator already built in this project.
 """
 
 from __future__ import annotations
@@ -24,7 +23,6 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
-TERMINAL_HTML = WEB_DIR / "moon_terminal.html"
 AVATAR_SVG = WEB_DIR / "avatar.svg"
 AVATAR_GIF = WEB_DIR / "avatar.gif"
 AVATAR_PNG = WEB_DIR / "avatar.png"
@@ -142,9 +140,17 @@ def _stream_text(text: str):
 
 @app.get("/")
 async def terminal_page() -> HTMLResponse:
-    if TERMINAL_HTML.exists():
-        return HTMLResponse(TERMINAL_HTML.read_text(encoding="utf-8"))
-    return HTMLResponse("<h1>MOON Terminal</h1><p>moon_terminal.html missing.</p>")
+    # The old front-end frame (web/moon_terminal.html) was removed; a new
+    # terminal UI/frame is being built from scratch. The backend (WebSocket /ws,
+    # /status, authz gate, /avatar.svg) stays live so the new UI can connect.
+    return HTMLResponse(
+        "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
+        "<title>MOON Terminal</title></head><body style='background:#03060f;color:#00f3ff;"
+        "font-family:monospace;display:grid;place-items:center;height:100vh;margin:0'>"
+        "<div style='text-align:center'><h1>MOON TERMINAL</h1>"
+        "<p>New interface coming online. Backend WebSocket /ws is live.</p></div>"
+        "</body></html>"
+    )
 
 
 @app.get("/avatar.svg")
