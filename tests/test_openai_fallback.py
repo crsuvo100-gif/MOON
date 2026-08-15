@@ -123,3 +123,42 @@ async def test_openai_preferred_over_openrouter():
     res = await o._complete_with_fallback([{"role": "user", "content": "hi"}])
     assert (res.content or "").strip() == "openai-answer"
     assert calls["or"] == 0
+
+
+@pytest.mark.asyncio
+async def test_huggingface_used_when_all_prior_fail():
+    """HuggingFace (tertiary) is used when local+OpenAI+OpenRouter all fail."""
+    o = Orchestrator(get_settings())
+    o._llm = _fake_llm(raises=True)
+    o._llm_fallback = _fake_llm(raises=True)
+    o._llm_fallback2 = _fake_llm(raises=True)
+    o._llm_fallback3 = _fake_llm(
+        returns=CompletionResult(content="from-huggingface", has_tool_calls=False, tool_calls=[])
+    )
+    o._settings.huggingface_model = "meta-llama/Llama-3.1-8B-Instruct"
+    res = await o._complete_with_fallback([{"role": "user", "content": "hi"}])
+    assert (res.content or "").strip() == "from-huggingface"
+
+
+@pytest.mark.asyncio
+async def test_openrouter_preferred_over_huggingface():
+    """When OpenRouter succeeds, HuggingFace must NOT be called."""
+    calls = {"hf": 0}
+
+    async def _hf_complete(*a, **k):
+        calls["hf"] += 1
+        return CompletionResult(content="should-not-be-used", has_tool_calls=False, tool_calls=[])
+
+    o = Orchestrator(get_settings())
+    o._llm = _fake_llm(returns=CompletionResult(content="", has_tool_calls=False, tool_calls=[]))
+    o._llm_fallback = _fake_llm(returns=CompletionResult(content="", has_tool_calls=False, tool_calls=[]))
+    o._llm_fallback2 = _fake_llm(
+        returns=CompletionResult(content="openrouter-answer", has_tool_calls=False, tool_calls=[])
+    )
+    o._llm_fallback3 = SimpleNamespace(complete=_hf_complete)
+    o._settings.openrouter_model = "openai/gpt-4o-mini"
+    o._settings.huggingface_model = "meta-llama/Llama-3.1-8B-Instruct"
+    res = await o._complete_with_fallback([{"role": "user", "content": "hi"}])
+    assert (res.content or "").strip() == "openrouter-answer"
+    assert calls["hf"] == 0
+

@@ -163,6 +163,8 @@ class Orchestrator:
         # transparently retries against a hosted OpenAI-compatible API. The key
         # comes from OPENAI_API_KEY (gitignored .env) and is never logged.
         self._llm_fallback: LLMService | None = None
+        self._llm_fallback2: LLMService | None = None
+        self._llm_fallback3: LLMService | None = None
         if self._settings.openai_api_key.strip():
             self._llm_fallback = LLMService(
                 base_url=self._settings.openai_base_url.strip() or "https://api.openai.com/v1",
@@ -193,6 +195,24 @@ class Orchestrator:
             )
             await self._llm_fallback2.setup()
             logger.info("Secondary fallback (OpenRouter) enabled: %s @ %s", self._settings.openrouter_model, self._settings.openrouter_base_url)
+
+        # --- Hugging Face FALLBACK backend (tertiary) -----------------------
+        # Tried after local, OpenAI, and OpenRouter. Hugging Face's router speaks
+        # the OpenAI-compatible /v1/chat/completions shape. Key from
+        # HUGGINGFACE_API_KEY (gitignored .env, never logged).
+        self._llm_fallback3: LLMService | None = None
+        if self._settings.huggingface_api_key.strip():
+            self._llm_fallback3 = LLMService(
+                base_url=self._settings.huggingface_base_url.strip() or "https://router.huggingface.co",
+                model_name=self._settings.huggingface_model.strip() or "meta-llama/Llama-3.1-8B-Instruct",
+                api_key=self._settings.huggingface_api_key.strip(),
+                temperature=cfg.temperature,
+                max_tokens=cfg.max_tokens,
+                timeout=cfg.timeout,
+                disable_thinking=True,
+            )
+            await self._llm_fallback3.setup()
+            logger.info("Tertiary fallback (Hugging Face) enabled: %s @ %s", self._settings.huggingface_model, self._settings.huggingface_base_url)
 
         self._embeddings = EmbeddingService(
             dim=ecfg.dim, enabled=ecfg.enabled,
@@ -792,9 +812,10 @@ class Orchestrator:
         """Run a completion on the primary (local) model, falling back through the
         configured hosted backends if the local call fails or returns no content.
 
-        Order: local -> OpenAI (OPENAI_API_KEY) -> OpenRouter (OPENROUTER_API_KEY).
-        Each fallback is tried only while the previous returned nothing. Never
-        raises; returns a CompletionResult (possibly empty).
+        Order: local -> OpenAI (OPENAI_API_KEY) -> OpenRouter (OPENROUTER_API_KEY)
+        -> Hugging Face (HUGGINGFACE_API_KEY). Each fallback is tried only while the
+        previous returned nothing. Never raises; returns a CompletionResult
+        (possibly empty).
 
         `messages` may be a list[ChatMessage] or a plain string (treated as a
         single user message)."""
@@ -816,10 +837,11 @@ class Orchestrator:
         primary = await _try(self._llm)
         if primary is not None and (primary.content or "").strip():
             return primary
-        # Ordered fallback chain: primary OpenAI, then OpenRouter (both optional).
+        # Ordered fallback chain: OpenAI, then OpenRouter, then Hugging Face (all optional).
         for llm, label in (
-            (self._llm_fallback, self._settings.openai_model),
-            (self._llm_fallback2, self._settings.openrouter_model),
+            (getattr(self, "_llm_fallback", None), self._settings.openai_model),
+            (getattr(self, "_llm_fallback2", None), self._settings.openrouter_model),
+            (getattr(self, "_llm_fallback3", None), self._settings.huggingface_model),
         ):
             if llm is None:
                 continue

@@ -98,6 +98,24 @@ class Settings(BaseSettings):
         ),
     )
 
+    # --- Hugging Face FALLBACK backend (tertiary) --------------------------
+    # A third hosted OpenAI-compatible API, tried after local, OpenAI, and
+    # OpenRouter. Hugging Face exposes an OpenAI-compatible router at
+    # https://router.huggingface.co (or your own TGI server). Key from
+    # HUGGINGFACE_API_KEY (gitignored .env, never committed).
+    huggingface_api_key: str = Field(
+        default="",
+        description="API key for the Hugging Face fallback backend (HUGGINGFACE_API_KEY). Blank = no tertiary fallback.",
+    )
+    huggingface_base_url: str = Field(
+        default="https://router.huggingface.co",
+        description="Base URL of the Hugging Face OpenAI-compatible endpoint (router or self-hosted TGI).",
+    )
+    huggingface_model: str = Field(
+        default="meta-llama/Llama-3.1-8B-Instruct",
+        description="Model id to request from Hugging Face (e.g. meta-llama/Llama-3.1-8B-Instruct).",
+    )
+
     # Optional STRONG model for accuracy-critical work. When set, factual and
     # cyber-critical tasks (and the main-brain accuracy gate) are routed to it
     # for a higher-quality pass. Leave empty to use the default model only.
