@@ -32,7 +32,7 @@ body::before{content:"";position:fixed;inset:0;background:
 .panel-title{font-size:10.5px;letter-spacing:2px;color:var(--cyan);font-weight:700;margin-bottom:7px;text-transform:uppercase;
   text-shadow:0 0 8px rgba(0,243,255,.8)}
 /* header */
-.hdr{display:flex;justify-content:space-between;align-items:center;padding:7px 16px;gap:12px}
+.hdr{display:flex;justify-content:space-between;align-items:center;padding:7px 16px;gap:12px;overflow:hidden}
 .brand{display:flex;align-items:center;gap:11px}
 .logo{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#eafaff,#2b6f8f 70%,#0a2330);box-shadow:0 0 16px var(--cyan),inset 0 0 6px rgba(255,255,255,.6);clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%)}
 .brand b{font-size:15px;letter-spacing:3px;color:#fff;text-shadow:0 0 12px var(--cyan)}
@@ -43,7 +43,12 @@ body::before{content:"";position:fixed;inset:0;background:
 .clock .on{color:var(--green);text-shadow:0 0 8px var(--green)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 1.6s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-#wfHead{width:90px;height:26px}#wfHeadL{width:90px;height:26px;transform:scaleX(-1)}
+#wfHead{display:block;width:90px;height:26px;margin-top:4px;vertical-align:middle;overflow:hidden}
+#wfHeadL{display:block;width:90px;height:26px;transform:scaleX(-1);margin-top:4px;vertical-align:middle;overflow:hidden}
+/* contain header side columns so inline canvas/waveform never bleeds into the
+   corner (was rendering as a stray cut-off rectangle at top-right). */
+.brand{overflow:hidden}
+.clock{text-align:right;font-size:11px;letter-spacing:1px;white-space:nowrap;overflow:hidden;max-width:240px}
 /* body */
 .body{display:flex;gap:10px;flex:1 1 auto;min-height:0;max-height:none;overflow:hidden}
 .moon-root>.body{min-height:0}
