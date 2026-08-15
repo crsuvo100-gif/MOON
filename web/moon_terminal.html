@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MOON NEURAL CORE INTERFACE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ===========================================================================
    MOON NEURAL CORE INTERFACE  --  rebuilt to reference spec + tweaks
@@ -15,7 +18,8 @@
 :root{
   --bg:#050505; --bg-panel:rgba(20,2,2,.55); --bg-dim:rgba(30,3,3,.72);
   --text:#ffffff; --label:#b08a8a; --warn:#ffae42; --ok:#39ff88;
-  --ff:'Share Tech Mono','Courier New',ui-monospace,monospace;
+  --ff:'Rajdhani','Share Tech Mono','Courier New',ui-monospace,monospace;
+  --ff-title:'Orbitron','Rajdhani','Share Tech Mono',sans-serif;
   --xs:9px; --sm:11px; --md:13px; --lg:18px; --xl:24px; --gap:8px; --r:4px; --bw:1px;
   /* default accent = red (reference) */
   --accent:#ff0000; --accent-soft:#ff4d4d; --accent-dim:#330000; --accent-line:rgba(255,40,40,.35);
@@ -32,8 +36,15 @@ body{background:radial-gradient(circle at 50% 42%,rgba(80,0,0,.18),rgba(5,5,5,0)
   color:var(--text);font-family:var(--ff);font-size:var(--md);overflow:hidden;letter-spacing:.04em}
 body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:9000;
   background:repeating-linear-gradient(to bottom,rgba(255,255,255,.05) 0 1px,rgba(0,0,0,0) 1px 3px);
-  opacity:.06;mix-blend-mode:overlay}
+  opacity:.10;mix-blend-mode:overlay}
 body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;box-shadow:inset 0 0 200px 40px rgba(0,0,0,.85)}
+/* faint animated background grid (cyber-space floor) */
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.18;
+  background-image:linear-gradient(var(--accent-line) 1px,transparent 1px),linear-gradient(90deg,var(--accent-line) 1px,transparent 1px);
+  background-size:46px 46px;mask-image:radial-gradient(circle at 50% 45%,#000 0%,transparent 70%);
+  -webkit-mask-image:radial-gradient(circle at 50% 45%,#000 0%,transparent 70%);
+  animation:gridpan 18s linear infinite}
+@keyframes gridpan{from{background-position:0 0,0 0}to{background-position:0 46px,46px 0}}
 .hud-frame{position:fixed;inset:6px;border:1px solid var(--accent-dim);border-radius:6px;z-index:1;pointer-events:none}
 .hud-frame i{position:absolute;width:18px;height:18px;border:2px solid var(--accent-soft);opacity:.7}
 .hud-frame i.tl{top:-2px;left:-2px;border-right:0;border-bottom:0}
@@ -83,8 +94,10 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
 .header .title b{font-size:var(--lg);color:var(--text);letter-spacing:.20em}
 .header .title small{display:block;font-size:var(--xs);color:var(--label);letter-spacing:.18em}
 .chips{display:grid;grid-template-columns:repeat(3,auto);gap:6px 12px}
-.chip{display:flex;flex-direction:column;align-items:flex-end;font-size:var(--xs);color:var(--label);white-space:nowrap}
-.chip b{color:var(--accent-soft);font-size:var(--sm)}
+.chip{display:flex;flex-direction:column;align-items:flex-end;font-size:var(--xs);color:var(--label);white-space:nowrap;
+  padding:3px 9px;border:1px solid var(--accent-dim);border-radius:var(--r);
+  background:linear-gradient(180deg,rgba(255,40,40,.10),rgba(0,0,0,.25));box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 0 8px rgba(255,0,0,.12)}
+.chip b{color:var(--accent-soft);font-size:var(--sm);font-family:var(--ff-title);font-weight:700;text-shadow:0 0 6px var(--accent-soft);letter-spacing:.04em}
 .chip .sub{font-size:var(--xs);color:var(--ok);margin-left:4px}
 .chip.alert b{color:var(--warn)}
 
@@ -119,6 +132,24 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
   font-size:var(--xs);color:var(--accent-soft);letter-spacing:.22em;z-index:2;pointer-events:none;
   text-shadow:0 0 8px rgba(0,0,0,.9)}
 .matrix-label small{color:var(--label);letter-spacing:.14em;font-size:8px}
+/* perspective grid-floor + vertical light beam under orb */
+.floor{position:absolute;left:50%;bottom:-2%;transform:translateX(-50%) perspective(220px) rotateX(68deg);
+  width:150%;height:54%;transform-origin:bottom center;pointer-events:none;z-index:0;opacity:.55;
+  background-image:linear-gradient(var(--accent-soft) 1px,transparent 1px),linear-gradient(90deg,var(--accent-soft) 1px,transparent 1px);
+  background-size:22px 22px;mask-image:linear-gradient(to top,#000 0%,transparent 85%);
+  -webkit-mask-image:linear-gradient(to top,#000 0%,transparent 85%);animation:floorpan 4s linear infinite}
+@keyframes floorpan{from{background-position:0 0,0 0}to{background-position:0 22px,22px 0}}
+.beam{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:10px;height:42%;pointer-events:none;z-index:1;
+  background:linear-gradient(to top,var(--accent-soft),transparent);filter:blur(3px);opacity:.5;mix-blend-mode:screen}
+.particles{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+/* scan sweep line over orb */
+.scan{position:absolute;left:0;right:0;top:0;height:2px;pointer-events:none;z-index:3;
+  background:linear-gradient(90deg,transparent,var(--accent-soft),transparent);box-shadow:0 0 10px var(--accent-soft);
+  animation:scanmove 3.6s linear infinite;opacity:.7}
+@keyframes scanmove{0%{top:6%}50%{top:94%}100%{top:6%}}
+/* animated NEURAL CONVERGENCE progress bar */
+.conv-bar{height:5px;background:var(--accent-dim);border-radius:3px;overflow:hidden;margin-top:3px}
+.conv-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-soft));box-shadow:0 0 8px var(--accent-soft);transition:width .8s}
 .core-overlay{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);width:82%;text-align:center;pointer-events:none;z-index:2}
 .core-overlay .conv{font-size:var(--xs);color:var(--label);letter-spacing:.16em}
 .core-overlay .conv b{color:var(--accent-soft)}
@@ -200,6 +231,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
 </style>
 </head>
 <body data-moon="idle">
+<div class="bg-grid"></div>
 <div class="hud-frame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
 
 <div class="fit"><div class="app" id="app" data-ar="auto" data-accent="red">
@@ -262,12 +294,17 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
         <div class="core-stage">
           <img class="core-img" src="/moon_core.png" alt="MOON Neural Core">
           <div class="core-cap">03.01 — MOON NEURAL CORE</div>
+          <div class="floor"></div>
+          <div class="beam"></div>
           <canvas id="orbCanvas"></canvas>
+          <canvas class="particles" id="particles"></canvas>
+          <div class="scan"></div>
           <div class="lobe-ring" id="lobeRing"></div>
           <div class="matrix-label">QUANTUM NEURAL MATRIX<br><small>ENTANGLEMENT VISUALIZATION</small></div>
           <div class="platform"></div>
           <div class="core-overlay">
             <div class="conv">03.04 NEURAL CONVERGENCE <b id="convPct">0.0%</b></div>
+            <div class="conv-bar"><i id="convBar"></i></div>
             <div class="mat">MOON IS ACTIVE AND AWARE</div>
             <div class="state-line">
               <span class="badge" data-st="idle">IDLE</span><span class="badge" data-st="listening">LISTENING</span>
@@ -460,6 +497,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
     buildPipeline(s.pipeline||[]);
     setText('agentInfo',(s.agents||0)+' agents · '+(s.n_tools||0)+' tools');
     setText('convPct',activity.toFixed(1)+'%');
+    {const b=el('convBar');if(b)b.style.width=Math.min(100,activity)+'%';}
     const lv=['lbFront','lbTemp','lbPari','lbLimb','lbOcc','lbCer'];
     lv.forEach((id,i)=>{const v=Math.round(60+(sys.cpu||0)*0.3+Math.sin(Date.now()/900+i)*12);setText(id+'V',v+'%');});
     drawWorld(document.getElementById('worldMap'));
@@ -549,6 +587,16 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
       const cR=R*(0.10+0.05*Math.sin(t*3)+activity/700),cg=x.createRadialGradient(CX,CY,0,CX,CY,cR*3);
       cg.addColorStop(0,'#fff');cg.addColorStop(0.4,AC+'aa');cg.addColorStop(1,AC+'00');x.fillStyle=cg;x.beginPath();x.arc(CX,CY,cR*3,0,7);x.fill();
     })();init();window.addEventListener('resize',init);})();
+
+  /* floating particles around the orb (futuristic sparkle field) */
+  (function(){const cv=el('particles');if(!cv)return;const x=cv.getContext('2d');let W=0,H=0,CX=0,CY=0,R=0;
+    const P=[];function seed(){const b=cv.getBoundingClientRect();cv.width=b.width||300;cv.height=b.height||300;W=cv.width;H=cv.height;CX=W/2;CY=H/2;R=Math.min(W,H)*0.42;P.length=0;for(let i=0;i<46;i++){const a=Math.random()*Math.PI*2,r=R*(0.5+Math.random()*0.7);P.push({x:CX+Math.cos(a)*r,y:CY+Math.sin(a)*r*0.95,vx:(Math.random()-.5)*0.3,vy:(Math.random()-.5)*0.3,s:Math.random()*2+0.6,ph:Math.random()*7});}}
+    function step(){requestAnimationFrame(step);if(!W)seed();const AS=accentSoft();
+      x.clearRect(0,0,W,H);for(const p of P){p.x+=p.vx;p.y+=p.vy;p.ph+=0.05;const dx=p.x-CX,dy=p.y-CY;if(Math.hypot(dx,dy)>R*1.25){p.vx*=-1;p.vy*=-1;}
+        const fl=0.5+0.5*Math.sin(p.ph);x.fillStyle=AS;x.globalAlpha=0.25+fl*0.5;x.beginPath();x.arc(p.x,p.y,p.s,0,7);x.fill();
+        x.globalAlpha=fl*0.4;x.beginPath();x.arc(p.x,p.y,p.s*2.4,0,7);x.fill();}
+      x.globalAlpha=1;}
+    step();cv.addEventListener('resize',seed);})();
 
   /* waveforms + voice analyzer */
   function makeWave(id){const cv=el(id);if(!cv)return;const x=cv.getContext('2d');let buf=new Array(120).fill(0),t=0;
