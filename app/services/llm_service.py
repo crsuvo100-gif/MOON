@@ -77,11 +77,19 @@ class LLMService:
         max_tokens: int | None = None,
         temperature: float | None = None,
     ) -> CompletionResult:
+        eff_max = max_tokens if max_tokens is not None else self._max_tokens
+        # Thinking models (qwen3 / deepseek-r1 / glm-z1) spend part of the token
+        # budget "thinking" before emitting the final answer in `content`. A small
+        # cap (e.g. 50-200) gets exhausted by reasoning and leaves `content` empty
+        # (finish_reason: length). To keep thinking ON for quality yet still get a
+        # real answer, ensure thinking models have enough headroom.
+        if not self._disable_thinking and eff_max < 1024:
+            eff_max = 1024
         payload: dict[str, Any] = {
             "model": self._model,
             "messages": [{"role": m.role, "content": m.content} for m in messages],
             "temperature": temperature if temperature is not None else self._temperature,
-            "max_tokens": max_tokens if max_tokens is not None else self._max_tokens,
+            "max_tokens": eff_max,
         }
         # qwen3 / deepseek-r1 / glm-z1 style "thinking" models: keep thinking
         # ON for better performance (operator preference). The correct key is
@@ -100,13 +108,14 @@ class LLMService:
             data = resp.json()
             choice = data["choices"][0]["message"]
             content = choice.get("content")
-            # Thinking models may leave `content` empty and place the answer in
-            # the reasoning trace when the token budget is exhausted; fall back
-            # to the tail of the reasoning as the answer if needed. Never return
-            # None: a nil content would later produce invalid (400) chat messages.
             reasoning = choice.get("reasoning") or choice.get("reasoning_content")
+            # Thinking models may leave `content` empty and place the answer in the
+            # reasoning trace. Extract the REAL final answer from reasoning rather
+            # than just the last line (which is mid-thought). Heuristic: the answer
+            # usually follows a closing thought or is the most substantive trailing
+            # sentence. Never return None (nil content would break later chat calls).
             if not content and reasoning:
-                content = reasoning.strip().splitlines()[-1].strip()
+                content = _extract_answer_from_reasoning(reasoning)
             if content is None:
                 content = ""
             raw_calls = choice.get("tool_calls") or []
@@ -123,6 +132,31 @@ class LLMService:
         except Exception as exc:  # noqa: BLE001
             logger.warning("LLM complete failed: %s", exc)
             return CompletionResult(content=None, has_tool_calls=False, tool_calls=[])
+
+
+def _extract_answer_from_reasoning(reasoning: str) -> str:
+    """Pull the final, substantive answer out of a thinking-model trace.
+
+    qwen3/deepseek-r1 emit reasoning in `reasoning` and the answer at the end.
+    We skip the preamble and return the most answer-like trailing text.
+    """
+    import re as _re
+    txt = reasoning.strip()
+    if not txt:
+        return ""
+    # Strip common XML-ish thinking wrappers if present.
+    txt = _re.sub(r"</?think>", "", txt, flags=_re.IGNORECASE).strip()
+    lines = [l.strip() for l in txt.splitlines() if l.strip()]
+    if not lines:
+        return txt
+    # The answer is typically the longest / last confident statement. Prefer the
+    # final non-boilerplate line; if it looks like a question echo, back up.
+    for l in reversed(lines):
+        low = l.lower()
+        if low.startswith(("okay,", "so i", "let me", "hmm", "wait,", "i need to", "first,")):
+            continue
+        return l
+    return lines[-1]
 
     async def teardown(self) -> None:
         await self._client.aclose()

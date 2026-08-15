@@ -276,10 +276,13 @@ class Orchestrator:
         self._agent_order = list(self._agents.keys())
 
     async def teardown(self) -> None:
-        if self._llm is not None:
-            await self._llm.teardown()
-        if getattr(self, "_llm_strong", None) is not None:
-            await self._llm_strong.teardown()
+        for attr in ("_llm", "_llm_strong"):
+            svc = getattr(self, attr, None)
+            if svc is not None and hasattr(svc, "teardown"):
+                try:
+                    await svc.teardown()
+                except Exception:  # noqa: BLE001
+                    pass
         if getattr(self, "_agent_models", None) is not None:
             await self._agent_models.teardown()
         logger.info("Orchestrator torn down")
