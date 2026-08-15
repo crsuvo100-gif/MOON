@@ -20,6 +20,10 @@ numpy>=1.26
 # chromadb>=0.5         # optional; enable for persistent vector search
 # sentence-transformers>=2.6  # optional; enable for real local embeddings
 
+# --- Telegram channel (optional; MOON as a Telegram bot) --------------------
+# pip install python-telegram-bot  (token/chat_id stay in .env, never committed)
+python-telegram-bot>=20.0
+
 # --- Hugging Face (optional; enables HF InferenceClient: chat + text-to-image) -
 # Controlled by MOON's huggingface fallback / huggingface tool. The code degrades
 # gracefully if absent. Install with: pip install "huggingface_hub[cli]"

@@ -32,6 +32,8 @@ dependencies = [
 # Hugging Face hosted inference (chat completions + text-to-image via InferenceClient).
 # MOON works without it; install with: pip install "moon-ai-agent[hf]"
 hf = ["huggingface_hub>=0.22"]
+# Telegram channel (MOON as a Telegram bot). Token/chat id stay in .env.
+telegram = ["python-telegram-bot>=20.0"]
 
 [project.scripts]
 moon = "main:main"

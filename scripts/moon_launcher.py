@@ -97,6 +97,65 @@ def ensure_env() -> None:
     log(".env created from .env.example (features unlocked; fill API keys to enable cloud fallbacks)")
 
 
+def start_tunnel() -> int:
+    """Expose MOON's Terminal through a secure tunnel, behind an authz token.
+
+    Safety: the Terminal's WebSocket + /status REQUIRE `MOON_TERMINAL_TOKEN`.
+    If it is unset we generate a random one (printed once) so remote exposure is
+    never unauthenticated. We then start `cloudflared` (if installed) to create a
+    public URL. If cloudflared is missing we still run the token-gated server on
+    loopback and tell the operator how to forward it.
+    """
+    import secrets
+
+    token = os.environ.get("MOON_TERMINAL_TOKEN", "").strip()
+    if not token:
+        token = secrets.token_hex(16)
+        os.environ["MOON_TERMINAL_TOKEN"] = token
+        log(f"Generated MOON_TERMINAL_TOKEN (keep this secret): {token}")
+    else:
+        log("Using existing MOON_TERMINAL_TOKEN (Terminal is auth-gated)")
+
+    # Start the Terminal in the background (token-gated via env).
+    log("Starting MOON Terminal (auth-gated)...")
+    srv = subprocess.Popen(
+        [venv_python_or_default(), "main.py", "start"],
+        env={**os.environ, "MOON_TERMINAL_TOKEN": token},
+    )
+    try:
+        cf = shutil.which("cloudflared")
+        if cf:
+            log("cloudflared found -- opening a secure tunnel to MOON Terminal...")
+            tun = subprocess.Popen(
+                [cf, "tunnel", "--url", "http://127.0.0.1:8777"],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            )
+            log("Tunnel starting; your public URL will appear above. Connect with header:")
+            log(f"  Authorization: Bearer {token}")
+            try:
+                srv.wait()
+            except KeyboardInterrupt:
+                pass
+        else:
+            log("cloudflared not installed -- Terminal is auth-gated on http://127.0.0.1:8777.")
+            log("To expose remotely, install cloudflared and run this again, or port-forward 8777.")
+            log(f"Clients MUST send header: Authorization: Bearer {token}")
+            try:
+                srv.wait()
+            except KeyboardInterrupt:
+                pass
+    finally:
+        srv.terminate()
+    return 0
+
+
+def venv_python_or_default() -> str:
+    p = os.path.join(ROOT, ".venv", "bin", "python")
+    if platform.system() == "Windows":
+        p = os.path.join(ROOT, ".venv", "Scripts", "python.exe")
+    return p
+
+
 def main(argv: list[str]) -> int:
     os.chdir(ROOT)
     mode = argv[1] if len(argv) > 1 else "terminal"
@@ -106,9 +165,7 @@ def main(argv: list[str]) -> int:
 
     # Decontaminate PYTHONPATH so MOON's venv is used (see app/config/env_guard.py)
     os.environ.pop("PYTHONPATH", None)
-    venv_python = os.path.join(ROOT, ".venv", "bin", "python")
-    if platform.system() == "Windows":
-        venv_python = os.path.join(ROOT, ".venv", "Scripts", "python.exe")
+    venv_python = venv_python_or_default()
     if not os.path.exists(venv_python):
         log(f"No .venv found at {venv_python}")
         log("Create one: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt")
@@ -120,11 +177,19 @@ def main(argv: list[str]) -> int:
     if mode == "dashboard":
         log("MOON Dashboard starting at http://127.0.0.1:5000")
         return subprocess.call([venv_python, "main.py", "dashboard"])
+    if mode == "tui":
+        log("MOON TUI starting (curses)...")
+        return subprocess.call([venv_python, "main.py", "tui"])
+    if mode == "telegram":
+        log("MOON Telegram bot starting (polling)...")
+        return subprocess.call([venv_python, "main.py", "telegram"])
+    if mode == "tunnel":
+        return start_tunnel()
     if mode == "run":
         task = " ".join(argv[2:]) if len(argv) > 2 else "Say hello."
         log(f"MOON running: {task}")
         return subprocess.call([venv_python, "main.py", "run", task])
-    log("Usage: moon_launcher.py [terminal|dashboard|run <task>]")
+    log("Usage: moon_launcher.py [terminal|dashboard|tui|telegram|tunnel|run <task>]")
     return 2
 
 

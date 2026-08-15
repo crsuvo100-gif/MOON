@@ -20,7 +20,7 @@ import os
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
@@ -30,6 +30,29 @@ AVATAR_GIF = WEB_DIR / "avatar.gif"
 AVATAR_PNG = WEB_DIR / "avatar.png"
 
 app = FastAPI(title="MOON Terminal")
+
+# --- Remote-access authorization gate ----------------------------------------
+# When MOON_TERMINAL_TOKEN / settings.terminal_access_token is set, the Terminal
+# interface REQUIRES a matching `Authorization: Bearer <token>` on the WebSocket
+# and /status. This is the ONLY safe way to expose MOON beyond loopback (pair with
+# a tunnel/relay). When unset, MOON stays local-only (no token checked) -- her
+# default, safest posture.
+try:
+    from app.config.settings import get_settings
+    TERMINAL_TOKEN = get_settings().terminal_access_token.strip() or os.environ.get("MOON_TERMINAL_TOKEN", "").strip()
+except Exception:  # noqa: BLE001
+    TERMINAL_TOKEN = os.environ.get("MOON_TERMINAL_TOKEN", "").strip()
+
+
+def _token_ok(ws_or_headers) -> bool:
+    """True when no token is required, or the request presented the right one."""
+    if not TERMINAL_TOKEN:
+        return True
+    if isinstance(ws_or_headers, dict):
+        auth = ws_or_headers.get("authorization", "") or ws_or_headers.get("Authorization", "")
+    else:
+        auth = ws_or_headers.headers.get("authorization", "") if hasattr(ws_or_headers, "headers") else ""
+    return auth == f"Bearer {TERMINAL_TOKEN}"
 
 # ---- shared orchestrator (lazy, one per process) ----
 _ORCH = None
@@ -333,7 +356,11 @@ async def _moon_status(orch) -> dict:
 
 
 @app.get("/status")
-async def status():
+async def status(request: Request):
+    # Authorization gate for remote exposure.
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
     orch = await _get_orchestrator()
     return await _moon_status(orch)
 
@@ -384,6 +411,10 @@ async def _run_diagnostics(orch) -> dict:
 
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
+    # Authorization gate for remote exposure: require Bearer token when set.
+    if TERMINAL_TOKEN and not _token_ok(ws):
+        await ws.close(code=1008, reason="unauthorized")
+        return
     await ws.accept()
     global _voice_muted
     orch = await _get_orchestrator()

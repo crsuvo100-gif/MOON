@@ -86,6 +86,8 @@ def main() -> None:
     sub.add_parser("models", help="Pre-pull all per-agent preferred models so agents are ready")
     sub.add_parser("dashboard", help="Launch the MOON web dashboard (Flask+SocketIO UI)")
     sub.add_parser("terminal", help="Launch MOON's own terminal interface (animated avatar UI)")
+    sub.add_parser("tui", help="Launch MOON's curses text-mode terminal UI (headless/SSH)")
+    sub.add_parser("telegram", help="Run MOON as a Telegram bot (polling listener)")
     args = ap.parse_args()
     if args.cmd == "start":
         _run_terminal()
@@ -95,6 +97,12 @@ def main() -> None:
         asyncio.run(_prefetch_models())
     elif args.cmd == "dashboard":
         asyncio.run(_run_dashboard())
+    elif args.cmd == "tui":
+        from app.tui import main as tui_main
+        raise SystemExit(tui_main())
+    elif args.cmd == "telegram":
+        from app.services.telegram_bot import main as tg_main
+        raise SystemExit(tg_main())
     elif args.cmd == "terminal":
         _run_terminal()
     else:

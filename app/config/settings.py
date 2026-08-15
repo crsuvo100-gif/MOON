@@ -166,6 +166,21 @@ class Settings(BaseSettings):
                     "(e.g. api.github.com,my-agent.example.com). Everything else is CONFIRMATION.",
     )
 
+    # --- Telegram channel (MOON as a Telegram bot, polling listener) ---------
+    # Token + allowed chat id are read from the environment (TELEGRAM_BOT_TOKEN /
+    # TELEGRAM_CHAT_ID) so they stay in the gitignored .env. See app/services/telegram_bot.py.
+    telegram_bot_token: str = Field(default="", description="Telegram bot token (TELEGRAM_BOT_TOKEN). Blank = channel disabled.")
+    telegram_chat_id: str = Field(default="", description="Authorized Telegram chat id (TELEGRAM_CHAT_ID). Blank = any chat.")
+
+    # --- Remote-access authorization gate for the Terminal interface ---------
+    # When set, the Terminal WebSocket + /status require `Authorization: Bearer <token>`.
+    # MOON stays local-only (no token checked) when blank -- her safest default.
+    # The `tunnel` launcher mode generates/uses this so remote exposure is never open.
+    terminal_access_token: str = Field(
+        default="",
+        description="Token for MOON_TERMINAL_TOKEN. When set, the Terminal requires Bearer auth.",
+    )
+
     # Per-agent models: each agent can pull/install and run on its OWN model
     # (via Ollama) for domain-suited results, feeding its output up to the main
     # brain. Disable to force every agent to share the default model.
