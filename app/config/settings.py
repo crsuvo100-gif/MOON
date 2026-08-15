@@ -78,6 +78,26 @@ class Settings(BaseSettings):
         description="Model id to request from OpenRouter (e.g. openai/gpt-4o-mini, anthropic/claude-3.5-sonnet).",
     )
 
+    # --- OpenRouter ACCOUNT keys (NOT used for model serving) ---------------
+    # These are auxiliary OpenRouter credentials, kept available for account
+    # management / inbound-webhook verification. They are NEVER sent to the
+    # chat-completions endpoint (that uses openrouter_api_key above).
+    openrouter_management_key: str = Field(
+        default="",
+        description=(
+            "OpenRouter MANAGEMENT key (sk-or-v1-...). Account/billing/admin only -- "
+            "create keys, view usage. NOT a model-serving key; do not pass to /v1/chat/completions."
+        ),
+    )
+    openrouter_webhook_secret: str = Field(
+        default="",
+        description=(
+            "OpenRouter webhook signing secret (whsec_...). Used ONLY to verify inbound "
+            "OpenRouter webhooks (e.g. usage events). No webhook ingestion is wired yet; "
+            "stored for when that feature is added. Blank = disabled."
+        ),
+    )
+
     # Optional STRONG model for accuracy-critical work. When set, factual and
     # cyber-critical tasks (and the main-brain accuracy gate) are routed to it
     # for a higher-quality pass. Leave empty to use the default model only.
