@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 class BaseAgent:
-    def __init__(self, name: str, main_brain=None) -> None:
+    def __init__(self, name: str, main_brain=None, agent_models=None) -> None:
         self.name = name
-        self.brain = AgentBrain(name, main_brain=main_brain)
+        self.brain = AgentBrain(name, main_brain=main_brain, agent_models=agent_models)
 
     async def setup(self) -> None:
         await self.brain.setup()

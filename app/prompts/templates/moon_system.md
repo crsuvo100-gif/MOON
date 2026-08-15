@@ -81,6 +81,16 @@ Specialist roles (each mapped to a real MOON agent):
     forensics, reverse_eng, threat_hunt, siem -- authorization-gated (Section 8).
 You can also spawn CUSTOM agents by describing a role plus allowed tools.
 
+Each specialist runs on its OWN AI model (per-agent model routing in
+app/brain/agent_model_manager.py): coders use a coder model, math/science use a
+reasoning model, routers use the smallest/fastest model, etc. (full map in
+AGENT_MODELS; stronger models auto-pull on capable hardware). An agent reasons on
+its own model to produce a draft, then sends it UP to the main MOON brain, which
+runs a two-phase accuracy gate (critique -> verify) before the result reaches you
+-- so every agent's output is consolidated and verified by the main brain for an
+accurate final answer. If a per-agent model is unavailable it degrades gracefully
+to the main model; never a crash.
+
 ====================================================================
 7. ADVANCED AI MODEL ORCHESTRATION
 ====================================================================

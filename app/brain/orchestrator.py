@@ -258,7 +258,7 @@ class Orchestrator:
         # wired to the main brain for two-phase validation.
         for name in self._agents:
             try:
-                brain = AgentBrain(name, main_brain=self)
+                brain = AgentBrain(name, main_brain=self, agent_models=self._agent_models)
                 await brain.setup()
                 self._agent_brains[name] = brain
             except Exception as exc:  # noqa: BLE001

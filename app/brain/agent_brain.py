@@ -19,6 +19,7 @@ from typing import Any
 from app.config.settings import get_settings
 from app.memory.conversation_history import ConversationHistory
 from app.memory.working_memory import WorkingMemory
+from app.services.llm_service import ChatMessage
 
 logger = logging.getLogger(__name__)
 
@@ -69,11 +70,21 @@ class _AgentBrainStore:
 
 
 class AgentBrain:
-    """An agent's own brain, wired to MOON's main brain for validation."""
+    """An agent's own brain, wired to MOON's main brain for validation.
 
-    def __init__(self, agent_name: str, main_brain=None) -> None:
+    Each agent can run on its OWN model (via AgentModelManager) so it generates
+    a real, domain-suited first-pass answer before the result is sent up to the
+    main MOON brain for the two-phase accuracy gate. If per-agent models are
+    disabled or unavailable, the agent falls back to a template draft that the
+    main brain still validates -- graceful degradation, never a crash.
+    """
+
+    def __init__(self, agent_name: str, main_brain=None,
+                 agent_models: "AgentModelManager | None" = None) -> None:
         self.agent_name = agent_name
         self.main_brain = main_brain
+        self.agent_models = agent_models
+        self._llm: "LLMService | None" = None
         self.working = WorkingMemory()
         self.history = ConversationHistory(session_id=f"agent:{agent_name}")
         self._store = _AgentBrainStore(agent_name)
@@ -81,6 +92,14 @@ class AgentBrain:
 
     async def setup(self) -> None:
         await self._store.load()
+        # Lazily bind this agent's OWN model (pulled/installed on demand).
+        if self.agent_models is not None:
+            try:
+                self._llm = await self.agent_models.get_llm(self.agent_name)
+                logger.info("Agent '%s' brain bound to its own model", self.agent_name)
+            except Exception as exc:  # noqa: BLE001
+                logger.info("Agent '%s' own-model bind failed; template fallback: %s", self.agent_name, exc)
+                self._llm = None
         logger.info("Agent brain '%s' ready (%d prior episodes)", self.agent_name, len(self._store.episodes()))
 
     async def remember(self, episode: dict[str, Any]) -> None:
@@ -88,14 +107,34 @@ class AgentBrain:
         await self._store.append(episode)
 
     async def draft(self, task: str, context: str = "") -> str:
-        """Produce a first-pass answer from the agent's own brain."""
+        """Produce a first-pass answer from the agent's OWN brain/model.
+
+        If the agent has its own LLMService (per-agent model), it actually
+        generates an answer on that model. Otherwise it returns a prompt template
+        so the main brain still has something to validate (graceful fallback).
+        """
         prior = self._store.episodes()[-3:]
         prior_txt = "\n".join(f"- {e.get('outcome', '')[:200]}" for e in prior)
-        prompt = (
+        if self._llm is not None:
+            try:
+                messages = [
+                    ChatMessage(role="system", content=(
+                        f"You are the {self.agent_name} agent of MOON, an expert sub-agent. "
+                        f"Use your prior experience when relevant.\nPRIOR EXPERIENCE:\n{prior_txt}"
+                    )),
+                    ChatMessage(role="user", content=f"Task: {task}\nContext: {context}"),
+                ]
+                resp = await self._llm.complete(messages)
+                if resp.content:
+                    return resp.content
+                logger.info("Agent '%s' own-model returned empty; using template fallback", self.agent_name)
+            except Exception as exc:  # noqa: BLE001
+                logger.info("Agent '%s' own-model draft failed; template fallback: %s", self.agent_name, exc)
+        # Template fallback (no own model / call failed) -- main brain still validates.
+        return (
             f"You are the {self.agent_name} agent of MOON. Use your prior experience:\n"
             f"{prior_txt}\n\nTask: {task}\nContext: {context}\nProduce a concise draft answer."
         )
-        return prompt
 
     async def refine_with_main(self, draft_text: str, task: str) -> str:
         """Two-phase accuracy gate: main brain CRITIQUES then VERIFIES the draft.
