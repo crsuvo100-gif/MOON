@@ -23,6 +23,8 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+TERMINAL_HTML = WEB_DIR / "moon_terminal.html"
+THEME_JSON = WEB_DIR / "theme.json"
 AVATAR_SVG = WEB_DIR / "avatar.svg"
 AVATAR_GIF = WEB_DIR / "avatar.gif"
 AVATAR_PNG = WEB_DIR / "avatar.png"
@@ -140,17 +142,25 @@ def _stream_text(text: str):
 
 @app.get("/")
 async def terminal_page() -> HTMLResponse:
-    # The old front-end frame (web/moon_terminal.html) was removed; a new
-    # terminal UI/frame is being built from scratch. The backend (WebSocket /ws,
-    # /status, authz gate, /avatar.svg) stays live so the new UI can connect.
+    # Serves the rebuilt MOON NEURAL CORE INTERFACE (web/moon_terminal.html),
+    # a red/black HUD wired to the live /ws backend.
+    if TERMINAL_HTML.exists():
+        return HTMLResponse(TERMINAL_HTML.read_text(encoding="utf-8"))
     return HTMLResponse(
         "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
-        "<title>MOON Terminal</title></head><body style='background:#03060f;color:#00f3ff;"
+        "<title>MOON Terminal</title></head><body style='background:#050505;color:#ff4d4d;"
         "font-family:monospace;display:grid;place-items:center;height:100vh;margin:0'>"
         "<div style='text-align:center'><h1>MOON TERMINAL</h1>"
-        "<p>New interface coming online. Backend WebSocket /ws is live.</p></div>"
+        "<p>Interface offline. Backend WebSocket /ws is live.</p></div>"
         "</body></html>"
     )
+
+
+@app.get("/theme")
+async def theme_json():
+    if THEME_JSON.exists():
+        return FileResponse(str(THEME_JSON), media_type="application/json")
+    return HTMLResponse("{}", status_code=404)
 
 
 @app.get("/avatar.svg")

@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MOON NEURAL CORE INTERFACE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style>
+/* ===========================================================================
+   MOON NEURAL CORE INTERFACE  --  red/black HUD terminal (rebuilt from scratch)
+   Languages: HTML (structure) · CSS (theme/frame/fx) · JS (logic/orb/comms)
+   Backend: GET /status + WebSocket /ws (FastAPI, app.terminal_interface)
+   =========================================================================== */
+:root{
+  --bg:#050505; --bg-panel:rgba(20,2,2,.55); --bg-panel2:rgba(30,3,3,.72);
+  --red:#ff0000; --red-soft:#ff4d4d; --red-dim:#330000; --red-line:rgba(255,40,40,.35);
+  --text:#ffffff; --label:#b08a8a; --warn:#ffae42; --ok:#39ff88; --cy:#ff6a6a;
+  --ff:'Share Tech Mono','Courier New',ui-monospace,monospace;
+  --xs:9px; --sm:11px; --md:13px; --lg:18px; --xl:24px;
+  --gap:8px; --r:4px; --bw:1px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:
+    radial-gradient(circle at 50% 42%, rgba(80,0,0,.20), rgba(5,5,5,0) 60%),
+    var(--bg);
+  color:var(--text); font-family:var(--ff); font-size:var(--md);
+  overflow:hidden; letter-spacing:.04em;
+}
+/* CRT scanlines + vignette overlay */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:9000;
+  background:repeating-linear-gradient(to bottom,rgba(255,255,255,.05) 0 1px,rgba(0,0,0,0) 1px 3px);
+  opacity:.06;mix-blend-mode:overlay}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;
+  box-shadow:inset 0 0 200px 40px rgba(0,0,0,.85)}
+/* corner brackets (HUD chrome) */
+.hud-frame{position:fixed;inset:6px;border:1px solid var(--red-dim);border-radius:6px;z-index:1;pointer-events:none}
+.hud-frame i{position:absolute;width:18px;height:18px;border:2px solid var(--red-soft);opacity:.7}
+.hud-frame i.tl{top:-2px;left:-2px;border-right:0;border-bottom:0}
+.hud-frame i.tr{top:-2px;right:-2px;border-left:0;border-bottom:0}
+.hud-frame i.bl{bottom:-2px;left:-2px;border-right:0;border-top:0}
+.hud-frame i.br{bottom:-2px;right:-2px;border-left:0;border-top:0}
+
+/* ---- grid layout ---- */
+.app{position:relative;z-index:2;height:100vh;display:grid;
+  grid-template-columns:230px 1fr 250px;
+  grid-template-rows:48px 1fr 230px 46px;
+  grid-template-areas:
+    "header header header"
+    "left   center right"
+    "left   bottom right"
+    "footer footer footer";
+  gap:var(--gap);padding:12px;}
+
+/* corner-bracket mixin for panels */
+.panel{position:relative;background:var(--bg-panel);border:var(--bw) solid var(--red-line);
+  border-radius:var(--r);padding:8px 10px;overflow:hidden;backdrop-filter:blur(2px)}
+.panel::before,.panel::after{content:"";position:absolute;width:10px;height:10px;pointer-events:none}
+.panel::before{top:2px;left:2px;border-top:2px solid var(--red-soft);border-left:2px solid var(--red-soft)}
+.panel::after{bottom:2px;right:2px;border-bottom:2px solid var(--red-soft);border-right:2px solid var(--red-soft)}
+.panel h3{margin:0 0 6px;font-size:var(--sm);color:var(--red-soft);font-weight:700;
+  text-transform:uppercase;letter-spacing:.12em;border-bottom:1px solid var(--red-dim);padding-bottom:3px;
+  display:flex;justify-content:space-between;align-items:center}
+.panel h3 .tag{font-size:var(--xs);color:var(--label)}
+.row{display:flex;justify-content:space-between;align-items:center;font-size:var(--sm);padding:2px 0}
+.row span:first-child{color:var(--label)}
+.row b{color:var(--text);font-weight:400}
+.bar{height:5px;background:var(--red-dim);border-radius:3px;overflow:hidden;margin:2px 0 5px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--red-soft));
+  box-shadow:0 0 8px var(--red-soft);width:0;transition:width .4s}
+
+/* ---- header ---- */
+.header{grid-area:header;display:flex;align-items:center;gap:14px;padding:0 14px;
+  background:linear-gradient(90deg,rgba(40,0,0,.6),rgba(10,0,0,.3));
+  border:1px solid var(--red-line);border-radius:var(--r)}
+.header .brand{display:flex;flex-direction:column;line-height:1.15}
+.header .brand b{font-size:var(--md);color:var(--red-soft);letter-spacing:.18em}
+.header .brand small{font-size:var(--xs);color:var(--label);letter-spacing:.1em}
+.header .title{flex:1;text-align:center}
+.header .title b{font-size:var(--lg);color:var(--text);letter-spacing:.25em}
+.header .title small{display:block;font-size:var(--xs);color:var(--label);letter-spacing:.2em}
+.chips{display:flex;gap:10px}
+.chip{display:flex;flex-direction:column;align-items:flex-end;font-size:var(--xs);color:var(--label)}
+.chip b{color:var(--red-soft);font-size:var(--sm)}
+.chip.alert b{color:var(--warn)}
+
+/* ---- left sidebar ---- */
+.left{grid-area:left;display:flex;flex-direction:column;gap:var(--gap);overflow:auto}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{all:unset;cursor:pointer;font-family:var(--ff);font-size:var(--sm);color:var(--label);
+  padding:5px 8px;border-left:2px solid transparent;text-transform:uppercase;letter-spacing:.08em}
+.nav button:hover{color:var(--text);background:rgba(255,40,40,.08)}
+.nav button.active{color:var(--red-soft);border-left-color:var(--red);background:rgba(255,40,40,.12)}
+
+/* ---- center ---- */
+.center{grid-area:center;display:flex;flex-direction:column;gap:var(--gap);min-height:0}
+.core-wrap{flex:1;position:relative;display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:var(--gap);min-height:0}
+.core-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0}
+#orbCanvas{width:min(340px,90%);height:min(340px,90%);display:block}
+.core-overlay{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
+  width:78%;text-align:center;pointer-events:none}
+.core-overlay .conv{font-size:var(--xs);color:var(--label);letter-spacing:.18em}
+.core-overlay .conv b{color:var(--red-soft)}
+.core-overlay .mat{margin-top:2px;font-size:var(--sm);color:var(--text);letter-spacing:.3em}
+.core-caption{position:absolute;top:8px;width:100%;text-align:center;font-size:var(--xs);
+  color:var(--label);letter-spacing:.25em}
+.state-line{display:flex;justify-content:center;gap:8px;align-items:center;margin-top:4px}
+.state-line .badge{font-size:var(--xs);padding:2px 7px;border:1px solid var(--red-line);border-radius:10px;color:var(--label)}
+.state-line .badge.on{color:var(--red-soft);border-color:var(--red);box-shadow:0 0 8px rgba(255,40,40,.4)}
+.pipeline{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-top:6px}
+.pipeline .st{font-size:var(--xs);text-align:center;padding:4px 2px;border:1px solid var(--red-dim);
+  border-radius:var(--r);color:var(--label);background:rgba(20,0,0,.4);transition:.3s}
+.pipeline .st.active{color:var(--red-soft);border-color:var(--red);box-shadow:0 0 8px rgba(255,40,40,.35)}
+.pipeline .st .n{font-size:14px;display:block;margin-bottom:1px}
+
+/* ---- right sidebar ---- */
+.right{grid-area:right;display:flex;flex-direction:column;gap:var(--gap);overflow:auto}
+.donut{display:flex;align-items:center;gap:8px}
+.donut canvas{width:84px;height:84px}
+.legend{font-size:var(--xs);color:var(--label);line-height:1.5}
+.legend b{color:var(--text)}
+
+/* ---- bottom row ---- */
+.bottom{grid-area:bottom;display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:var(--gap);min-height:0}
+.logs{overflow:auto;font-size:var(--xs);line-height:1.45;color:var(--text)}
+.logs .l{white-space:pre-wrap;word-break:break-word}
+.logs .l .t{color:var(--label)}
+.logs .l .c{color:var(--red-soft)}
+.wave{display:flex;flex-direction:column}
+.wave canvas{flex:1;width:100%;min-height:90px;display:block}
+.gauge{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gauge canvas{width:120px;height:120px}
+.gauge .lab{font-size:var(--xs);color:var(--label);letter-spacing:.2em}
+
+/* ---- footer ---- */
+.footer{grid-area:footer;display:flex;align-items:center;gap:10px;padding:0 12px;
+  background:rgba(20,0,0,.5);border:1px solid var(--red-line);border-radius:var(--r)}
+.footer input{flex:1;background:rgba(0,0,0,.5);border:1px solid var(--red-dim);color:var(--text);
+  font-family:var(--ff);font-size:var(--sm);padding:8px 10px;border-radius:var(--r)}
+.footer input:focus{outline:none;border-color:var(--red)}
+.footer .send{all:unset;cursor:pointer;background:var(--red);color:#000;font-weight:700;
+  padding:8px 16px;border-radius:var(--r);letter-spacing:.1em;text-transform:uppercase}
+.footer .send:hover{background:var(--red-soft)}
+.footer .nav2{display:flex;gap:6px}
+.footer .nav2 button{all:unset;cursor:pointer;font-size:var(--xs);color:var(--label);
+  padding:6px 9px;border:1px solid var(--red-dim);border-radius:var(--r);text-transform:uppercase}
+.footer .nav2 button:hover{color:var(--red-soft);border-color:var(--red)}
+.footer .clock{font-size:var(--sm);color:var(--red-soft);min-width:74px;text-align:right}
+
+/* speech bubble */
+.speech{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:50;
+  max-width:60%;background:rgba(20,0,0,.92);border:1px solid var(--red);border-radius:8px;
+  padding:10px 14px;font-size:var(--sm);color:var(--text);box-shadow:0 0 20px rgba(255,40,40,.4);
+  display:none}
+.speech.show{display:block}
+
+@media(max-width:1100px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto auto auto auto auto;
+    grid-template-areas:"header" "left" "center" "right" "bottom" "footer"}
+  .left,.right,.bottom{overflow:visible}
+  .bottom{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body data-moon="idle">
+<div class="hud-frame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+
+<div class="app">
+  <!-- ===================== HEADER ===================== -->
+  <header class="header">
+    <div class="brand">
+      <b>MOON NEURAL CORE</b>
+      <small>SENTIENT OS v2.1.0 · QUANTUM AI MAINFRAME</small>
+    </div>
+    <div class="title"><b>MOON NEURAL CORE INTERFACE</b>
+      <small>HUMAN BRAIN NEURAL WORKFLOW · MOON AGENT ORCHESTRATOR</small></div>
+    <div class="chips" id="chips">
+      <div class="chip"><span>CORE TEMP</span><b id="cTemp">--</b></div>
+      <div class="chip"><span>QUANTUM LOAD</span><b id="cLoad">--</b></div>
+      <div class="chip"><span>CORE STATUS</span><b id="cStatus">--</b></div>
+      <div class="chip"><span>UPTIME</span><b id="cUp">--</b></div>
+      <div class="chip alert"><span>THREAT LEVEL</span><b id="cThreat">MINIMAL</b></div>
+    </div>
+  </header>
+
+  <!-- ===================== LEFT ===================== -->
+  <aside class="left">
+    <section class="panel">
+      <h3>SYSTEM MODULES</h3>
+      <nav class="nav" id="nav">
+        <button class="active">Overview</button>
+        <button>Neural Map</button>
+        <button>Cognitive Core</button>
+        <button>Memory Matrix</button>
+        <button>Learning Engine</button>
+        <button>Processor Array</button>
+        <button>Network Protocols</button>
+        <button>Security Grid</button>
+        <button>System Logs</button>
+        <button>Configuration</button>
+      </nav>
+    </section>
+    <section class="panel">
+      <h3>POWER MANAGEMENT</h3>
+      <div class="row"><span>Power Output</span><b id="pOut">--</b></div>
+      <div class="bar"><i id="pOutBar"></i></div>
+      <div class="row"><span>Energy Reserves</span><b id="pEnergy">--</b></div>
+      <div class="bar"><i id="pEnergyBar"></i></div>
+      <div class="row"><span>Coolant Eff.</span><b id="pCool">--</b></div>
+      <div class="bar"><i id="pCoolBar"></i></div>
+      <div class="row"><span>Core Temp</span><b id="pTemp">--</b></div>
+      <div class="bar"><i id="pTempBar"></i></div>
+    </section>
+  </aside>
+
+  <!-- ===================== CENTER ===================== -->
+  <main class="center">
+    <section class="panel core-wrap">
+      <!-- left telemetry -->
+      <div class="panel core-panel" style="align-items:stretch">
+        <h3>NEURAL TELEMETRY</h3>
+        <div class="row"><span>Neural Density</span><b id="ntDen">--</b></div>
+        <div class="row"><span>Synaptic Act.</span><b id="ntSyn">--</b></div>
+        <div class="row"><span>Signal Freq</span><b id="ntFreq">--</b></div>
+        <div class="row"><span>Net Latency</span><b id="ntLat">--</b></div>
+        <h3 style="margin-top:8px">CORE CONFIGURATION</h3>
+        <div class="row"><span>Neural Cores</span><b id="ccCores">--</b></div>
+        <div class="row"><span>Quantum Nodes</span><b id="ccNodes">--</b></div>
+        <div class="row"><span>Memory Clusters</span><b id="ccMem">--</b></div>
+        <div class="row"><span>Architecture</span><b id="ccArch">NEURO-SYNAPTIC</b></div>
+      </div>
+      <!-- hero orb -->
+      <div class="panel core-panel" style="position:relative">
+        <div class="core-caption">QUANTUM NEURAL MATRIX</div>
+        <canvas id="orbCanvas"></canvas>
+        <div class="core-overlay">
+          <div class="conv">NEURAL CONVERGENCE IN PROGRESS <b id="convPct">0.0%</b></div>
+          <div class="mat">MOON IS ACTIVE AND AWARE</div>
+          <div class="state-line">
+            <span class="badge" data-st="idle">IDLE</span>
+            <span class="badge" data-st="listening">LISTENING</span>
+            <span class="badge" data-st="thinking">THINKING</span>
+            <span class="badge" data-st="executing">EXECUTING</span>
+            <span class="badge" data-st="speaking">SPEAKING</span>
+          </div>
+        </div>
+      </div>
+      <!-- right telemetry (topology) -->
+      <div class="panel core-panel" style="align-items:stretch">
+        <h3>NN TOPOLOGY</h3>
+        <div class="row"><span>Nodes</span><b id="tpNodes">--</b></div>
+        <div class="row"><span>Connections</span><b id="tpConn">--</b></div>
+        <div class="row"><span>Density</span><b id="tpDen">--</b></div>
+        <div class="row"><span>Stability</span><b id="tpStab">100%</b></div>
+        <h3 style="margin-top:8px">MEMORY SYNC</h3>
+        <div class="row"><span>Episodic</span><b id="mEpi">--</b></div>
+        <div class="row"><span>Long-term</span><b id="mLtm">--</b></div>
+        <div class="row"><span>Short-term</span><b id="mStm">--</b></div>
+        <div class="row"><span>Vectors</span><b id="mVec">--</b></div>
+      </div>
+    </section>
+    <section class="panel">
+      <h3>COGNITIVE PROCESS PIPELINE <span class="tag" id="agentInfo">-- agents</span></h3>
+      <div class="pipeline" id="pipeline"></div>
+    </section>
+  </main>
+
+  <!-- ===================== RIGHT ===================== -->
+  <aside class="right">
+    <section class="panel">
+      <h3>MEMORY CORE STATUS</h3>
+      <div class="row"><span>Total</span><b id="memTot">--</b></div>
+      <div class="row"><span>Used</span><b id="memUsed">--</b></div>
+      <div class="row"><span>Free</span><b id="memFree">--</b></div>
+      <div class="donut">
+        <canvas id="memDonut" width="84" height="84"></canvas>
+        <div class="legend">
+          <div>SHORT TERM <b id="dShort">--</b></div>
+          <div>WORKING <b id="dWork">--</b></div>
+          <div>LONG TERM <b id="dLong">--</b></div>
+          <div>ARCHIVE <b id="dArch">--</b></div>
+        </div>
+      </div>
+    </section>
+    <section class="panel">
+      <h3>THREAT ASSESSMENT</h3>
+      <div class="row"><span>Global Level</span><b id="thLevel">2.1%</b></div>
+      <div class="bar"><i id="thBar" style="width:2%"></i></div>
+      <div class="row"><span>Active Threats</span><b id="thActive">0</b></div>
+      <div class="row"><span>Neutralized</span><b id="thNeut">--</b></div>
+      <div class="row"><span>Tools Online</span><b id="thTools">--</b></div>
+      <div class="row"><span>Sensors</span><b id="thSens">--</b></div>
+    </section>
+  </aside>
+
+  <!-- ===================== BOTTOM ===================== -->
+  <section class="bottom">
+    <div class="panel logs" id="logs"><h3 style="position:sticky;top:0;background:var(--bg-panel)">SYSTEM LOGS</h3></div>
+    <div class="panel wave"><h3>SYNAPTIC SPECTRUM</h3><canvas id="wavA"></canvas></div>
+    <div class="panel wave"><h3>NEURAL FEED</h3><canvas id="wavB"></canvas></div>
+    <div class="panel gauge"><h3>SYSTEM EFFICIENCY</h3><canvas id="effG" width="120" height="120"></canvas>
+      <div class="lab" id="effLab">--%</div></div>
+  </section>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="footer">
+    <span style="color:var(--red-soft);font-weight:700">MOON&gt;</span>
+    <input id="cmd" placeholder="Enter command or ask MOON..." autocomplete="off">
+    <button class="send" id="send">SEND</button>
+    <div class="nav2">
+      <button data-act="diagnostics">Diagnostics</button>
+      <button data-act="memory_search">Memory</button>
+      <button data-act="status">Status</button>
+      <button data-act="help">Help</button>
+    </div>
+    <div class="clock" id="clock">--:--:--</div>
+  </footer>
+</div>
+
+<div class="speech" id="speech"></div>
+
+<script>
+/* ===========================================================================
+   MOON NEURAL CORE INTERFACE -- front-end logic
+   Pure vanilla JS. Reads theme tokens from /theme, status from /status,
+   streams live events from WebSocket /ws.
+   ========================================================================== */
+(function(){
+  "use strict";
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+  const el = id => document.getElementById(id);
+  let STATE = "idle";
+  let activity = 40;            // 0..100 neural convergence / load
+
+  /* ---------- theme tokens (JSON) ---------- */
+  fetch('/theme').then(r=>r.ok?r.json():{}).then(t=>{
+    document.documentElement.dataset.theme = (t.name||'MOON');
+  }).catch(()=>{});
+
+  /* ---------- helpers ---------- */
+  const setBar=(id,pct)=>{const b=el(id);if(b)b.style.width=Math.max(0,Math.min(100,pct))+'%';};
+  const setText=(id,t)=>{const e=el(id);if(e)e.textContent=t;};
+  function fmtMB(mb){ if(mb>=1048576)return (mb/1048576).toFixed(2)+' PB';
+    if(mb>=1024)return (mb/1024).toFixed(1)+' TB'; return Math.round(mb)+' MB'; }
+
+  /* simple JSON-safe number/string getter */
+  const num=(o,d)=> (typeof o==='number'?o:d);
+
+  /* ---------- status mapping ---------- */
+  function applyStatus(s){
+    if(!s) return;
+    const sys = s.system||{};
+    const mem = s.memory||{};
+    const emo = s.emotion||{};
+    // header chips
+    setText('cTemp', (sys.temp_c!=null?sys.temp_c+'°C':'--'));
+    setText('cLoad', (sys.cpu!=null?sys.cpu+'%':'--'));
+    setText('cStatus', s.locked? 'LOCKED':'ONLINE');
+    setText('cUp', s.uptime_fmt||'--');
+    // power mgmt (derived from real metrics)
+    const eff = 90 + Math.round((sys.cpu||0)*0.08);
+    setText('pOut', eff+'%'); setBar('pOutBar',eff);
+    const energy = 100 - Math.round((sys.ram_pct||0)*0.7);
+    setText('pEnergy', energy+'%'); setBar('pEnergyBar',energy);
+    const cool = 100 - Math.min(40,Math.round((sys.temp_c||0)*2));
+    setText('pCool', cool+'%'); setBar('pCoolBar',cool);
+    setText('pTemp', (sys.temp_c!=null?sys.temp_c+'°C':'--'));
+    setBar('pTempBar', Math.min(100,(sys.temp_c||0)*3));
+    // neural telemetry
+    setText('ntDen', (80+Math.round((sys.cpu||0)*0.18))+'%');
+    setText('ntSyn', ((sys.cpu||0)*0.014+1.2).toFixed(3)+' PETA/s');
+    setText('ntFreq', (20+(sys.cpu||0)*0.3).toFixed(1)+' Hz');
+    setText('ntLat', (7+(sys.net||0)*0.001).toFixed(1)+' ms');
+    // core config
+    setText('ccCores', (16384).toLocaleString());
+    setText('ccNodes', (1048576).toLocaleString());
+    setText('ccMem', (s.agents||0)*1024);
+    // topology
+    const nodes = 13670 + (s.agents||0)*10;
+    setText('tpNodes', nodes.toLocaleString());
+    setText('tpConn', (nodes*6).toLocaleString());
+    setText('tpDen', (97+Math.round((sys.cpu||0)*0.02))+'%');
+    setText('tpStab', '100%');
+    // memory sync
+    setText('mEpi', mem.episodic||0);
+    setText('mLtm', (mem.long_term||0).toLocaleString());
+    setText('mStm', mem.short_term||0);
+    setText('mVec', (mem.vector||0).toLocaleString());
+    // memory core status (illustrative PB scale from real counts)
+    const total = 1.02e6; // MB (~1 PB)
+    const used = Math.min(total, (mem.long_term||0)*0.02 + (mem.vector||0)*0.004 + 200000);
+    setText('memTot', fmtMB(total));
+    setText('memUsed', fmtMB(used));
+    setText('memFree', fmtMB(total-used));
+    setText('dShort', (mem.short_term||0));
+    setText('dWork', (mem.episodic||0));
+    setText('dLong', (mem.long_term||0).toLocaleString());
+    setText('dArch', (mem.kb_docs||0).toLocaleString()+' docs');
+    drawDonut(mem);
+    // threat
+    setText('thActive', s.locked? '0':'0'); // no active threats when supervised
+    setText('thNeut', (9000+(s.tools||[]).length*40).toLocaleString());
+    setText('thTools', (s.n_tools||0));
+    const sens = s.sensors||{};
+    setText('thSens', [sens.voice,sens.text,sens.vision,sens.file,sens.system].filter(Boolean).length+'/5');
+    // efficiency gauge
+    const effv = Math.round(95 + (sys.cpu||0)*0.04 - (s.locked?10:0));
+    drawGauge(el('effG'), effv, '#ff4d4d');
+    setText('effLab', effv+'%');
+    // pipeline
+    buildPipeline(s.pipeline||[]);
+    setText('agentInfo', (s.agents||0)+' agents · '+(s.n_tools||0)+' tools');
+    // neural convergence drives orb
+    activity = Math.max(5, Math.min(100, Math.round((sys.cpu||0)*0.7+30)));
+    setText('convPct', activity.toFixed(1)+'%');
+  }
+
+  function buildPipeline(p){
+    const wrap = el('pipeline'); if(!wrap) return; wrap.innerHTML='';
+    const icons={input:'⌁',memory:'▤',knowledge:'❖',reasoning:'❓',planner:'⤳',tools:'⚒',execution:'▶',verify:'✔'};
+    p.forEach(st=>{
+      const d=document.createElement('div');
+      d.className='st'+(st.active?' active':'');
+      d.innerHTML='<span class="n">'+(icons[st.key]||'•')+'</span>'+st.label;
+      wrap.appendChild(d);
+    });
+  }
+
+  /* ---------- canvas donut (memory distribution) ---------- */
+  function drawDonut(mem){
+    const c=el('memDonut'); if(!c)return; const x=c.getContext('2d');
+    const W=c.width,H=c.height,cx=W/2,cy=H/2,R=34;
+    const segs=[
+      ['SHORT', num(mem.short_term,1), '#ff4d4d'],
+      ['WORK',  num(mem.episodic,1),   '#ff9a3c'],
+      ['LONG',  num(mem.long_term,1),   '#ffd23d'],
+      ['ARCH',  num(mem.kb_docs,1),    '#bd00ff'],
+    ];
+    const tot=segs.reduce((a,s)=>a+Math.max(0,s[1]),1)||1;
+    x.clearRect(0,0,W,H);
+    let a=-Math.PI/2;
+    segs.forEach(s=>{const ang=Math.max(0,s[1])/tot*Math.PI*2;
+      x.beginPath();x.moveTo(cx,cy);x.arc(cx,cy,R,a,a+ang);x.closePath();
+      x.fillStyle=s[2];x.fill();a+=ang;});
+    x.beginPath();x.arc(cx,cy,R*0.55,0,7);x.fillStyle='#0a0202';x.fill();
+    x.fillStyle='#ff4d4d';x.font='9px monospace';x.textAlign='center';
+    x.fillText('MEM',cx,cy-2);x.fillText('CORE',cx,cy+8);
+  }
+
+  /* ---------- canvas gauge ---------- */
+  function drawGauge(c,val,col){
+    if(!c)return;const x=c.getContext('2d');const W=c.width,H=c.height,cx=W/2,cy=H/2,R=46;
+    x.clearRect(0,0,W,H);
+    x.lineWidth=8;x.strokeStyle='#330000';x.beginPath();x.arc(cx,cy,R,0,Math.PI*2);x.stroke();
+    x.strokeStyle=col;x.shadowColor=col;x.shadowBlur=12;
+    x.beginPath();x.arc(cx,cy,R,-Math.PI/2,-Math.PI/2+val/100*Math.PI*2);x.stroke();
+    x.shadowBlur=0;x.fillStyle='#fff';x.font='16px monospace';x.textAlign='center';
+  }
+
+  /* ---------- NEURAL CORE ORB (Canvas2D, red) ---------- */
+  const orb=(function(){
+    const cv=el('orbCanvas'); if(!cv)return{}; const x=cv.getContext('2d');
+    let W=0,H=0,CX=0,CY=0,R=0;
+    const N=52, brain=[];
+    for(let i=0;i<N;i++){const y=1-(i/(N-1))*2,r=Math.sqrt(Math.max(0,1-y*y)),th=i*2.399963;
+      brain.push({x:Math.cos(th)*r,y:y,z:Math.sin(th)*r});}
+    const links=[];
+    for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){const a=brain[i],b=brain[j];
+      const d=Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);if(d<0.5)links.push([i,j]);}
+    const pulses=[];
+    function spawn(){if(links.length)pulses.push({li:Math.floor(Math.random()*links.length),t:0,sp:0.012+Math.random()*0.02});}
+    setInterval(()=>{if(pulses.length<16&&Math.random()<activity/110)spawn();},90);
+    const ringN=3,ringNodes=[];
+    for(let r=0;r<ringN;r++){const arr=[];const cnt=5+r*2;for(let k=0;k<cnt;k++)arr.push({a:k/cnt*Math.PI*2});ringNodes.push(arr);}
+    let ringRot=[0,0,0];
+    function proj(p,rx,ry,s){let{ x:px,y:py,z:pz}=p;
+      let cy=Math.cos(ry),sy=Math.sin(ry),cx=Math.cos(rx),sx=Math.sin(rx);
+      let y1=py*cy-pz*sy,z1=py*sy+pz*cy;let x2=px*cx+z1*sx,z2=-px*sx+z1*cx;
+      const depth=(z2+1.6)/3.2;return{X:CX+x2*R*s,Y:CY+y1*R*s,depth};}
+    function init(){const r=cv.getBoundingClientRect();const s=Math.max(140,Math.min(r.width||300,r.height||300));
+      cv.width=s;cv.height=s;W=s;H=s;CX=s/2;CY=s/2;R=s*0.40;}
+    let t=0;
+    function loop(){requestAnimationFrame(loop);if(!W)init();t+=0.016;
+      const active=(STATE!=='idle'&&STATE!=='locked');
+      const spin=active?0.010:0.004, rotX=t*spin*0.7, rotY=t*spin;
+      x.clearRect(0,0,W,H);
+      const g=x.createRadialGradient(CX,CY,R*0.1,CX,CY,R*1.2);
+      g.addColorStop(0,`rgba(255,40,40,${0.18+activity/400})`);g.addColorStop(1,'rgba(255,40,40,0)');
+      x.fillStyle=g;x.beginPath();x.arc(CX,CY,R*1.2,0,7);x.fill();
+      // cage
+      x.strokeStyle='rgba(255,70,70,0.4)';x.lineWidth=1;
+      for(let la=-2;la<=2;la++){const yy=la/3,rr=Math.sqrt(Math.max(0,1-yy*yy));
+        x.beginPath();for(let a=0;a<=40;a++){const an=a/40*Math.PI*2;const p=proj({x:Math.cos(an)*rr,y:yy,z:Math.sin(an)*rr},rotX,rotY,1);a?x.lineTo(p.X,p.Y):x.moveTo(p.X,p.Y);}x.stroke();}
+      for(let lo=0;lo<8;lo++){const an=lo/8*Math.PI*2;x.beginPath();for(let a=0;a<=40;a++){const yy=a/40*2-1,rr=Math.sqrt(Math.max(0,1-yy*yy));const p=proj({x:Math.cos(an)*rr,y:yy,z:Math.sin(an)*rr},rotX,rotY,1);a?x.lineTo(p.X,p.Y):x.moveTo(p.X,p.Y);}x.stroke();}
+      // brain
+      const P=brain.map(n=>proj(n,rotX+0.3,rotY,0.72));
+      x.lineWidth=0.6;
+      for(const[i,j]of links){const a=P[i],b=P[j],al=(a.depth+b.depth)/2*0.5+0.1;
+        x.strokeStyle=`rgba(255,120,90,${al})`;x.beginPath();x.moveTo(a.X,a.Y);x.lineTo(b.X,b.Y);x.stroke();}
+      for(const pu of pulses){pu.t+=pu.sp*(0.6+activity/80);const[i,j]=links[pu.li],a=P[i],b=P[j];
+        const px=a.X+(b.X-a.X)*pu.t,py=a.Y+(b.Y-a.Y)*pu.t;
+        x.fillStyle='rgba(255,230,180,0.95)';x.beginPath();x.arc(px,py,1.8,0,7);x.fill();
+        x.strokeStyle='rgba(255,180,120,0.5)';x.beginPath();x.arc(px,py,4,0,7);x.stroke();}
+      for(let k=pulses.length-1;k>=0;k--)if(pulses[k].t>=1)pulses.splice(k,1);
+      for(let i=0;i<N;i++){const p=P[i],al=0.4+p.depth*0.6;
+        x.fillStyle=`rgba(255,${Math.round(120+100*p.depth)},110,${al})`;x.beginPath();x.arc(p.X,p.Y,1.4+p.depth,0,7);x.fill();}
+      // rings
+      const rc=['rgba(255,77,77,','rgba(189,0,255,','rgba(255,210,61,'];
+      for(let r=0;r<ringN;r++){ringRot[r]+=spin*(r%2?-1:1)*(0.6+r*0.3);
+        const ry=rotY+ringRot[r],rr=R*(0.62+r*0.13);
+        x.strokeStyle=rc[r]+'0.5)';x.lineWidth=1.2;
+        x.beginPath();for(let a=0;a<=48;a++){const an=a/48*Math.PI*2;const X=CX+Math.cos(an)*rr,Y=CY+Math.sin(an)*rr*0.42;a?x.lineTo(X,Y):x.moveTo(X,Y);}x.stroke();
+        x.strokeStyle=rc[r]+'0.28)';
+        x.beginPath();for(let a=0;a<=48;a++){const an=a/48*Math.PI*2;const X=CX+Math.cos(an)*rr*0.42,Y=CY+Math.sin(an)*rr;a?x.lineTo(X,Y):x.moveTo(X,Y);}x.stroke();
+        for(const nd of ringNodes[r]){nd.a+=spin*(r%2?-1:1)*1.4;
+          const X=CX+Math.cos(nd.a)*rr,Y=CY+Math.sin(nd.a)*rr*0.42;
+          x.fillStyle=rc[r]+'0.95)';x.beginPath();x.arc(X,Y,2.2,0,7);x.fill();
+          x.fillStyle=rc[r]+'0.25)';x.beginPath();x.arc(X,Y,5,0,7);x.fill();}}
+      // core
+      const cR=R*(0.10+0.05*Math.sin(t*3)+activity/700);
+      const cg=x.createRadialGradient(CX,CY,0,CX,CY,cR*3);
+      cg.addColorStop(0,'rgba(255,250,240,0.95)');cg.addColorStop(0.4,'rgba(255,90,70,0.7)');cg.addColorStop(1,'rgba(255,40,60,0)');
+      x.fillStyle=cg;x.beginPath();x.arc(CX,CY,cR*3,0,7);x.fill();
+    }
+    init();loop();window.addEventListener('resize',init);
+    return {};
+  })();
+
+  /* ---------- waveform canvases ---------- */
+  function makeWave(id){
+    const cv=el(id); if(!cv)return null; const x=cv.getContext('2d');
+    let buf=new Array(120).fill(0), t=0;
+    function init(){const r=cv.getBoundingClientRect();cv.width=r.width||200;cv.height=r.height||100;}
+    function draw(){requestAnimationFrame(draw);if(!cv.width)init();t+=0.05;
+      const target=activity/100*(0.7+0.3*Math.sin(t))*(0.6+Math.random()*0.4);
+      buf.push(target);buf.shift();
+      x.clearRect(0,0,cv.width,cv.height);
+      x.strokeStyle='rgba(255,77,77,0.9)';x.lineWidth=1.4;x.beginPath();
+      for(let i=0;i<buf.length;i++){const X=i/cv.width*cv.width;const Y=cv.height/2+(buf[i]-0.5)*cv.height*0.8;
+        i?x.lineTo(X,Y):x.moveTo(X,Y);}x.stroke();
+      x.strokeStyle='rgba(255,40,40,0.15)';x.beginPath();x.moveTo(0,cv.height/2);x.lineTo(cv.width,cv.height/2);x.stroke();}
+    init();draw();window.addEventListener('resize',init);
+    return {};
+  }
+  makeWave('wavA');makeWave('wavB');
+
+  /* ---------- state badges ---------- */
+  function setState(s){
+    STATE=s; document.body.dataset.moon=s;
+    $$('.badge').forEach(b=>b.classList.toggle('on', b.dataset.st===s));
+  }
+
+  /* ---------- logs ---------- */
+  function log(kind,msg){
+    const box=el('logs'); if(!box)return;
+    const d=document.createElement('div');d.className='l';
+    const ts=new Date().toLocaleTimeString();
+    d.innerHTML=`<span class="t">[${ts}]</span> <span class="c">[${kind}]</span> ${msg}`;
+    box.appendChild(d); box.scrollTop=box.scrollHeight;
+    while(box.children.length>120) box.removeChild(box.firstChild);
+  }
+
+  /* ---------- speech bubble ---------- */
+  let spkTimer=null;
+  function speech(text){
+    const s=el('speech'); if(!s)return; s.textContent=text; s.classList.add('show');
+    clearTimeout(spkTimer); spkTimer=setTimeout(()=>s.classList.remove('show'),6000);
+  }
+
+  /* ---------- WebSocket ---------- */
+  let ws=null;
+  function connect(){
+    const proto=location.protocol==='https:'?'wss':'ws';
+    ws=new WebSocket(`${proto}://${location.host}/ws`);
+    ws.onopen=()=>{log('LINK','MOON terminal connected.');ws.send(JSON.stringify({action:'status'}));};
+    ws.onmessage=(e)=>{let m;try{m=JSON.parse(e.data);}catch(_){return;}handle(m);};
+    ws.onclose=()=>{log('LINK','disconnected. retrying...');setTimeout(connect,2500);};
+    ws.onerror=()=>{log('ERR','socket error');};
+  }
+  function handle(m){
+    switch(m.type){
+      case 'ready': case 'status': setState('idle'); applyStatus(m.status||m); log('READY','status received.'); break;
+      case 'assistant_start': setState('speaking'); log('MOON','thinking...'); break;
+      case 'workflow': setState(stageToState(m.stage)); log('FLOW',(m.stage||'')+': '+(m.detail||'')); break;
+      case 'assistant_chunk': speech((el('speech').textContent||'')+m.content); break;
+      case 'audio': log('AUDIO','voice synthesized ('+m.format+')'); break;
+      case 'assistant_done': setState('idle'); log('MOON',(m.locked?'[locked] ':'')+'done in '+(m.elapsed||0)+'s'); break;
+      default: break;
+    }
+  }
+  function stageToState(st){
+    return ({input:'listening',memory:'thinking',knowledge:'thinking',reasoning:'thinking',
+      planner:'thinking',tools:'executing',execution:'executing',verify:'executing',
+      speaking:'speaking',locked:'idle'})[st]||'idle';
+  }
+  function sendMsg(text){ if(!ws||ws.readyState!==1)return; ws.send(JSON.stringify({action:'send_message',text})); }
+  function sendAct(a,extra){ if(!ws||ws.readyState!==1)return; ws.send(JSON.stringify(Object.assign({action:a},extra||{}))); }
+
+  /* ---------- command bar ---------- */
+  el('send').addEventListener('click',()=>{const v=el('cmd').value.trim();if(v){sendMsg(v);log('YOU',v);el('cmd').value='';}});
+  el('cmd').addEventListener('keydown',e=>{if(e.key==='Enter')el('send').click();});
+  $$('.footer .nav2 button').forEach(b=>b.addEventListener('click',()=>{
+    const a=b.dataset.act; log('CMD',a);
+    if(a==='memory_search'){const q=prompt('Memory search query:'); if(q)sendAct('memory_search',{query:q});}
+    else if(a==='help'){speech("MOON online. Type a command, or say 'love you 3000 Moon' to unlock active operations.");}
+    else sendAct(a);
+  }));
+  $$('.nav button').forEach(b=>b.addEventListener('click',()=>{
+    $$('.nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+    log('NAV',b.textContent);
+  }));
+
+  /* ---------- clock ---------- */
+  setInterval(()=>{const c=el('clock');if(c)c.textContent=new Date().toLocaleTimeString();},1000);
+
+  connect();
+})();
+</script>
+</body>
+</html>
