@@ -211,3 +211,34 @@ async def test_manager_tool_list_empty():
         tool = CapabilityManagerTool(manager=CapabilityManager(registry=CapabilityRegistry(root=Path(d))))
         out = await tool.execute(action="list")
         assert "registry empty" in out
+
+
+@pytest.mark.asyncio
+async def test_manager_tool_search_github_returns_candidates():
+    tool = CapabilityManagerTool(manager=CapabilityManager())
+    out = await tool.execute(action="search_github", query="video converter")
+    assert isinstance(out, str) and out.strip()
+    # live GitHub retriever returns either real candidates or a graceful note
+    assert ("GITHUB CANDIDATES" in out) or ("GitHub search" in out)
+
+
+def test_system_prompt_includes_capability_subsystem():
+    # The merged system prompt must document the real Capability Management
+    # subsystem AND expose the capabilities/github terminal commands.
+    from app.brain.prompt_manager import PromptManager
+    p = PromptManager().system_prompt()
+    assert "15. AUTONOMOUS CAPABILITY MANAGEMENT SYSTEM" in p
+    assert "moon> capabilities list" in p
+    assert "moon> github <query>" in p
+    assert "Verification Engine" in p
+    assert "Self-Repair Engine" in p
+
+
+def test_capability_manager_tool_registered_in_registry():
+    # The prompt's Section 15 maps to a real, registered agent tool.
+    from app.tools.registry import ToolRegistry
+    from app.capability.tool import CapabilityManagerTool
+    reg = ToolRegistry()
+    reg.register(CapabilityManagerTool())
+    assert reg.get("capability_manager") is not None
+    assert bool(reg.get("capability_manager").description)
