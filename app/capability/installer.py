@@ -102,9 +102,15 @@ class InstallationManager:
             return InstallResult(False, f"system({self._pm})", str(exc))
 
     def install(self, spec: dict) -> InstallResult:
-        """Dispatch by spec: {'method': 'pip'|'npm'|'system'|'go'|'cargo'|'gh',
-        'package': str, 'repo': str, 'path': str}."""
+        """Dispatch by spec: {'method': 'pip'|'npm'|'system'|'go'|'cargo'|'gh'|'none',
+        'package': str, 'repo': str, 'path': str}.
+
+        method 'none' (e.g. built-in MOON capabilities like Hugging Face, which ship
+        with the agent and need no install) is treated as already satisfied.
+        """
         method = spec.get("method", "pip")
+        if method == "none":
+            return InstallResult(True, "builtin", "capability already present in MOON", source="builtin")
         if method == "pip":
             return self.install_pip(spec.get("package", ""))
         if method == "npm":

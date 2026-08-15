@@ -54,6 +54,17 @@ _BUILTIN_SPECS: dict[str, dict] = {
     "beautifulsoup4": {"type": "python", "method": "pip", "package": "beautifulsoup4", "verify": "bs4"},
     "requests": {"type": "python", "method": "pip", "package": "requests", "verify": "requests"},
     "playwright": {"type": "python", "method": "pip", "package": "playwright", "verify": "playwright"},
+    # Hugging Face capabilities are BUILT-IN (no network install needed): MOON ships
+    # the huggingface + huggingface_deploy tools. The planner can freely choose them
+    # for hosted chat (gpt-oss, DeepSeek-R1, ...) and text-to-image (FLUX).
+    "huggingface": {"type": "builtin", "method": "none", "package": "", "verify": "huggingface"},
+    "hugging face": {"type": "builtin", "method": "none", "package": "", "verify": "huggingface"},
+    "image generation": {"type": "builtin", "method": "none", "package": "", "verify": "huggingface"},
+    "text to image": {"type": "builtin", "method": "none", "package": "", "verify": "huggingface"},
+    "text-to-image": {"type": "builtin", "method": "none", "package": "", "verify": "huggingface"},
+    "image gen": {"type": "builtin", "method": "none", "package": "", "verify": "huggingface"},
+    "hf model": {"type": "builtin", "method": "none", "package": "", "verify": "huggingface"},
+    "hosted model": {"type": "builtin", "method": "none", "package": "", "verify": "huggingface"},
 }
 
 
@@ -83,7 +94,9 @@ class CapabilityManager:
             if key.replace("_", " ") in t or key in t:
                 found.append(key)
         for token in ("video", "audio", "image", "ocr", "pdf", "web scraping",
-                      "data", "chart", "translate", "excel", "qr", "download"):
+                      "data", "chart", "translate", "excel", "qr", "download",
+                      "huggingface", "hugging face", "flux", "deepseek", "gpt-oss",
+                      "image generation", "text to image", "text-to-image"):
             if token in t and token not in found:
                 found.append(token)
         return found
