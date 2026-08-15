@@ -134,7 +134,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
 .core-hero .col{display:flex;flex-direction:column;align-items:stretch;gap:4px;overflow:auto}
 .core-stage{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;flex:1;
   perspective:900px;transform-style:preserve-3d;
-  background:radial-gradient(circle at 50% 50%,rgba(70,10,110,.22),rgba(10,5,30,.10) 55%,transparent 80%)}
+  background:radial-gradient(circle at 50% 50%,rgba(120,12,18,.22),rgba(30,4,8,.10) 55%,transparent 80%)}
 /* embedded AI-reference image as a 3D rotating holo-panel (dimmed backdrop) */
 .core-img{position:absolute;top:50%;left:50%;width:min(420px,98%);height:min(420px,98%);
   transform:translate(-50%,-50%) rotateY(-14deg) rotateX(6deg);
@@ -345,7 +345,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
     <section class="panel neural-frame">
       <h3>03 — CENTRAL NEURAL FRAME <span class="tag" id="agentInfo">-- agents</span></h3>
       <div class="core-stage">
-        <img class="core-img" src="/core_ai.png" alt="MOON AI Core">
+        <img class="core-img" src="/moon_core.png" alt="MOON Neural Core">
         <div class="core-cap">03.01 — MOON AI NEURAL CORE</div>
         <div class="floor"></div>
         <div class="beam"></div>
@@ -595,13 +595,13 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
       const act=(STATE!=='idle'&&STATE!=='locked'),spin=act?0.012:0.005,rx=t*spin*0.7,ry=t*spin;
       const AC=accent(),AS=accentSoft();
       x.clearRect(0,0,W,H);
-      // ambient fiery glow (reference: white-hot center -> amber -> orange -> red -> transparent)
+      // ambient glow (reference: red/black — white-hot core -> red -> dark red -> transparent)
       const g=x.createRadialGradient(CX,CY,R*0.05,CX,CY,R*1.3);
-      g.addColorStop(0,'rgba(255,255,235,0.55)');
-      g.addColorStop(0.16,'rgba(255,225,120,0.40)');
-      g.addColorStop(0.38,'rgba(255,160,40,0.28)');
-      g.addColorStop(0.66,'rgba(255,90,20,0.16)');
-      g.addColorStop(1,'rgba(255,60,10,0)');
+      g.addColorStop(0,'rgba(255,235,235,0.50)');
+      g.addColorStop(0.16,'rgba(255,120,120,0.34)');
+      g.addColorStop(0.38,'rgba(255,60,40,0.22)');
+      g.addColorStop(0.66,'rgba(220,30,20,0.12)');
+      g.addColorStop(1,'rgba(180,20,10,0)');
       x.fillStyle=g;x.beginPath();x.arc(CX,CY,R*1.3,0,7);x.fill();
       // (a) geodesic wireframe cage
       x.strokeStyle=AS+'55';x.lineWidth=0.8;
@@ -626,19 +626,19 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
         x.strokeStyle=rc[r]+'80';x.lineWidth=1.2;x.beginPath();for(let a=0;a<=48;a++){const an=a/48*Math.PI*2,X=CX+Math.cos(an)*RR,Y=CY+Math.sin(an)*RR*0.42;a?x.lineTo(X,Y):x.moveTo(X,Y);}x.stroke();
         x.strokeStyle=rc[r]+'46';x.beginPath();for(let a=0;a<=48;a++){const an=a/48*Math.PI*2,X=CX+Math.cos(an)*RR*0.42,Y=CY+Math.sin(an)*RR;a?x.lineTo(X,Y):x.moveTo(X,Y);}x.stroke();
         for(const nd of rn[r]){nd.a+=spin*(r%2?-1:1)*1.4;const X=CX+Math.cos(nd.a)*RR,Y=CY+Math.sin(nd.a)*RR*0.42;x.fillStyle=rc[r];x.beginPath();x.arc(X,Y,2.2,0,7);x.fill();}}
-      // bright equatorial ring (reference: brighter horizontal orbital band)
-      x.save();x.translate(CX,CY);x.strokeStyle='rgba(255,225,120,.75)';x.lineWidth=1.6;x.shadowColor='rgba(255,180,60,.8)';x.shadowBlur=8;
+      // bright equatorial ring (reference: brighter horizontal orbital band, red)
+      x.save();x.translate(CX,CY);x.strokeStyle='rgba(255,90,80,.8)';x.lineWidth=1.6;x.shadowColor='rgba(255,60,40,.85)';x.shadowBlur=8;
       x.beginPath();for(let a=0;a<=64;a++){const an=a/64*Math.PI*2,X=Math.cos(an)*R*0.96,Y=Math.sin(an)*R*0.30;a?x.lineTo(X,Y):x.moveTo(X,Y);}x.stroke();x.restore();
-      // (g) glowing core (amber-hot, matching reference)
+      // (g) glowing core (red-hot, matching the red/black reference)
       const cR=R*(0.10+0.05*Math.sin(t*3)+activity/700),cg=x.createRadialGradient(CX,CY,0,CX,CY,cR*3);
-      cg.addColorStop(0,'#fff');cg.addColorStop(0.32,'rgba(255,205,95,0.92)');cg.addColorStop(0.7,'rgba(255,140,40,0.45)');cg.addColorStop(1,'rgba(255,100,20,0)');
+      cg.addColorStop(0,'#fff');cg.addColorStop(0.30,'rgba(255,110,90,0.95)');cg.addColorStop(0.66,'rgba(230,40,25,0.5)');cg.addColorStop(1,'rgba(180,15,10,0)');
       x.fillStyle=cg;x.beginPath();x.arc(CX,CY,cR*3,0,7);x.fill();
     })();init();window.addEventListener('resize',init);})();
 
   /* AI-INTERFACE OVERLAY — hex tech panels, rotating targeting brackets,
      orbiting data nodes + bloom (the "fully futuristic" framing) */
   (function(){const cv=el('aiCanvas');if(!cv)return;const x=cv.getContext('2d');let W=0,H=0,CX=0,CY=0,R=0;
-    const AI='#ff8a1e',AI2='#ffd24a',CYAN='#19d2ff';
+    const AI='#ff4d3a',AI2='#ff8a6e',CYAN='#19d2ff';
     const nodes=[];for(let i=0;i<14;i++)nodes.push({a:i/14*Math.PI*2,r:0.62+Math.random()*0.34,ph:Math.random()*7});
     function init(){const b=cv.getBoundingClientRect();cv.width=b.width||340;cv.height=b.height||340;W=cv.width;H=cv.height;CX=W/2;CY=H/2;R=Math.min(W,H)*0.46;}
     function hex(cx,cy,r,rot){x.beginPath();for(let k=0;k<6;k++){const a=rot+k/6*Math.PI*2;const px=cx+Math.cos(a)*r,py=cy+Math.sin(a)*r;k?x.lineTo(px,py):x.moveTo(px,py);}x.closePath();}
@@ -646,31 +646,31 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
     (function draw(){requestAnimationFrame(draw);if(!W)init();t+=0.016;
       const spin=STATE==='idle'?0.25:0.7;
       x.clearRect(0,0,W,H);
-      // background radial (reference: deep purple/blue -> transparent)
-      const bg=x.createRadialGradient(CX,CY,R*0.6,CX,CY,R*1.5);bg.addColorStop(0,'rgba(70,10,110,.30)');bg.addColorStop(.5,'rgba(20,10,60,.18)');bg.addColorStop(1,'rgba(0,0,30,0)');
+      // background radial (reference: red/black — deep red -> transparent)
+      const bg=x.createRadialGradient(CX,CY,R*0.6,CX,CY,R*1.5);bg.addColorStop(0,'rgba(110,10,20,.28)');bg.addColorStop(.5,'rgba(60,8,14,.16)');bg.addColorStop(1,'rgba(20,0,0,0)');
       x.fillStyle=bg;x.beginPath();x.arc(CX,CY,R*1.5,0,7);x.fill();
-      // vertical data streaks on the left (reference: rain-like energy leaking)
+      // vertical data streaks on the left (reference: rain-like energy leaking, red)
       x.save();x.globalAlpha=.5;
       for(let i=0;i<7;i++){const sx=CX-R*(0.55+0.06*i),len=R*(0.5+0.4*Math.sin(t*0.4+i));const yo=((t*40+i*37)% (H)) ;
-        const y0=CY-R+ (yo-30), y1=y0+len;x.strokeStyle='rgba(120,200,255,'+(0.10+0.10*Math.sin(t*2+i))+')';x.lineWidth=1;
+        const y0=CY-R+ (yo-30), y1=y0+len;x.strokeStyle='rgba(255,90,70,'+(0.10+0.10*Math.sin(t*2+i))+')';x.lineWidth=1;
         x.beginPath();x.moveTo(sx,y0);x.lineTo(sx,y1);x.stroke();}
       x.restore();x.globalAlpha=1;
-      // soft amber bloom behind core
-      const g=x.createRadialGradient(CX,CY,R*0.1,CX,CY,R*1.4);g.addColorStop(0,'rgba(255,150,40,.28)');g.addColorStop(1,'rgba(255,120,20,0)');
+      // soft red bloom behind core
+      const g=x.createRadialGradient(CX,CY,R*0.1,CX,CY,R*1.4);g.addColorStop(0,'rgba(255,80,50,.26)');g.addColorStop(1,'rgba(200,20,10,0)');
       x.fillStyle=g;x.beginPath();x.arc(CX,CY,R*1.4,0,7);x.fill();
-      // rim light on the right side of the sphere (reference: right-side rim highlight)
-      x.save();x.globalAlpha=.5;x.strokeStyle='rgba(120,220,255,.6)';x.lineWidth=3;x.shadowColor='rgba(120,220,255,.7)';x.shadowBlur=10;
-      x.beginPath();for(let a=-1;a<=1;a+=0.06){const an=a*0.9+Math.PI*0.12,px=CX+Math.cos(an)*R*0.98,py=CY+Math.sin(an)*R*0.30;const X=CX+px*0;((a<=-1)?x.moveTo(CX+Math.cos(an)*R*0.94,CY+Math.sin(an)*R*0.30):x.lineTo(CX+Math.cos(an)*R*0.94,CY+Math.sin(an)*R*0.30));}x.stroke();x.restore();x.globalAlpha=1;
-      // hex tech panels around perimeter
+      // rim light on the right side of the sphere (reference: right-side rim highlight, red)
+      x.save();x.globalAlpha=.5;x.strokeStyle='rgba(255,110,90,.55)';x.lineWidth=3;x.shadowColor='rgba(255,90,60,.7)';x.shadowBlur=10;
+      x.beginPath();for(let a=-1;a<=1;a+=0.06){const an=a*0.9+Math.PI*0.12;((a<=-1)?x.moveTo(CX+Math.cos(an,0)*0,CY):0);const X2=CX+Math.cos(an)*R*0.94,Y2=CY+Math.sin(an)*R*0.30;((a<=-1)?x.moveTo(X2,Y2):x.lineTo(X2,Y2));}x.stroke();x.restore();x.globalAlpha=1;
+      // hex tech panels around perimeter (red)
       for(let i=0;i<8;i++){const a=i/8*Math.PI*2+t*0.06,rr=R*1.18,px=CX+Math.cos(a)*rr,py=CY+Math.sin(a)*rr;
-        x.strokeStyle='rgba(255,138,30,.35)';x.lineWidth=1;hex(px,py,9,a*2);x.stroke();
-        x.fillStyle='rgba(255,210,74,.5)';x.beginPath();x.arc(px,py,1.4,0,7);x.fill();}
-      // rotating outer targeting ring with tick marks
+        x.strokeStyle='rgba(255,70,55,.35)';x.lineWidth=1;hex(px,py,9,a*2);x.stroke();
+        x.fillStyle='rgba(255,120,100,.5)';x.beginPath();x.arc(px,py,1.4,0,7);x.fill();}
+      // rotating outer targeting ring with tick marks (red)
       x.save();x.translate(CX,CY);x.rotate(t*spin*0.4);
       x.strokeStyle=AI;x.lineWidth=1.5;x.shadowColor=AI;x.shadowBlur=10;
       x.beginPath();x.arc(0,0,R,0,7);x.stroke();
       for(let i=0;i<60;i++){const a=i/60*Math.PI*2,l=i%5?R-4:R-9;x.beginPath();x.moveTo(Math.cos(a)*R,Math.sin(a)*R);x.lineTo(Math.cos(a)*l,Math.sin(a)*l);x.stroke();}
-      // inner counter-rotating ring
+      // inner counter-rotating ring (cyan accent)
       x.rotate(-t*spin*0.9);x.strokeStyle=CYAN;x.globalAlpha=.6;
       x.beginPath();x.arc(0,0,R*0.78,0,7);x.stroke();
       for(let i=0;i<36;i++){const a=i/36*Math.PI*2;x.beginPath();x.moveTo(Math.cos(a)*R*0.78,Math.sin(a)*R*0.78);
