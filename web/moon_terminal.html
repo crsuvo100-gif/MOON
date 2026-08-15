@@ -43,14 +43,15 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
 
 .fit{position:relative;z-index:2;width:100vw;height:100vh;display:grid;place-items:center;padding:10px}
 .app{position:relative;width:100%;height:100%;max-width:100%;max-height:100%;
-  --ar:16/9;aspect-ratio:var(--ar);
+  --ar:auto;aspect-ratio:var(--ar);
   display:grid;grid-template-columns:215px 1fr 235px;
   grid-template-rows:54px 1fr 172px 46px 32px;
   grid-template-areas:"header header header" "left2 center right" "left1 center right" "quick quick quick" "appbar appbar appbar";
   gap:var(--gap);padding:12px}
 .app[data-ar="fill"]{aspect-ratio:auto;max-width:100%;max-height:100%}
+.app[data-ar="auto"]{aspect-ratio:auto}
 .app[data-ar="16:9"]{--ar:16/9}.app[data-ar="4:3"]{--ar:4/3}.app[data-ar="21:9"]{--ar:21/9}
-.app[data-ar="1:1"]{--ar:1/1}.app[data-ar="9:16"]{--ar:9/16}
+.app[data-ar="1:1"]{--ar:1/1}.app[data-ar="9:16"]{--ar:9/16}.app[data-ar="3:4"]{--ar:3/4}
 
 .panel{position:relative;background:var(--bg-panel);border:var(--bw) solid var(--accent-line);
   border-radius:var(--r);padding:7px 9px;overflow:hidden;backdrop-filter:blur(2px)}
@@ -114,6 +115,10 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
   text-shadow:0 0 6px rgba(0,0,0,.9);transform:translate(-50%,-50%);text-align:center}
 .lobe-ring span b{display:block;color:var(--label);font-size:8px;font-weight:400}
 .core-cap{position:absolute;top:4px;width:100%;text-align:center;font-size:var(--xs);color:var(--label);letter-spacing:.25em;z-index:2}
+.matrix-label{position:absolute;top:50%;left:50%;transform:translate(-50%,28px);text-align:center;
+  font-size:var(--xs);color:var(--accent-soft);letter-spacing:.22em;z-index:2;pointer-events:none;
+  text-shadow:0 0 8px rgba(0,0,0,.9)}
+.matrix-label small{color:var(--label);letter-spacing:.14em;font-size:8px}
 .core-overlay{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);width:82%;text-align:center;pointer-events:none;z-index:2}
 .core-overlay .conv{font-size:var(--xs);color:var(--label);letter-spacing:.16em}
 .core-overlay .conv b{color:var(--accent-soft)}
@@ -197,7 +202,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
 <body data-moon="idle">
 <div class="hud-frame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
 
-<div class="fit"><div class="app" id="app" data-ar="16:9" data-accent="red">
+<div class="fit"><div class="app" id="app" data-ar="auto" data-accent="red">
   <!-- 01 HEADER -->
   <header class="header">
     <div class="logo"></div>
@@ -259,6 +264,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
           <div class="core-cap">03.01 — MOON NEURAL CORE</div>
           <canvas id="orbCanvas"></canvas>
           <div class="lobe-ring" id="lobeRing"></div>
+          <div class="matrix-label">QUANTUM NEURAL MATRIX<br><small>ENTANGLEMENT VISUALIZATION</small></div>
           <div class="platform"></div>
           <div class="core-overlay">
             <div class="conv">03.04 NEURAL CONVERGENCE <b id="convPct">0.0%</b></div>
@@ -382,9 +388,9 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
     <button data-act="diagnostics">Diagnostics</button>
     <button data-act="help">Help</button>
     <label style="color:var(--label);font-size:var(--xs);display:flex;align-items:center;gap:4px">RATIO
-      <select id="arSel"><option value="auto">AUTO</option><option value="16:9" selected>16:9</option>
+      <select id="arSel"><option value="auto" selected>AUTO</option><option value="16:9">16:9</option>
         <option value="4:3">4:3</option><option value="21:9">21:9</option><option value="1:1">1:1</option>
-        <option value="9:16">9:16</option><option value="fill">FILL</option></select></label>
+        <option value="9:16">9:16 (mobile)</option><option value="3:4">3:4 (mobile)</option><option value="fill">FILL</option></select></label>
     <label style="color:var(--label);font-size:var(--xs);display:flex;align-items:center;gap:4px">ACCENT
       <select id="acSel"><option value="red" selected>RED</option><option value="cyan">CYAN</option>
         <option value="violet">VIOLET</option><option value="amber">AMBER</option><option value="emerald">EMERALD</option></select></label>
@@ -477,48 +483,69 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
     for(let i=0;i<8;i++){const a=i/8*Math.PI*2;x.beginPath();x.moveTo(W/2,H/2);x.lineTo(W/2+Math.cos(a)*W/2,H/2+Math.sin(a)*H/2*0.5);x.stroke();}
     x.fillStyle='rgba(255,77,77,.9)';[['17%','30%'],['72%','40%'],['40%','60%'],['60%','25%']].forEach(p=>{x.beginPath();x.arc(W*parseFloat(p[0]),H*parseFloat(p[1]),2,0,7);x.fill();});}
 
-  /* lobe labels around orb */
+  /* lobe labels around orb (clock positions per reference) */
   (function(){const ring=el('lobeRing');if(!ring)return;
-    const lobes=[['FRONTAL LOBE','EXECUTIVE CONTROL',50,8],['PARIETAL LOBE','SPATIAL AWARENESS',86,28],
-      ['LIMBIC SYSTEM','EMOTIONAL MATRIX',74,72],['CEREBELLUM','MOTOR CONTROL',26,72],
-      ['OCCIPITAL LOBE','VISION',14,28],['TEMPORAL LOBE','MEMORY PROCESSING',31,50]];
+    const lobes=[['FRONTAL LOBE','EXECUTIVE CONTROL',14,20],['PARIETAL LOBE','SPATIAL AWARENESS',86,20],
+      ['TEMPORAL LOBE','MEMORY PROCESSING',12,50],['OCCIPITAL LOBE','VISION',88,50],
+      ['LIMBIC SYSTEM','EMOTIONAL MATRIX',88,78],['CEREBELLUM','MOTOR CONTROL',12,78]];
     lobes.forEach(l=>{const s=document.createElement('span');s.style.left=l[2]+'%';s.style.top=l[3]+'%';
       s.innerHTML=l[0]+'<b>'+l[1]+'</b>';ring.appendChild(s);});})();
 
-  /* NEURAL CORE ORB (accent-aware) */
+  /* NEURAL CORE ORB — faithful clone of reference avatar (accent-aware) */
   (function(){const cv=el('orbCanvas');if(!cv)return;const x=cv.getContext('2d');
     let W=0,H=0,CX=0,CY=0,R=0;
-    const N=52,brain=[];
-    for(let i=0;i<N;i++){const y=1-(i/(N-1))*2,r=Math.sqrt(Math.max(0,1-y*y)),th=i*2.399963;brain.push({x:Math.cos(th)*r,y,z:Math.sin(th)*r});}
-    const links=[];for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){const a=brain[i],b=brain[j],d=Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);if(d<0.5)links.push([i,j]);}
+    // (b) brain-shaped neural network: two hemispheres with a central fissure
+    const N=120,brain=[];
+    for(let i=0;i<N;i++){const u=i/N*Math.PI*2,hem=(i%2?1:-1);
+      const y=(Math.random()*2-1)*0.7;
+      const rx=Math.sqrt(Math.max(0,1-y*y));
+      const lat=u%(Math.PI*2);
+      const fx=Math.cos(lat)*rx*0.82+hem*0.20;   // push left/right for bilateral split
+      const fz=Math.sin(lat)*rx*0.82;
+      const fy=y*0.92;
+      brain.push({x:fx,y:fy,z:fz});}
+    const links=[];for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){const a=brain[i],b=brain[j],d=Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);if(d<0.28)links.push([i,j]);}
+    // (c) 14 center-radiating beams
+    const beams=[];for(let i=0;i<14;i++){const a=i/14*Math.PI*2, p=(Math.random()*0.5+0.5);beams.push({a,p,ph:Math.random()*7});}
     const pulses=[];const spawn=()=>{if(links.length)pulses.push({li:Math.floor(Math.random()*links.length),t:0,sp:0.012+Math.random()*0.02});};
-    setInterval(()=>{if(pulses.length<16&&Math.random()<activity/110)spawn();},90);
-    const ringN=3,rn=[];for(let r=0;r<ringN;r++){const a=[];const c=5+r*2;for(let k=0;k<c;k++)a.push({a:k/c*Math.PI*2});rn.push(a);}
+    setInterval(()=>{if(pulses.length<20&&Math.random()<activity/90)spawn();},80);
+    const ringN=3,rn=[];for(let r=0;r<ringN;r++){const a=[];const c=6+r*2;for(let k=0;k<c;k++)a.push({a:k/c*Math.PI*2});rn.push(a);}
     let rr=[0,0,0];
     function proj(p,rx,ry,s){let{ x:px,y:py,z:pz}=p,cy=Math.cos(ry),sy=Math.sin(ry),cx=Math.cos(rx),sx=Math.sin(rx);
       let y1=py*cy-pz*sy,z1=py*sy+pz*cy,x2=px*cx+z1*sx,z2=-px*sx+z1*cx;const d=(z2+1.6)/3.2;return{X:CX+x2*R*s,Y:CY+y1*R*s,depth:d};}
-    function init(){const b=cv.getBoundingClientRect(),s=Math.max(140,Math.min(b.width||300,b.height||300));cv.width=s;cv.height=s;W=s;H=s;CX=s/2;CY=s/2;R=s*0.40;}
+    function init(){const b=cv.getBoundingClientRect(),s=Math.max(140,Math.min(b.width||300,b.height||300));cv.width=s;cv.height=s;W=s;H=s;CX=s/2;CY=s/2;R=s*0.38;}
     let t=0;
     (function loop(){requestAnimationFrame(loop);if(!W)init();t+=0.016;
-      const act=(STATE!=='idle'&&STATE!=='locked'),spin=act?0.010:0.004,rx=t*spin*0.7,ry=t*spin;
+      const act=(STATE!=='idle'&&STATE!=='locked'),spin=act?0.012:0.005,rx=t*spin*0.7,ry=t*spin;
       const AC=accent(),AS=accentSoft();
       x.clearRect(0,0,W,H);
-      const g=x.createRadialGradient(CX,CY,R*0.1,CX,CY,R*1.2);g.addColorStop(0,AC+'33');g.addColorStop(1,'rgba(255,40,40,0)');
-      x.fillStyle=g;x.beginPath();x.arc(CX,CY,R*1.2,0,7);x.fill();
-      x.strokeStyle=AS+'66';x.lineWidth=1;
-      for(let la=-2;la<=2;la++){const yy=la/3,rr2=Math.sqrt(Math.max(0,1-yy*yy));x.beginPath();for(let a=0;a<=40;a++){const an=a/40*Math.PI*2,p=proj({x:Math.cos(an)*rr2,y:yy,z:Math.sin(an)*rr2},rx,ry,1);a?x.lineTo(p.X,p.Y):x.moveTo(p.X,p.Y);}x.stroke();}
-      for(let lo=0;lo<8;lo++){const an=lo/8*Math.PI*2;x.beginPath();for(let a=0;a<=40;a++){const yy=a/40*2-1,rr2=Math.sqrt(Math.max(0,1-yy*yy)),p=proj(proj({x:Math.cos(an)*rr2,y:yy,z:Math.sin(an)*rr2},rx,ry,1));a?x.lineTo(p.X,p.Y):x.moveTo(p.X,p.Y);}x.stroke();}
-      const P=brain.map(n=>proj(n,rx+0.3,ry,0.72));x.lineWidth=0.6;
+      // ambient glow
+      const g=x.createRadialGradient(CX,CY,R*0.1,CX,CY,R*1.25);g.addColorStop(0,AC+'33');g.addColorStop(1,'rgba(255,40,40,0)');
+      x.fillStyle=g;x.beginPath();x.arc(CX,CY,R*1.25,0,7);x.fill();
+      // (a) geodesic wireframe cage
+      x.strokeStyle=AS+'55';x.lineWidth=0.8;
+      for(let la=-3;la<=3;la++){const yy=la/3.5,rr2=Math.sqrt(Math.max(0,1-yy*yy));x.beginPath();for(let a=0;a<=44;a++){const an=a/44*Math.PI*2,p=proj({x:Math.cos(an)*rr2,y:yy,z:Math.sin(an)*rr2},rx,ry,1);a?x.lineTo(p.X,p.Y):x.moveTo(p.X,p.Y);}x.stroke();}
+      for(let lo=0;lo<10;lo++){const an=lo/10*Math.PI*2;x.beginPath();for(let a=0;a<=44;a++){const yy=a/44*2-1,rr2=Math.sqrt(Math.max(0,1-yy*yy)),p=proj(proj({x:Math.cos(an)*rr2,y:yy,z:Math.sin(an)*rr2},rx,ry,1));a?x.lineTo(p.X,p.Y):x.moveTo(p.X,p.Y);}x.stroke();}
+      // (c) center-radiating beams
+      for(const bm of beams){bm.ph+=0.02;const fl=0.55+0.45*Math.sin(bm.ph);
+        const a0=proj({x:0,y:0,z:0},rx,ry,1);
+        const a1=proj({x:Math.cos(bm.a)*bm.p,y:Math.sin(bm.a*0.6)*0.3,z:Math.sin(bm.a)*bm.p},rx,ry,1);
+        const grd=x.createLinearGradient(a0.X,a0.Y,a1.X,a1.Y);grd.addColorStop(0,'#fff');grd.addColorStop(1,AS+'00');
+        x.strokeStyle=grd;x.lineWidth=1.4*fl;x.globalAlpha=0.5*fl+0.2;x.beginPath();x.moveTo(a0.X,a0.Y);x.lineTo(a1.X,a1.Y);x.stroke();x.globalAlpha=1;}
+      // (b) brain network
+      const P=brain.map(n=>proj(n,rx+0.3,ry,0.74));x.lineWidth=0.6;
       for(const[i,j]of links){const a=P[i],b=P[j],al=(a.depth+b.depth)/2*0.5+0.1;x.strokeStyle=AS+Math.round(al*200).toString(16).padStart(2,'0');x.beginPath();x.moveTo(a.X,a.Y);x.lineTo(b.X,b.Y);x.stroke();}
+      for(let i=0;i<N;i++){const p=P[i],al=0.4+p.depth*0.6;x.fillStyle=(al>0.8?'#fff':AS+Math.round(al*220).toString(16).padStart(2,'0'));x.beginPath();x.arc(p.X,p.Y,1.3+p.depth,0,7);x.fill();}
       for(const pu of pulses){pu.t+=pu.sp*(0.6+activity/80);const[i,j]=links[pu.li],a=P[i],b=P[j],px=a.X+(b.X-a.X)*pu.t,py=a.Y+(b.Y-a.Y)*pu.t;
         x.fillStyle='#fff';x.beginPath();x.arc(px,py,1.8,0,7);x.fill();x.strokeStyle=AS+'80';x.beginPath();x.arc(px,py,4,0,7);x.stroke();}
       for(let k=pulses.length-1;k>=0;k--)if(pulses[k].t>=1)pulses.splice(k,1);
-      for(let i=0;i<N;i++){const p=P[i],al=0.4+p.depth*0.6;x.fillStyle=AS+Math.round(al*200).toString(16).padStart(2,'0');x.beginPath();x.arc(p.X,p.Y,1.4+p.depth,0,7);x.fill();}
+      // (d) rings
       const rc=[AS+'','#bd00ff','#ffd23d'];
-      for(let r=0;r<ringN;r++){rr[r]+=spin*(r%2?-1:1)*(0.6+r*0.3);const ry2=ry+rr[r],RR=R*(0.62+r*0.13);
+      for(let r=0;r<ringN;r++){rr[r]+=spin*(r%2?-1:1)*(0.6+r*0.3);const RR=R*(0.60+r*0.14);
         x.strokeStyle=rc[r]+'80';x.lineWidth=1.2;x.beginPath();for(let a=0;a<=48;a++){const an=a/48*Math.PI*2,X=CX+Math.cos(an)*RR,Y=CY+Math.sin(an)*RR*0.42;a?x.lineTo(X,Y):x.moveTo(X,Y);}x.stroke();
         x.strokeStyle=rc[r]+'46';x.beginPath();for(let a=0;a<=48;a++){const an=a/48*Math.PI*2,X=CX+Math.cos(an)*RR*0.42,Y=CY+Math.sin(an)*RR;a?x.lineTo(X,Y):x.moveTo(X,Y);}x.stroke();
         for(const nd of rn[r]){nd.a+=spin*(r%2?-1:1)*1.4;const X=CX+Math.cos(nd.a)*RR,Y=CY+Math.sin(nd.a)*RR*0.42;x.fillStyle=rc[r];x.beginPath();x.arc(X,Y,2.2,0,7);x.fill();}}
+      // (g) glowing core
       const cR=R*(0.10+0.05*Math.sin(t*3)+activity/700),cg=x.createRadialGradient(CX,CY,0,CX,CY,cR*3);
       cg.addColorStop(0,'#fff');cg.addColorStop(0.4,AC+'aa');cg.addColorStop(1,AC+'00');x.fillStyle=cg;x.beginPath();x.arc(CX,CY,cR*3,0,7);x.fill();
     })();init();window.addEventListener('resize',init);})();
@@ -584,11 +611,11 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
     else if(a==='ai_chat')el('cmd').focus();else if(a==='audio'){_muted=!_muted;b.classList.toggle('on',!_muted);speech(_muted?'Audio muted':'Audio live');}}));
   // aspect ratio
   const appEl=el('app'),arSel=el('arSel');
-  const RATIOS={'16:9':16/9,'4:3':4/3,'21:9':21/9,'1:1':1,'9:16':9/16};
-  function bestFit(){const w=innerWidth-20,h=innerHeight-20;let best='16:9',bs=-1;
+  const RATIOS={'16:9':16/9,'4:3':4/3,'21:9':21/9,'1:1':1,'9:16':9/16,'3:4':3/4};
+  function bestFit(){const w=innerWidth-20,h=innerHeight-20;let best='auto',bs=-1;
     for(const k in RATIOS){const r=RATIOS[k];const f=Math.min(w/(h*r),h/(w/r));if(f>bs){bs=f;best=k;}}return best;}
   function setAR(v){if(v==='auto')v=bestFit();if(v==='fill')appEl.setAttribute('data-ar','fill');else appEl.setAttribute('data-ar',v);if(arSel&&arSel.value!==v&&v!=='auto')arSel.value=v;try{localStorage.setItem('moon_ar',v);}catch(_){}}
-  if(arSel){let sv='16:9';try{sv=localStorage.getItem('moon_ar')||'16:9';}catch(_){}arSel.value=sv;setAR(sv);arSel.addEventListener('change',()=>setAR(arSel.value));}
+  if(arSel){let sv='auto';try{sv=localStorage.getItem('moon_ar')||'auto';}catch(_){}arSel.value=sv;setAR(sv);arSel.addEventListener('change',()=>setAR(arSel.value));}
   addEventListener('resize',()=>{if(arSel&&arSel.value==='auto')setAR('auto');});
   // accent
   const acSel=el('acSel');
