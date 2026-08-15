@@ -77,10 +77,31 @@ def ensure_ollama() -> None:
         log("⚠️  Ollama still down -- start it manually (e.g. 'ollama serve')")
 
 
+def ensure_env() -> None:
+    """Ensure a local .env exists so MOON can read API keys / unlock flags.
+
+    .env is gitignored (it holds secrets) so a fresh clone has none. If absent,
+    we copy .env.example into .env so MOON launches in a fully-configured state
+    (all features unlocked; API-key fields blank for the operator to fill).
+    We NEVER create or touch .env when one already exists, and we NEVER commit it.
+    """
+    env_path = os.path.join(ROOT, ".env")
+    example_path = os.path.join(ROOT, ".env.example")
+    if os.path.exists(env_path):
+        log(".env present -- using existing local config")
+        return
+    if not os.path.exists(example_path):
+        log("No .env or .env.example -- relying on built-in defaults")
+        return
+    shutil.copyfile(example_path, env_path)
+    log(".env created from .env.example (features unlocked; fill API keys to enable cloud fallbacks)")
+
+
 def main(argv: list[str]) -> int:
     os.chdir(ROOT)
     mode = argv[1] if len(argv) > 1 else "terminal"
 
+    ensure_env()
     ensure_ollama()
 
     # Decontaminate PYTHONPATH so MOON's venv is used (see app/config/env_guard.py)
