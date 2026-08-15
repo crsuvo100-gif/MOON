@@ -1,27 +1,27 @@
 {
   "name": "MOON NEURAL CORE INTERFACE",
-  "variant": "red-black HUD",
-  "semanticVersion": "v9.7.1",
+  "variant": "hot-red HUD",
+  "semanticVersion": "v9.8.1",
   "tokens": {
     "color": {
-      "bg": "#050505",
-      "bgPanel": "rgba(20,2,2,0.55)",
-      "primary": "#ff0000",
-      "primarySoft": "#ff4d4d",
-      "primaryDim": "#330000",
-      "text": "#ffffff",
-      "label": "#b08a8a",
-      "warn": "#ffae42",
-      "ok": "#39ff88"
+      "bg": "#060101",
+      "bgPanel": "rgba(26,2,2,0.62)",
+      "primary": "#ff1a1a",
+      "primarySoft": "#ff6b6b",
+      "primaryDim": "#3a0000",
+      "text": "#fff4f4",
+      "label": "#e08a8a",
+      "warn": "#ff7a2a",
+      "ok": "#ff3b3b"
     },
     "font": {
       "stack": "'Share Tech Mono','Courier New',monospace",
       "size": {"xs":"9px","sm":"11px","md":"13px","lg":"18px","xl":"24px"}
     },
     "fx": {
-      "scanlineOpacity": 0.06,
+      "scanlineOpacity": 0.12,
       "cornerBracket": true,
-      "glowBlur": 12,
+      "glowBlur": 14,
       "gridGap": "8px",
       "radius": "4px"
     }

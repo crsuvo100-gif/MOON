@@ -16,28 +16,32 @@
    reference image, real WAV audio playback, mobile tuning.
    =========================================================================== */
 :root{
-  --bg:#050505; --bg-panel:rgba(20,2,2,.55); --bg-dim:rgba(30,3,3,.72);
-  --text:#ffffff; --label:#b08a8a; --warn:#ffae42; --ok:#39ff88;
+  --bg:#060101; --bg-panel:rgba(26,2,2,.62); --bg-dim:rgba(34,3,3,.78);
+  --text:#fff4f4; --label:#e08a8a; --warn:#ff7a2a; --ok:#ff3b3b;
   --ff:'Rajdhani','Share Tech Mono','Courier New',ui-monospace,monospace;
   --ff-title:'Orbitron','Rajdhani','Share Tech Mono',sans-serif;
   --xs:9px; --sm:11px; --md:13px; --lg:18px; --xl:24px; --gap:8px; --r:4px; --bw:1px;
-  /* default accent = red (reference) */
-  --accent:#ff0000; --accent-soft:#ff4d4d; --accent-dim:#330000; --accent-line:rgba(255,40,40,.35);
+  /* default accent = HOT RED */
+  --accent:#ff1a1a; --accent-soft:#ff6b6b; --accent-dim:#3a0000; --accent-line:rgba(255,50,50,.42);
 }
-/* accent themes */
-.app[data-accent="red"]{--accent:#ff0000;--accent-soft:#ff4d4d;--accent-dim:#330000;--accent-line:rgba(255,40,40,.35)}
-.app[data-accent="cyan"]{--accent:#00f3ff;--accent-soft:#5ffbff;--accent-dim:#002b33;--accent-line:rgba(0,243,255,.35)}
-.app[data-accent="violet"]{--accent:#bd00ff;--accent-soft:#d66bff;--accent-dim:#1f0033;--accent-line:rgba(189,0,255,.35)}
-.app[data-accent="amber"]{--accent:#ffae42;--accent-soft:#ffce7a;--accent-dim:#332200;--accent-line:rgba(255,174,66,.35)}
-.app[data-accent="emerald"]{--accent:#39ff88;--accent-soft:#7dffb4;--accent-dim:#00331f;--accent-line:rgba(57,255,136,.35)}
+/* accent themes — all remapped to the hot-red family so the whole UI stays hot red */
+.app[data-accent="red"]{--accent:#ff1a1a;--accent-soft:#ff6b6b;--accent-dim:#3a0000;--accent-line:rgba(255,50,50,.42)}
+.app[data-accent="cyan"]{--accent:#ff2a2a;--accent-soft:#ff7a7a;--accent-dim:#3a0000;--accent-line:rgba(255,60,60,.40)}
+.app[data-accent="violet"]{--accent:#ff1f5a;--accent-soft:#ff6b8e;--accent-dim:#3a0014;--accent-line:rgba(255,40,80,.40)}
+.app[data-accent="amber"]{--accent:#ff3a1a;--accent-soft:#ff7e5a;--accent-dim:#3a0a00;--accent-line:rgba(255,60,40,.40)}
+.app[data-accent="emerald"]{--accent:#ff2a2a;--accent-soft:#ff7a7a;--accent-dim:#3a0000;--accent-line:rgba(255,60,60,.40)}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{background:radial-gradient(circle at 50% 42%,rgba(80,0,0,.18),rgba(5,5,5,0) 60%),var(--bg);
+body{background:radial-gradient(circle at 50% 42%,rgba(140,0,0,.30),rgba(8,1,1,0) 58%),var(--bg);
   color:var(--text);font-family:var(--ff);font-size:var(--md);overflow:hidden;letter-spacing:.04em}
 body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:9000;
-  background:repeating-linear-gradient(to bottom,rgba(255,255,255,.05) 0 1px,rgba(0,0,0,0) 1px 3px);
-  opacity:.10;mix-blend-mode:overlay}
-body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;box-shadow:inset 0 0 200px 40px rgba(0,0,0,.85)}
+  background:repeating-linear-gradient(to bottom,rgba(255,255,255,.06) 0 1px,rgba(0,0,0,0) 1px 3px);
+  opacity:.12;mix-blend-mode:overlay;animation:flicker 3.2s steps(60) infinite}
+@keyframes flicker{0%,100%{opacity:.12}48%{opacity:.10}50%{opacity:.16}52%{opacity:.09}55%{opacity:.14}}
+/* hot-pulse vignette: the whole frame breathes red */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;
+  box-shadow:inset 0 0 220px 50px rgba(90,0,0,.55);animation:hotpulse 4.5s ease-in-out infinite}
+@keyframes hotpulse{0%,100%{box-shadow:inset 0 0 200px 40px rgba(70,0,0,.45)}50%{box-shadow:inset 0 0 260px 70px rgba(150,0,0,.62)}}
 /* faint animated background grid (cyber-space floor) */
 .bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.18;
   background-image:linear-gradient(var(--accent-line) 1px,transparent 1px),linear-gradient(90deg,var(--accent-line) 1px,transparent 1px);
@@ -77,7 +81,9 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
 .app[data-ar="3:4"]{aspect-ratio:3/4;width:auto;height:auto}
 
 .panel{position:relative;background:var(--bg-panel);border:var(--bw) solid var(--accent-line);
-  border-radius:var(--r);padding:7px 9px;overflow:hidden;backdrop-filter:blur(2px)}
+  border-radius:var(--r);padding:7px 9px;overflow:hidden;backdrop-filter:blur(2px);
+  animation:panelpulse 5.5s ease-in-out infinite}
+@keyframes panelpulse{0%,100%{border-color:var(--accent-line);box-shadow:0 0 0 rgba(255,30,30,0)}50%{border-color:rgba(255,70,70,.7);box-shadow:0 0 14px rgba(255,30,30,.18)}}
 .panel::before,.panel::after{content:"";position:absolute;width:10px;height:10px;pointer-events:none}
 .panel::before{top:2px;left:2px;border-top:2px solid var(--accent-soft);border-left:2px solid var(--accent-soft)}
 .panel::after{bottom:2px;right:2px;border-bottom:2px solid var(--accent-soft);border-right:2px solid var(--accent-soft)}
@@ -97,8 +103,9 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
 /* 01 header */
 .header{grid-area:header;display:flex;align-items:center;gap:14px;padding:0 14px;
   background:linear-gradient(90deg,rgba(40,0,0,.6),rgba(10,0,0,.3));border:1px solid var(--accent-line);border-radius:var(--r)}
-.logo{width:26px;height:26px;background:conic-gradient(from 0deg,var(--accent),#bd00ff,var(--accent));
-  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);box-shadow:0 0 10px var(--accent-soft)}
+.logo{width:26px;height:26px;background:conic-gradient(from 0deg,var(--accent),#ff6b6b,var(--accent));
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);box-shadow:0 0 14px var(--accent-soft);animation:logopulse 2.8s ease-in-out infinite}
+@keyframes logopulse{0%,100%{box-shadow:0 0 10px var(--accent-soft)}50%{box-shadow:0 0 22px var(--accent)}}
 .header .brand{display:flex;flex-direction:column;line-height:1.1}
 .header .brand b{font-size:var(--md);color:var(--accent-soft);letter-spacing:.14em}
 .header .brand small{font-size:var(--xs);color:var(--label);letter-spacing:.08em}
@@ -175,6 +182,12 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
   background:linear-gradient(90deg,transparent,var(--accent-soft),transparent);box-shadow:0 0 10px var(--accent-soft);
   animation:scanmove 3.6s linear infinite;opacity:.7}
 @keyframes scanmove{0%{top:6%}50%{top:94%}100%{top:6%}}
+/* GLOBAL sweeping scan line across the whole interface (advanced HUD) */
+.global-scan{position:fixed;left:0;right:0;top:0;height:3px;pointer-events:none;pointer-events:none;z-index:9100;
+  background:linear-gradient(90deg,transparent,var(--accent-soft),#fff,var(--accent-soft),transparent);
+  box-shadow:0 0 16px var(--accent),0 0 40px var(--accent-soft);opacity:.55;
+  animation:globalscan 6.5s linear infinite;mix-blend-mode:screen}
+@keyframes globalscan{0%{top:-2%}100%{top:102%}}
 /* corner targeting brackets (active-system framing) */
 .core-stage::before,.core-stage::after{content:"";position:absolute;width:22px;height:22px;border:2px solid var(--accent-soft);opacity:.6;z-index:4;pointer-events:none}
 .core-stage::before{top:6px;left:6px;border-right:0;border-bottom:0}
@@ -269,6 +282,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
 <body data-moon="idle">
 <div class="bg-grid"></div>
 <div class="hud-frame"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+<div class="global-scan"></div>
 
 <div class="fit"><div class="app" id="app" data-ar="auto" data-accent="red">
   <!-- 01 HEADER -->
@@ -520,17 +534,17 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
     setText('tpNodes',nodes.toLocaleString());setText('rtNodes',nodes.toLocaleString());
     setText('tpConn',(nodes*6).toLocaleString());setText('tpDen',(97+Math.round((sys.cpu||0)*0.02))+'%');
     setText('topoMesh',nodes.toLocaleString());setText('topoSyn',(nodes*6).toLocaleString());
-    drawDonut(el('topoDonut'),[['MESH',nodes,'#ff4d4d'],['SYN',nodes*6,'#bd00ff']]);
+    drawDonut(el('topoDonut'),[['MESH',nodes,'#ff6b6b'],['SYN',nodes*6,'#ff1a1a']]);
     const total=1.02e6,used=Math.min(total,(mem.long_term||0)*0.02+(mem.vector||0)*0.004+200000);
     setText('memTot',fmtMB(total));setText('memUsed',fmtMB(used));setText('memFree',fmtMB(total-used));
     setText('dShort',(mem.short_term||0));setText('dWork',(mem.episodic||0));
     setText('dLong',(mem.long_term||0).toLocaleString());setText('dArch',(mem.kb_docs||0).toLocaleString()+' docs');
-    drawDonut(el('memDonut'),[['SHORT',num(mem.short_term,1),'#ff4d4d'],['WORK',num(mem.episodic,1),'#ff9a3c'],['LONG',num(mem.long_term,1),'#ffd23d'],['ARCH',num(mem.kb_docs,1),'#bd00ff']]);
-    drawGauge(el('memGauge'),Math.round(used/total*100),'#ff4d4d');
+    drawDonut(el('memDonut'),[['SHORT',num(mem.short_term,1),'#ff6b6b'],['WORK',num(mem.episodic,1),'#ff3a1a'],['LONG',num(mem.long_term,1),'#ffd23d'],['ARCH',num(mem.kb_docs,1),'#ff1a1a']]);
+    drawGauge(el('memGauge'),Math.round(used/total*100),'#ff1a1a');
     setText('thActive',s.locked?'0':'0');setText('thNeut',(9000+(s.tools||[]).length*40).toLocaleString());setText('thReg','148');setBar('thBar',2);
     const lr1=Math.min(100,73+(sys.cpu||0)*0.1),lr2=Math.min(100,87+(sys.cpu||0)*0.15),lr3=Math.min(100,91+(sys.cpu||0)*0.05);
     setBar('lr1',lr1);setText('lr1v',lr1.toFixed(1)+'%');setBar('lr2',lr2);setText('lr2v',lr2.toFixed(1)+'%');setBar('lr3',lr3);setText('lr3v',lr3.toFixed(1)+'%');
-    const ev=Math.round(95+(sys.cpu||0)*0.04-(s.locked?10:0));drawGauge(el('effG'),ev,'#ff4d4d');setText('effLab',ev+'%');
+    const ev=Math.round(95+(sys.cpu||0)*0.04-(s.locked?10:0));drawGauge(el('effG'),ev,'#ff1a1a');setText('effLab',ev+'%');
     setText('qcActive',128+(s.agents||0));setText('qcEnt',(1.37e6).toLocaleString());setText('qcStab','99.99%');
     buildPipeline(s.pipeline||[]);
     setText('agentInfo',(s.agents||0)+' agents · '+(s.n_tools||0)+' tools');
@@ -621,7 +635,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
         x.fillStyle='#fff';x.beginPath();x.arc(px,py,1.8,0,7);x.fill();x.strokeStyle=AS+'80';x.beginPath();x.arc(px,py,4,0,7);x.stroke();}
       for(let k=pulses.length-1;k>=0;k--)if(pulses[k].t>=1)pulses.splice(k,1);
       // (d) rings
-      const rc=[AS+'','#19d2ff','#bd00ff'];
+      const rc=[AS+'','#ffae42','#ff3a1a'];
       for(let r=0;r<ringN;r++){rr[r]+=spin*(r%2?-1:1)*(0.6+r*0.3);const RR=R*(0.60+r*0.14);
         x.strokeStyle=rc[r]+'80';x.lineWidth=1.2;x.beginPath();for(let a=0;a<=48;a++){const an=a/48*Math.PI*2,X=CX+Math.cos(an)*RR,Y=CY+Math.sin(an)*RR*0.42;a?x.lineTo(X,Y):x.moveTo(X,Y);}x.stroke();
         x.strokeStyle=rc[r]+'46';x.beginPath();for(let a=0;a<=48;a++){const an=a/48*Math.PI*2,X=CX+Math.cos(an)*RR*0.42,Y=CY+Math.sin(an)*RR;a?x.lineTo(X,Y):x.moveTo(X,Y);}x.stroke();
@@ -638,7 +652,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
   /* AI-INTERFACE OVERLAY — hex tech panels, rotating targeting brackets,
      orbiting data nodes + bloom (the "fully futuristic" framing) */
   (function(){const cv=el('aiCanvas');if(!cv)return;const x=cv.getContext('2d');let W=0,H=0,CX=0,CY=0,R=0;
-    const AI='#ff4d3a',AI2='#ff8a6e',CYAN='#19d2ff';
+    const AI='#ff4d3a',AI2='#ff8a6e',CYAN='#ff6b6b';
     const nodes=[];for(let i=0;i<14;i++)nodes.push({a:i/14*Math.PI*2,r:0.62+Math.random()*0.34,ph:Math.random()*7});
     function init(){const b=cv.getBoundingClientRect();cv.width=b.width||340;cv.height=b.height||340;W=cv.width;H=cv.height;CX=W/2;CY=H/2;R=Math.min(W,H)*0.46;}
     function hex(cx,cy,r,rot){x.beginPath();for(let k=0;k<6;k++){const a=rot+k/6*Math.PI*2;const px=cx+Math.cos(a)*r,py=cy+Math.sin(a)*r;k?x.lineTo(px,py):x.moveTo(px,py);}x.closePath();}
