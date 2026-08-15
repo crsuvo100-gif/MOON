@@ -74,6 +74,7 @@ from app.tools.vuln_scanner_tool import VulnScannerTool
 from app.tools.web_search import WebSearchTool
 from app.capability.tool import CapabilityManagerTool
 from app.connector.tool import GlobalConnectorTool
+from app.tools.huggingface_deploy import HuggingFaceDeployTool
 
 logger = get_logger(__name__)
 
@@ -280,6 +281,7 @@ class Orchestrator:
             SystemInfoTool(), PowerShellTool(), DockerTool(), GitTool(), SelfEvolveTool(), ModelPullTool(), GitHubSyncTool(),
             CapabilityManagerTool(),
             GlobalConnectorTool(),
+            HuggingFaceDeployTool(),
         ):
             registry.register(tool)
 

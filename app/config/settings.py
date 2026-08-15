@@ -116,6 +116,26 @@ class Settings(BaseSettings):
         description="Model id to request from Hugging Face (e.g. meta-llama/Llama-3.1-8B-Instruct).",
     )
 
+    # --- Hugging Face OAuth client (for MOON to act AS an HF OAuth app) ------
+    # The registration payload MOON presents to HF when you register her as an
+    # OAuth application (Authorization Code + PKCE; token_endpoint_auth_method
+    # "none"). Fill these with YOUR hosted URL. Left blank = no OAuth client.
+    hf_oauth_client_id: str = Field(
+        default="",
+        description="HF OAuth client_id (your website's /.well-known/oauth-authorization-server or registration url).",
+    )
+    hf_oauth_client_name: str = Field(default="MOON", description="Display name for the HF OAuth app.")
+    hf_oauth_website: str = Field(
+        default="",
+        description="Your website base URL used for client_id, redirect_uris and client_uri (e.g. https://moon.example.com).",
+    )
+    hf_oauth_logo_uri: str = Field(default="", description="Optional logo URI for the HF OAuth app.")
+    # Namespace used when MOON deploys Hugging Face Inference Endpoints.
+    hf_endpoint_namespace: str = Field(
+        default="crsuvo",
+        description="HF namespace (org/user) under which MOON deploys Inference Endpoints.",
+    )
+
     # Optional STRONG model for accuracy-critical work. When set, factual and
     # cyber-critical tasks (and the main-brain accuracy gate) are routed to it
     # for a higher-quality pass. Leave empty to use the default model only.
