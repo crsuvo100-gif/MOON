@@ -218,9 +218,10 @@ def _fmt_uptime(sec: float) -> str:
         d = int(sec // 86400)
         h = int((sec % 86400) // 3600)
         m = int((sec % 3600) // 60)
-        return f"{d}d {h}h {m}m"
+        s = int(sec % 60)
+        return f"{d}d {h}h {m}m {s}s"
     except Exception:
-        return "0d 0h 0m"
+        return "0d 0h 0m 0s"
 
 
 def _system_metrics() -> dict:
