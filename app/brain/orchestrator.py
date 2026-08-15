@@ -75,6 +75,7 @@ from app.tools.web_search import WebSearchTool
 from app.capability.tool import CapabilityManagerTool
 from app.connector.tool import GlobalConnectorTool
 from app.tools.huggingface_deploy import HuggingFaceDeployTool
+from app.tools.huggingface_tool import HuggingFaceTool
 
 logger = get_logger(__name__)
 
@@ -282,6 +283,7 @@ class Orchestrator:
             CapabilityManagerTool(),
             GlobalConnectorTool(),
             HuggingFaceDeployTool(),
+            HuggingFaceTool(),
         ):
             registry.register(tool)
 

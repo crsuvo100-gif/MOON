@@ -28,6 +28,11 @@ dependencies = [
     "pytest-asyncio>=0.23",
 ]
 
+[project.optional-dependencies]
+# Hugging Face hosted inference (chat completions + text-to-image via InferenceClient).
+# MOON works without it; install with: pip install "moon-ai-agent[hf]"
+hf = ["huggingface_hub>=0.22"]
+
 [project.scripts]
 moon = "main:main"
 
