@@ -135,9 +135,11 @@ def test_pick_llm_routing():
     o = asyncio.new_event_loop()
     try:
         orch = o.run_until_complete(_make_orch())
-        # no strong model configured -> always default
-        assert orch._pick_llm("what is 2+2?") is orch._llm
-        assert orch._pick_llm("scan this host for exploits") is orch._llm
+        # Strong model IS configured (unlocked) -> factual/cyber prompts route to
+        # the strong model, everything else to the default.
+        assert orch._pick_llm("what is 2+2?") is orch._llm_strong, "factual -> strong"
+        assert orch._pick_llm("scan this host for exploits") is orch._llm_strong, "cyber-critical -> strong"
+        assert orch._pick_llm("write me a haiku about the moon") is orch._llm, "creative -> default"
         o.run_until_complete(orch.teardown())
     finally:
         o.close()

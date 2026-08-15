@@ -45,9 +45,10 @@ class Settings(BaseSettings):
     # Optional STRONG model for accuracy-critical work. When set, factual and
     # cyber-critical tasks (and the main-brain accuracy gate) are routed to it
     # for a higher-quality pass. Leave empty to use the default model only.
+    # Unlocked: route accuracy-critical work to a larger local model on this host.
     strong_model_name: str = Field(
-        default="",
-        description="Optional larger/more-capable model id for accuracy-critical tasks.",
+        default="qwen3:1.7b",
+        description="Larger/more-capable model id for accuracy-critical tasks.",
     )
     strong_model_base_url: str = Field(
         default="",
@@ -85,9 +86,9 @@ class Settings(BaseSettings):
 
     api_cors_origins: str = "*"
 
-    enable_browser_automation: bool = False
-    enable_ocr: bool = False
-    enable_pdf: bool = False
+    enable_browser_automation: bool = True
+    enable_ocr: bool = True
+    enable_pdf: bool = True
 
     enable_agent_validation: bool = True
     enable_auto_learning: bool = True
