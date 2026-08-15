@@ -21,7 +21,7 @@ import time
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 TERMINAL_HTML = WEB_DIR / "moon_terminal.html"
@@ -43,8 +43,8 @@ async def _get_orchestrator():
     async with _ORCH_LOCK:
         if _ORCH is None:
             from app.brain.orchestrator import Orchestrator
-            from app.config.settings import get_settings
             from app.config.env_guard import decontaminate_pythonpath
+            from app.config.settings import get_settings
             decontaminate_pythonpath()
             o = Orchestrator(get_settings())
             await o.setup()
@@ -567,6 +567,40 @@ async def ws_endpoint(ws: WebSocket):
                 for chunk in _stream_text(out):
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
+            elif action in ("capabilities", "github"):
+                # NEW: expose the autonomous Capability Manager / GitHub retriever
+                # through the existing terminal (additive; no existing command clobbered).
+                await send(type="assistant_start")
+                await send(type="workflow", stage="tools", detail="capability system")
+                try:
+                    tool = getattr(orch._tools, "_registry", None)
+                    cap_tool = tool.get("capability_manager") if tool else None
+                    if cap_tool is None:
+                        out = "[capabilities] Capability Manager not registered."
+                    else:
+                        payload = (data.get("query") or data.get("text") or data.get("command") or "").strip()
+                        if action == "github":
+                            res = await cap_tool.execute(action="search_github", query=payload or "video converter")
+                        else:
+                            # 'capabilities list|health|search <x>' parsing
+                            parts = payload.split()
+                            cmd = parts[0].lower() if parts else "list"
+                            if cmd in ("list", "health", "ls"):
+                                res = await cap_tool.execute(action="list" if cmd != "health" else "health")
+                            elif cmd == "search" and len(parts) > 1:
+                                res = await cap_tool.execute(action="search_github", query=" ".join(parts[1:]))
+                            elif cmd == "github":
+                                res = await cap_tool.execute(action="search_github", query=" ".join(parts[1:]) or "tool")
+                            elif cmd in ("install", "verify", "inspect") and len(parts) > 1:
+                                res = await cap_tool.execute(action=cmd, name=parts[1])
+                            else:
+                                res = await cap_tool.execute(action="list")
+                        out = res if isinstance(res, str) else str(res)
+                except Exception as e:  # noqa: BLE001
+                    out = f"[capabilities] error: {e}"
+                for chunk in _stream_text(out):
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "settings":
                 await send(type="assistant_start")
                 s = orch._settings
@@ -606,7 +640,6 @@ async def ws_endpoint(ws: WebSocket):
                 await send(type="workflow", stage="tools", detail="checking automation")
                 try:
                     lessons = 0
-                    lp = getattr(orch, "_logs_dir", None)
                     import os as _os
                     lessons_path = _os.path.join(str(getattr(orch, "_base_dir", ".")), "logs", "lessons.jsonl")
                     if _os.path.exists(lessons_path):

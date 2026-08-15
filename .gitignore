@@ -25,6 +25,12 @@ app/logs/moon_lock.txt
 app/logs/agent.log.*
 app/logs/agent_brains/
 
+# Capability system runtime registry (written at runtime; source is committed, not state)
+capabilities/registry.json
+capabilities/manifests/
+capabilities/installed/
+capabilities/cache/
+
 # Test caches
 .pytest_cache/
 .mypy_cache/

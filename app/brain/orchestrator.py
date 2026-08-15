@@ -17,12 +17,12 @@ from app.brain.agent_brain import AgentBrain
 from app.brain.agent_model_manager import AgentModelManager
 from app.brain.context_builder import ContextBuilder
 from app.brain.error_recovery import ErrorRecovery
+from app.brain.intent_detector import detect_intent
 from app.brain.lock import SessionLock
 from app.brain.memory_manager import MemoryManager
 from app.brain.output_formatter import OutputFormatter
 from app.brain.planner import Planner
 from app.brain.prompt_manager import PromptManager
-from app.brain.intent_detector import detect_intent
 from app.brain.reasoning import ReasoningEngine
 from app.brain.self_reflection import SelfReflection
 from app.brain.tool_manager import ToolManager
@@ -38,15 +38,25 @@ from app.services.embedding_service import EmbeddingService
 from app.services.llm_service import ChatMessage, LLMService
 from app.tools.api_requests import ApiRequestsTool
 from app.tools.browser import BrowserTool
+from app.tools.cv_and_memory_tools import (
+    AutonomousChainTool,
+    HabitLearnTool,
+    MultimodalSearchTool,
+    MultimodalStoreTool,
+    ObjectTrackTool,
+)
 from app.tools.database import DatabaseTool
 from app.tools.docker_tool import DockerTool
 from app.tools.exploit_intel_tool import ExploitIntelTool
 from app.tools.file_manager import FileManagerTool
 from app.tools.git_tool import GitTool
+from app.tools.github_sync_tool import GitHubSyncTool
 from app.tools.hardening_audit_tool import HardeningAuditTool
 from app.tools.image_processing import ImageProcessingTool
+from app.tools.learning_tool import LearningTool
 from app.tools.log_analyzer_tool import LogAnalyzerTool
 from app.tools.malware_analysis_tool import MalwareAnalysisTool
+from app.tools.model_management_tool import ModelManagementTool
 from app.tools.model_pull_tool import ModelPullTool
 from app.tools.ocr import OcrTool
 from app.tools.pdf_reader import PdfReaderTool
@@ -54,21 +64,15 @@ from app.tools.powershell_tool import PowerShellTool
 from app.tools.python_executor import PythonExecutorTool
 from app.tools.recon_tool import ReconTool
 from app.tools.registry import ToolRegistry
-from app.tools.model_management_tool import ModelManagementTool
-from app.tools.learning_tool import LearningTool
-from app.tools.utility_tools import UnitConverterTool, TimezoneConverterTool, IpGeolocationTool
-from app.tools.cv_and_memory_tools import ObjectTrackTool, AutonomousChainTool, MultimodalStoreTool, MultimodalSearchTool, HabitLearnTool
-from app.tools.telegram_tool import TelegramTool, GoogleWorkspaceTool
-from app.tools.model_management_tool import ModelManagementTool
-from app.tools.learning_tool import LearningTool
-from app.tools.model_management_tool import ModelManagementTool
 from app.tools.self_evolve_tool import SelfEvolveTool
-from app.tools.github_sync_tool import GitHubSyncTool
 from app.tools.system_command_tool import SystemCommandTool
 from app.tools.system_info_tool import SystemInfoTool
+from app.tools.telegram_tool import GoogleWorkspaceTool, TelegramTool
 from app.tools.terminal import TerminalTool
+from app.tools.utility_tools import IpGeolocationTool, TimezoneConverterTool, UnitConverterTool
 from app.tools.vuln_scanner_tool import VulnScannerTool
 from app.tools.web_search import WebSearchTool
+from app.capability.tool import CapabilityManagerTool
 
 logger = get_logger(__name__)
 
@@ -217,6 +221,7 @@ class Orchestrator:
             ReconTool(), VulnScannerTool(), HardeningAuditTool(), LogAnalyzerTool(),
             MalwareAnalysisTool(), ExploitIntelTool(),
             SystemInfoTool(), PowerShellTool(), DockerTool(), GitTool(), SelfEvolveTool(), ModelPullTool(), GitHubSyncTool(),
+            CapabilityManagerTool(),
         ):
             registry.register(tool)
 
@@ -368,10 +373,31 @@ class Orchestrator:
             logger.debug("repo catalog refresh skipped: %s", exc)
 
     async def _auto_acquire_for_task(self, task: Task, agent) -> None:
-        """Detect a missing capability and auto-install a tool (catalog or LLM-generated)."""
+        """Detect a missing capability and auto-acquire a tool.
+
+        ADDITIVE integration with the new Capability Manager: we prefer the
+        CapabilityManager (persistent registry + acquisition-priority + safety
+        policy) when it can satisfy a discovered need, then fall back to the
+        existing catalog / LLM-plugin / GitHub-feed paths so no prior behavior
+        is lost.
+        """
         from app.tools.tool_acquisition import acquire_by_catalog, generate_plugin
 
         prompt = (task.prompt or "").lower()
+        # --- New Capability Manager (preferred, persistent, policy-gated) ---
+        try:
+            from app.capability.manager import CapabilityManager
+            mgr = CapabilityManager()
+            for need in mgr.discover(task.prompt or ""):
+                if mgr.status(need) in ("missing", "unknown", "failed"):
+                    res = await mgr.acquire(need)
+                    logger.info("capability_manager %s -> %s (%s)", need, res.status, res.source)
+                    if res.status == "acquired":
+                        continue
+        except Exception as exc:  # noqa: BLE001
+            logger.info("capability_manager auto-acquire skipped: %s", exc)
+
+        cap = ""
         for cap in ("youtube", "video", "audio download", "web scraping", "html parse",
                     "browser automation", "image", "ocr", "pdf", "data", "csv",
                     "plot", "chart", "speech", "translate api", "excel", "yaml", "qr"):
