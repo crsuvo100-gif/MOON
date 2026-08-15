@@ -25,6 +25,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 TERMINAL_HTML = WEB_DIR / "moon_terminal.html"
 THEME_JSON = WEB_DIR / "theme.json"
+MOON_CORE_PNG = WEB_DIR / "moon_core.png"
 AVATAR_SVG = WEB_DIR / "avatar.svg"
 AVATAR_GIF = WEB_DIR / "avatar.gif"
 AVATAR_PNG = WEB_DIR / "avatar.png"
@@ -161,6 +162,13 @@ async def theme_json():
     if THEME_JSON.exists():
         return FileResponse(str(THEME_JSON), media_type="application/json")
     return HTMLResponse("{}", status_code=404)
+
+
+@app.get("/moon_core.png")
+async def moon_core_png():
+    if MOON_CORE_PNG.exists():
+        return FileResponse(str(MOON_CORE_PNG), media_type="image/png")
+    return HTMLResponse("<svg/>", status_code=404)
 
 
 @app.get("/avatar.svg")
