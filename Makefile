@@ -4,10 +4,12 @@
 
 PY := env -u PYTHONPATH .venv/bin/python
 
-.PHONY: help run serve terminal test live voice-test voice voice-install models clean
+.PHONY: help run serve terminal test live voice-test voice voice-install models clean install start deploy
 
 help:
-	@echo "Targets: run serve terminal test live voice-test models clean"
+	@echo "Targets: run serve terminal test live voice-test models install start clean"
+	@echo "  install   - install Ollama systemd service (sudo make install)"
+	@echo "  start     - launch MOON (ensures Ollama is up first)"
 
 run:
 	$(PY) main.py run "$(TASK)" --agent $(AGENT)
@@ -17,6 +19,16 @@ serve:
 
 terminal:
 	$(PY) main.py start
+
+# Install MOON's model backend (Ollama) as a systemd service. Uses sudo when not root.
+install:
+	@echo "== Installing Ollama service (model backend for MOON) =="
+	@if [ "$(EUID)" = "0" ]; then ./scripts/install_ollama_service.sh; \
+	 else sudo ./scripts/install_ollama_service.sh; fi
+
+# Launch MOON anywhere: boots Ollama if needed, then MOON's terminal UI.
+start:
+	@bash ./moon-launch.sh $(MODE)
 
 test:
 	$(PY) -m pytest tests -q
