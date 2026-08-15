@@ -52,17 +52,23 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
 .hud-frame i.bl{bottom:-2px;left:-2px;border-right:0;border-top:0}
 .hud-frame i.br{bottom:-2px;right:-2px;border-left:0;border-top:0}
 
-.fit{position:relative;z-index:2;width:100vw;height:100vh;display:grid;place-items:center;padding:10px}
+.fit{position:relative;z-index:2;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;padding:10px;overflow:hidden}
 .app{position:relative;width:100%;height:100%;max-width:100%;max-height:100%;
   --ar:auto;aspect-ratio:var(--ar);
   display:grid;grid-template-columns:215px 1fr 235px;
   grid-template-rows:54px 1fr 172px 46px 32px;
   grid-template-areas:"header header header" "left2 center right" "left1 center right" "quick quick quick" "appbar appbar appbar";
   gap:var(--gap);padding:12px}
-.app[data-ar="fill"]{aspect-ratio:auto;max-width:100%;max-height:100%}
-.app[data-ar="auto"]{aspect-ratio:auto}
-.app[data-ar="16:9"]{--ar:16/9}.app[data-ar="4:3"]{--ar:4/3}.app[data-ar="21:9"]{--ar:21/9}
-.app[data-ar="1:1"]{--ar:1/1}.app[data-ar="9:16"]{--ar:9/16}.app[data-ar="3:4"]{--ar:3/4}
+/* AUTO / FILL => use the whole display, no letterbox */
+.app[data-ar="fill"]{aspect-ratio:auto;width:100%;height:100%}
+.app[data-ar="auto"]{aspect-ratio:auto;width:100%;height:100%}
+/* fixed presets => scaled + centered (framed look) */
+.app[data-ar="16:9"]{aspect-ratio:16/9;width:auto;height:auto}
+.app[data-ar="4:3"]{aspect-ratio:4/3;width:auto;height:auto}
+.app[data-ar="21:9"]{aspect-ratio:21/9;width:auto;height:auto}
+.app[data-ar="1:1"]{aspect-ratio:1/1;width:auto;height:auto}
+.app[data-ar="9:16"]{aspect-ratio:9/16;width:auto;height:auto}
+.app[data-ar="3:4"]{aspect-ratio:3/4;width:auto;height:auto}
 
 .panel{position:relative;background:var(--bg-panel);border:var(--bw) solid var(--accent-line);
   border-radius:var(--r);padding:7px 9px;overflow:hidden;backdrop-filter:blur(2px)}
@@ -657,12 +663,11 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
   $$('.appbar button').forEach(b=>b.addEventListener('click',()=>{const a=b.dataset.act;log('BAR',a);
     if(a==='diagnostics')sendAct('diagnostics');else if(a==='help')speech("MOON online. Type a command, or say 'love you 3000 Moon' to unlock active operations.");
     else if(a==='ai_chat')el('cmd').focus();else if(a==='audio'){_muted=!_muted;b.classList.toggle('on',!_muted);speech(_muted?'Audio muted':'Audio live');}}));
-  // aspect ratio
+  // aspect ratio: AUTO = fill the current display exactly (no letterbox on any
+  // screen / orientation); presets (16:9,4:3,...) give a fixed framed ratio.
   const appEl=el('app'),arSel=el('arSel');
-  const RATIOS={'16:9':16/9,'4:3':4/3,'21:9':21/9,'1:1':1,'9:16':9/16,'3:4':3/4};
-  function bestFit(){const w=innerWidth-20,h=innerHeight-20;let best='auto',bs=-1;
-    for(const k in RATIOS){const r=RATIOS[k];const f=Math.min(w/(h*r),h/(w/r));if(f>bs){bs=f;best=k;}}return best;}
-  function setAR(v){if(v==='auto')v=bestFit();if(v==='fill')appEl.setAttribute('data-ar','fill');else appEl.setAttribute('data-ar',v);if(arSel&&arSel.value!==v&&v!=='auto')arSel.value=v;try{localStorage.setItem('moon_ar',v);}catch(_){}}
+  function setAR(v){if(v==='auto')v='fill';appEl.setAttribute('data-ar',v);
+    if(arSel&&arSel.value!==v&&v!=='auto')arSel.value=v;try{localStorage.setItem('moon_ar',v);}catch(_){}}
   if(arSel){let sv='auto';try{sv=localStorage.getItem('moon_ar')||'auto';}catch(_){}arSel.value=sv;setAR(sv);arSel.addEventListener('change',()=>setAR(arSel.value));}
   addEventListener('resize',()=>{if(arSel&&arSel.value==='auto')setAR('auto');});
   // accent
