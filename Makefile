@@ -20,15 +20,14 @@ serve:
 terminal:
 	$(PY) main.py start
 
-# Install MOON's model backend (Ollama) as a systemd service. Uses sudo when not root.
+# Install MOON's model backend (Ollama) as a service. Uses sudo when not root.
 install:
 	@echo "== Installing Ollama service (model backend for MOON) =="
-	@if [ "$(EUID)" = "0" ]; then ./scripts/install_ollama_service.sh; \
-	 else sudo ./scripts/install_ollama_service.sh; fi
+	@python3 scripts/install_ollama.py
 
 # Launch MOON anywhere: boots Ollama if needed, then MOON's terminal UI.
 start:
-	@bash ./moon-launch.sh $(MODE)
+	@python3 scripts/moon_launcher.py $(MODE)
 
 test:
 	$(PY) -m pytest tests -q

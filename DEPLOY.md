@@ -12,7 +12,8 @@ cd MOON
 sudo make install          # installs Ollama as a systemd service
 ```
 
-`make install` runs `scripts/install_ollama_service.sh`, which is **idempotent**:
+`make install` runs `scripts/install_ollama.py`, which is **idempotent** and
+cross-platform:
 - creates the unprivileged `ollama` system user (skips if present),
 - adds you to the `ollama` group for socket access,
 - detects an NVIDIA GPU (`nvidia-smi`) and enables CUDA automatically; CPU otherwise,
@@ -33,12 +34,12 @@ python3 -m venv .venv
 ```bash
 make start                # boots Ollama if needed, then MOON Terminal (:8777)
 # or:
-./moon-launch.sh dashboard   # Flask+SocketIO dashboard (:5000)
-./moon-launch.sh run "hi Moon"  # one-shot task via main.py
+python3 scripts/moon_launcher.py dashboard   # Flask+SocketIO dashboard (:5000)
+python3 scripts/moon_launcher.py run "hi Moon"  # one-shot task via main.py
 ```
 
-`moon-launch.sh` checks Ollama is reachable and starts the service if it can
-(needs root/`sudo` for that step only), then boots MOON.
+`moon_launcher.py` checks Ollama is reachable and starts the service if it can
+(needs root/`sudo` for the systemd step only), then boots MOON.
 
 ## 4. Pull MOON's models (first time)
 
