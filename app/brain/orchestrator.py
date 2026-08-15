@@ -35,7 +35,7 @@ from app.models.agent import AgentCard
 from app.models.message import Message
 from app.models.task import Task
 from app.services.embedding_service import EmbeddingService
-from app.services.llm_service import ChatMessage, LLMService
+from app.services.llm_service import ChatMessage, CompletionResult, LLMService
 from app.tools.api_requests import ApiRequestsTool
 from app.tools.browser import BrowserTool
 from app.tools.cv_and_memory_tools import (
@@ -157,6 +157,24 @@ class Orchestrator:
             )
             await self._llm_strong.setup()
             logger.info("Strong model enabled: %s @ %s", strong_name, strong_url)
+
+        # --- OpenAI-compatible FALLBACK backend ----------------------------
+        # If the local endpoint (Ollama) is down or a completion fails, MOON
+        # transparently retries against a hosted OpenAI-compatible API. The key
+        # comes from OPENAI_API_KEY (gitignored .env) and is never logged.
+        self._llm_fallback: LLMService | None = None
+        if self._settings.openai_api_key.strip():
+            self._llm_fallback = LLMService(
+                base_url=self._settings.openai_base_url.strip() or "https://api.openai.com/v1",
+                model_name=self._settings.openai_model.strip() or "gpt-4o-mini",
+                api_key=self._settings.openai_api_key.strip(),
+                temperature=cfg.temperature,
+                max_tokens=cfg.max_tokens,
+                timeout=cfg.timeout,
+                disable_thinking=True,  # hosted models are not thinking models
+            )
+            await self._llm_fallback.setup()
+            logger.info("Fallback backend enabled: %s @ %s", self._settings.openai_model, self._settings.openai_base_url)
 
         self._embeddings = EmbeddingService(
             dim=ecfg.dim, enabled=ecfg.enabled,
@@ -501,7 +519,11 @@ class Orchestrator:
         persona = self._agent_persona(task.agent_name)
         sys_p = f"{persona}\n\nAnswer concisely and accurately."
         ctx = await self._context.build(task=task, history=self._history, system_override=sys_p)
-        text, tokens = await self._llm.complete(ctx.prompt, max_tokens=self._settings.model_max_tokens, temperature=self._settings.model_temperature)
+        resp = await self._complete_with_fallback(
+            ctx.prompt, max_tokens=self._settings.model_max_tokens,
+            temperature=self._settings.model_temperature,
+        )
+        text, tokens = (resp.content or "").strip(), 0
         return text.strip(), tokens
 
     def _agent_persona(self, name: str) -> str:
@@ -746,6 +768,42 @@ class Orchestrator:
         self._last_tool_outputs = tool_outputs
         return final_text, total_tokens
 
+    async def _complete_with_fallback(
+        self, messages, *, tools=None, max_tokens=None, temperature=None
+    ) -> "CompletionResult":
+        """Run a completion on the primary (local) model, falling back to the
+        configured OpenAI-compatible backend if the local call fails or returns
+        no content. Never raises; returns a CompletionResult (possibly empty).
+
+        `messages` may be a list[ChatMessage] or a plain string (treated as a
+        single user message)."""
+        if isinstance(messages, str):
+            messages = [ChatMessage(role="user", content=messages)]
+
+        async def _try(llm):
+            if llm is None:
+                return None
+            try:
+                r = await llm.complete(
+                    messages, tools=tools, max_tokens=max_tokens, temperature=temperature
+                )
+                return r
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("LLM complete failed: %s", exc)
+                return None
+
+        primary = await _try(self._llm)
+        if primary is not None and (primary.content or "").strip():
+            return primary
+        if self._llm_fallback is not None:
+            logger.info("Primary model failed/empty -> falling back to %s", self._settings.openai_model)
+            fb = await _try(self._llm_fallback)
+            if fb is not None:
+                return fb
+        return primary if primary is not None else CompletionResult(
+            content=None, has_tool_calls=False, tool_calls=[]
+        )
+
     async def quick_reply(self, prompt: str, *, max_tokens: int = 1024, temperature: float = 0.7) -> str:
         if self._llm is None:
             await self.setup()
@@ -754,7 +812,7 @@ class Orchestrator:
         persona = self._system_persona()
         messages = [ChatMessage(role="system", content=persona), ChatMessage(role="user", content=prompt)]
         try:
-            resp = await self._llm.complete(messages, max_tokens=max_tokens, temperature=temperature)
+            resp = await self._complete_with_fallback(messages, max_tokens=max_tokens, temperature=temperature)
             text = (resp.content or "").strip()
         except Exception as exc:  # noqa: BLE001
             logger.warning("quick_reply failed: %s", exc)

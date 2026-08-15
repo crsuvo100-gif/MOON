@@ -42,6 +42,24 @@ class Settings(BaseSettings):
     model_max_tokens: int = 2048
     model_timeout: float = Field(default=120.0, description="Per-request timeout (seconds).")
 
+    # --- OpenAI-compatible FALLBACK backend ---------------------------------
+    # When the primary local endpoint (Ollama) is unavailable OR a completion
+    # fails, MOON falls back to a hosted OpenAI-compatible API (e.g. OpenAI).
+    # The key is read from OPENAI_API_KEY (kept in the gitignored .env, never
+    # committed). Leave blank to disable the fallback (local-only operation).
+    openai_api_key: str = Field(
+        default="",
+        description="API key for the OpenAI-compatible fallback backend (OPENAI_API_KEY). Blank = no fallback.",
+    )
+    openai_base_url: str = Field(
+        default="https://api.openai.com/v1",
+        description="Base URL of the OpenAI-compatible fallback endpoint.",
+    )
+    openai_model: str = Field(
+        default="gpt-4o-mini",
+        description="Model id to request from the fallback backend.",
+    )
+
     # Optional STRONG model for accuracy-critical work. When set, factual and
     # cyber-critical tasks (and the main-brain accuracy gate) are routed to it
     # for a higher-quality pass. Leave empty to use the default model only.
