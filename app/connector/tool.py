@@ -31,7 +31,7 @@ class GlobalConnectorTool(BaseTool):
     description = (
         "MOON's global connection layer. Register and call connections to external "
         "services, other AI agents, MCP tool-servers, webhooks, and websockets -- "
-        "all permission-gated. Actions: connect, list, call, health, disconnect."
+        "all permission-gated. Actions: connect, list, call, health, disconnect, federate."
     )
 
     def __init__(self, gateway: ConnectionGateway | None = None) -> None:
@@ -49,7 +49,9 @@ class GlobalConnectorTool(BaseTool):
             return await self._health()
         if action == "disconnect":
             return self._disconnect(kwargs)
-        return f"[global_connector] unknown action '{action}'. Use connect|list|call|health|disconnect."
+        if action == "federate":
+            return await self._federate(kwargs)
+        return f"[global_connector] unknown action '{action}'. Use connect|list|call|health|disconnect|federate."
 
     # -- actions ------------------------------------------------------------
     async def _connect(self, kw: dict) -> str:
@@ -140,3 +142,20 @@ class GlobalConnectorTool(BaseTool):
         if self._gw.remove(name):
             return f"[global_connector] removed '{name}'."
         return f"[global_connector] no connection named '{name}'."
+
+    async def _federate(self, kw: dict) -> str:
+        """Delegate a prompt to a registered peer AI agent; two-way federation.
+
+        Reuses the gateway's permission-gated call_agent(); folds the peer's
+        answer back as MOON's own result. This is how MOON 'connects to any AI
+        agent' and collaborates rather than just firing one-shot HTTP.
+        """
+        name = kw.get("name") or ""
+        message = kw.get("message") or ""
+        if not name or not message:
+            return "[global_connector] federate requires name (peer agent) and message."
+        res = await self._gw.call_agent(name, message, system=kw.get("system", ""))
+        if not res.get("ok"):
+            return f"[global_connector] federation with '{name}' failed: {res.get('error')}"
+        return (f"[global_connector] '{name}' (peer {res.get('agent')}) replied:\n"
+                f"{res.get('answer')}")

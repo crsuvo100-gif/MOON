@@ -127,3 +127,29 @@ class ConnectionGateway:
         if rec.kind == "mcp":
             return MCPConnector(rec.url)
         return HTTPConnector(rec.url, timeout=30.0)
+
+    # -- federation ---------------------------------------------------------
+    async def call_agent(self, name: str, message: str, *,
+                         system: str = "", history: list[dict] | None = None) -> dict[str, Any]:
+        """Delegate a prompt to a registered peer AI agent and return its answer.
+
+        This is MOON's two-way federation: she not only reaches OUT to the world
+        but can also ask another AI agent to do a subtask and fold the answer back
+        into her own reasoning. Permission-gated by the connection's scope.
+        Returns {"ok": bool, "answer": str, ...}.
+        """
+        from app.connector.connectors import CallResult  # noqa: F401
+        rec = self._conns.get(name)
+        if rec is None:
+            return {"ok": False, "error": f"no connection named '{name}'"}
+        if rec.kind != "agent":
+            return {"ok": False, "error": f"connection '{name}' is kind '{rec.kind}', not 'agent'"}
+        if not rec.enabled:
+            return {"ok": False, "error": f"connection '{name}' is disabled"}
+        from app.connector.connectors import AgentConnector
+        conn: AgentConnector = self.build_connector(rec)  # type: ignore[assignment]
+        res = await conn.ask(message, system=system, history=history)
+        self.set_status(name, "ok" if res.ok else f"error: {res.error}")
+        if res.ok:
+            return {"ok": True, "answer": (res.data or {}).get("answer", ""), "agent": rec.model}
+        return {"ok": False, "error": res.error}

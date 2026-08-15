@@ -145,3 +145,34 @@ async def test_tool_call_unknown_name():
         tool = GlobalConnectorTool(gateway=_gw(Path(d)))
         out = await tool.execute(action="call", name="nope", message="hi")
         assert "no connection" in out
+
+
+@pytest.mark.asyncio
+async def test_federation_with_real_peer_agent():
+    """MOON federates with a peer AI agent (her own Ollama) for real.
+
+    Registers Ollama's /v1 endpoint as a peer 'agent' connection, then delegates
+    a prompt via the `federate` action and asserts the peer actually replies with
+    real content. This is the live proof of 'connect to any AI agent'.
+    """
+    import os
+    # Only run against a live Ollama on loopback (MOON's own model host).
+    base = os.environ.get("MOON_TEST_OLLAMA", "http://127.0.0.1:11434/v1")
+    with tempfile.TemporaryDirectory() as d:
+        tool = GlobalConnectorTool(gateway=_gw(Path(d)))
+        out = await tool.execute(
+            action="connect", name="peer", url=base, kind="agent",
+            model="qwen3:0.6b",
+        )
+        assert "registered" in out
+        # Delegate a prompt to the peer agent.
+        res = await tool.execute(
+            action="federate", name="peer",
+            message="Reply with the single word: MOON",
+            system="You are a terse peer agent.",
+        )
+        assert "replied:" in res
+        # The peer must have produced real, non-empty content.
+        assert len(res.split("replied:", 1)[1].strip()) > 0
+        # And the gateway recorded success.
+        assert tool._gw.get("peer").last_status == "ok"
