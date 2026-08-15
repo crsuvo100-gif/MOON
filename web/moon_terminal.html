@@ -55,9 +55,15 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
 .fit{position:relative;z-index:2;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;padding:10px;overflow:hidden}
 .app{position:relative;width:100%;height:100%;max-width:100%;max-height:100%;
   --ar:auto;aspect-ratio:var(--ar);
-  display:grid;grid-template-columns:215px 1fr 235px;
-  grid-template-rows:54px 1fr 172px 46px 32px;
-  grid-template-areas:"header header header" "left2 center right" "left1 center right" "quick quick quick" "appbar appbar appbar";
+  display:grid;
+  grid-template-columns:248px minmax(0,1fr) 262px;
+  grid-template-rows:60px minmax(0,1fr) 150px 44px 30px;
+  grid-template-areas:
+    "header header header"
+    "left   center right"
+    "bottom bottom bottom"
+    "quick  quick  quick"
+    "appbar appbar appbar";
   gap:var(--gap);padding:12px}
 /* AUTO / FILL => use the whole display, no letterbox */
 .app[data-ar="fill"]{aspect-ratio:auto;width:100%;height:100%}
@@ -99,16 +105,19 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
 .header .title{flex:1}
 .header .title b{font-size:var(--lg);color:var(--text);letter-spacing:.20em}
 .header .title small{display:block;font-size:var(--xs);color:var(--label);letter-spacing:.18em}
-.chips{display:grid;grid-template-columns:repeat(3,auto);gap:6px 12px}
+.chips{display:flex;flex-wrap:wrap;gap:3px 9px;justify-content:flex-end}
 .chip{display:flex;flex-direction:column;align-items:flex-end;font-size:var(--xs);color:var(--label);white-space:nowrap;
-  padding:3px 9px;border:1px solid var(--accent-dim);border-radius:var(--r);
+  padding:2px 7px;border:1px solid var(--accent-dim);border-radius:var(--r);
   background:linear-gradient(180deg,rgba(255,40,40,.10),rgba(0,0,0,.25));box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 0 8px rgba(255,0,0,.12)}
 .chip b{color:var(--accent-soft);font-size:var(--sm);font-family:var(--ff-title);font-weight:700;text-shadow:0 0 6px var(--accent-soft);letter-spacing:.04em}
 .chip .sub{font-size:var(--xs);color:var(--ok);margin-left:4px}
 .chip.alert b{color:var(--warn)}
 
-/* 02 left nav */
-.left-nav{grid-area:left2}
+/* 02 left column (nav + telemetry + config + power + logs) */
+.left{grid-area:left;display:flex;flex-direction:column;gap:var(--gap);min-height:0}
+.left .nav-panel{flex:none}
+.left .scroll{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:var(--gap)}
+.left .logs{max-height:170px}
 .nav{display:flex;flex-direction:column;gap:1px}
 .nav button{all:unset;cursor:pointer;display:flex;gap:8px;align-items:center;font-family:var(--ff);
   font-size:var(--sm);color:var(--label);padding:4px 8px;border-left:2px solid transparent;text-transform:uppercase;letter-spacing:.04em}
@@ -123,7 +132,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
 .neural-frame{flex:1;position:relative;display:flex;flex-direction:column;min-height:0}
 .core-hero{flex:1;position:relative;display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:var(--gap);min-height:0}
 .core-hero .col{display:flex;flex-direction:column;align-items:stretch;gap:4px;overflow:auto}
-.core-stage{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0}
+.core-stage{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;flex:1}
 .core-img{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(360px,96%);height:min(360px,96%);
   object-fit:contain;opacity:.4;filter:drop-shadow(0 0 18px var(--accent-soft));pointer-events:none;z-index:0}
 #orbCanvas{width:min(330px,92%);height:min(330px,92%);display:block;position:relative;z-index:1}
@@ -170,7 +179,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
 .banner{text-align:center;font-size:var(--xs);color:var(--accent-soft);letter-spacing:.25em;padding:3px;border:1px solid var(--accent-dim);border-radius:var(--r);background:rgba(255,40,40,.06)}
 
 /* 04 right */
-.right{grid-area:right;display:flex;flex-direction:column;gap:var(--gap);overflow:auto}
+.right{grid-area:right;display:flex;flex-direction:column;gap:var(--gap);overflow:auto;min-height:0}
 .donut{display:flex;align-items:center;gap:8px}
 .donut canvas{width:74px;height:74px}
 .legend{font-size:var(--xs);color:var(--label);line-height:1.45}
@@ -227,9 +236,9 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
 .lightbox .close{position:absolute;top:16px;right:20px;cursor:pointer;color:var(--accent-soft);font-size:24px;border:1px solid var(--accent-dim);border-radius:6px;padding:2px 12px}
 
 @media(max-width:1150px){
-  .app{grid-template-columns:1fr;grid-template-rows:auto auto auto auto auto auto auto;
-    grid-template-areas:"header" "left2" "center" "left1" "right" "bottom" "quick" "appbar";aspect-ratio:auto!important}
-  .left-nav,.left-tel,.right,.bottom{overflow:visible}
+  .app{grid-template-columns:1fr;grid-template-rows:auto auto auto auto auto auto;
+    grid-template-areas:"header" "left" "center" "right" "bottom" "quick" "appbar";aspect-ratio:auto!important}
+  .left .scroll{overflow:visible}.center,.right,.bottom{overflow:visible}
   .bottom{grid-template-columns:repeat(2,1fr)}.core-hero{grid-template-columns:1fr}}
 @media(max-width:680px){
   .chips{grid-template-columns:repeat(2,auto)}.bottom{grid-template-columns:1fr}
@@ -244,8 +253,8 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
   <!-- 01 HEADER -->
   <header class="header">
     <div class="logo"></div>
-    <div class="brand"><b>MOON NEURAL CORE</b><small>SENTIENT OS v2.1.0 · QUANTUM AI MAINFRAME</small></div>
-    <div class="title"><b>MOON NEURAL CORE INTERFACE</b><small>HUMAN BRAIN NEURAL WORKFLOW · MOON AGENT ORCHESTRATOR</small></div>
+    <div class="brand"><b>MOON</b><small>NEURAL CORE</small></div>
+    <div class="title"><b>NEURAL CORE INTERFACE</b><small>SENTIENT OS v2.1.0 · QUANTUM AI MAINFRAME</small></div>
     <div class="chips" id="chips">
       <div class="chip"><span>CORE TEMP</span><b id="cTemp">--<span class="sub" id="cTempT">OPTIMAL</span></b></div>
       <div class="chip"><span>QUANTUM LOAD</span><b id="cLoad">--</b></div>
@@ -257,78 +266,83 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
     </div>
   </header>
 
-  <!-- 02 LEFT NAVIGATION -->
-  <aside class="left-nav panel">
-    <h3>SYSTEM MODULES</h3>
-    <nav class="nav" id="nav">
-      <button class="active"><span class="ic">▣</span><span>OVERVIEW<span class="sub">SYSTEM STATUS</span></span></button>
-      <button><span class="ic">◈</span><span>NEURAL MAP<span class="sub">BRAIN TOPOLOGY</span></span></button>
-      <button><span class="ic">❖</span><span>COGNITIVE CORE<span class="sub">AI ARCHITECTURE</span></span></button>
-      <button><span class="ic">▤</span><span>MEMORY MATRIX<span class="sub">DATA REPOSITORY</span></span></button>
-      <button><span class="ic">⚙</span><span>LEARNING ENGINE<span class="sub">ADAPTIVE AI</span></span></button>
-      <button><span class="ic">⊞</span><span>PROCESSOR ARRAY<span class="sub">CORE DISTRIBUTION</span></span></button>
-      <button><span class="ic">⇄</span><span>NETWORK PROTOCOLS<span class="sub">COMM & ROUTING</span></span></button>
-      <button><span class="ic">⛨</span><span>SECURITY GRID<span class="sub">DEFENSE MATRIX</span></span></button>
-      <button><span class="ic">≣</span><span>SYSTEM LOGS<span class="sub">EVENT STREAM</span></span></button>
-      <button><span class="ic">⚒</span><span>CONFIGURATION<span class="sub">PREFERENCES</span></span></button>
-    </nav>
+  <!-- 02 LEFT COLUMN: SYSTEM MODULES · TELEMETRY · CONFIG · POWER · LOGS -->
+  <aside class="left">
+    <section class="panel nav-panel">
+      <h3>SYSTEM MODULES</h3>
+      <nav class="nav" id="nav">
+        <button class="active"><span class="ic">▣</span><span>OVERVIEW<span class="sub">SYSTEM STATUS</span></span></button>
+        <button><span class="ic">◈</span><span>NEURAL MAP<span class="sub">BRAIN TOPOLOGY</span></span></button>
+        <button><span class="ic">❖</span><span>COGNITIVE CORE<span class="sub">AI ARCHITECTURE</span></span></button>
+        <button><span class="ic">▤</span><span>MEMORY MATRIX<span class="sub">DATA REPOSITORY</span></span></button>
+        <button class="active"><span class="ic">⚙</span><span>LEARNING ENGINE<span class="sub">ADAPTIVE AI</span></span></button>
+        <button><span class="ic">⊞</span><span>PROCESSOR ARRAY<span class="sub">CORE DISTRIBUTION</span></span></button>
+        <button><span class="ic">⇄</span><span>NETWORK PROTOCOLS<span class="sub">COMM & ROUTING</span></span></button>
+        <button><span class="ic">⛨</span><span>SECURITY GRID<span class="sub">DEFENSE MATRIX</span></span></button>
+        <button><span class="ic">≣</span><span>SYSTEM LOGS<span class="sub">EVENT STREAM</span></span></button>
+        <button><span class="ic">⚒</span><span>CONFIGURATION<span class="sub">PREFERENCES</span></span></button>
+      </nav>
+    </section>
+    <div class="scroll">
+      <section class="panel">
+        <h3>NEURAL TELEMETRY <span class="tag">OPTIMAL</span></h3>
+        <div class="row"><span>Neural Density</span><b id="tDen">--</b></div><div class="bar"><i id="tDenB"></i></div>
+        <div class="row"><span>Synaptic Activity</span><b id="tSyn">--</b></div><div class="bar"><i id="tSynB"></i></div>
+        <div class="row"><span>Signal Frequency</span><b id="tFreq">--</b></div><div class="bar"><i id="tFreqB"></i></div>
+        <div class="row"><span>Network Latency</span><b id="tLat">--</b></div><div class="bar"><i id="tLatB"></i></div>
+        <div class="row"><span>Neural Density %</span><b id="ntDen">--</b></div>
+        <div class="row"><span>Synaptic Peta/s</span><b id="ntSyn">--</b></div>
+        <div class="row"><span>Signal Hz</span><b id="ntFreq">--</b></div>
+        <div class="row"><span>Net Latency ms</span><b id="ntLat">--</b></div>
+      </section>
+      <section class="panel">
+        <h3>CORE CONFIGURATION</h3>
+        <div class="row"><span>Neural Cores</span><b id="tCores">16,384</b></div>
+        <div class="row"><span>Quantum Nodes</span><b id="tNodes">1,048,576</b></div>
+        <div class="row"><span>Architecture</span><b id="tArch">NEURO-SYNAPTIC</b></div>
+        <div class="row"><span>Topology</span><b>DYNAMIC MESH</b></div>
+        <div class="row"><span>Neural Cores (calc)</span><b id="ccCores">16,384</b></div>
+        <div class="row"><span>Quantum Nodes (calc)</span><b id="ccNodes">1,048,576</b></div>
+        <div class="row"><span>Memory Clusters</span><b id="ccMem">--</b></div>
+      </section>
+      <section class="panel">
+        <h3>POWER MANAGEMENT</h3>
+        <div class="row"><span>Power Output</span><b id="pOut">--</b></div><div class="bar"><i id="pOutB"></i></div>
+        <div class="row"><span>Energy Reserves</span><b id="pEnergy">--</b></div><div class="bar"><i id="pEnergyB"></i></div>
+        <div class="row"><span>Coolant Eff.</span><b id="pCool">--</b></div><div class="bar"><i id="pCoolB"></i></div>
+        <div class="row"><span>Core Temp</span><b id="pTemp">--</b></div><div class="bar"><i id="pTempB"></i></div>
+      </section>
+      <section class="panel">
+        <h3>SYSTEM LOGS <span class="tag">REAL-TIME EVENT STREAM</span></h3>
+        <div class="logs" id="logs"></div>
+      </section>
+    </div>
   </aside>
 
-  <!-- 03 CENTRAL NEURAL FRAME -->
+  <!-- 03 CENTRAL NEURAL FRAME (orb + matrix + pipeline) -->
   <main class="center">
     <section class="panel neural-frame">
       <h3>03 — CENTRAL NEURAL FRAME <span class="tag" id="agentInfo">-- agents</span></h3>
-      <div class="core-hero">
-        <div class="col">
-          <h3 style="font-size:var(--xs);margin-bottom:2px">03.02 LOBE TELEMETRY</h3>
-          <div class="lobes">
-            <div class="lobe"><div class="n">FRONTAL</div><div class="v" id="lbFrontV">--</div></div>
-            <div class="lobe"><div class="n">TEMPORAL</div><div class="v" id="lbTempV">--</div></div>
-            <div class="lobe"><div class="n">PARIETAL</div><div class="v" id="lbPariV">--</div></div>
-            <div class="lobe"><div class="n">LIMBIC</div><div class="v" id="lbLimbV">--</div></div>
-            <div class="lobe"><div class="n">OCCIPITAL</div><div class="v" id="lbOccV">--</div></div>
-            <div class="lobe"><div class="n">CEREBELLUM</div><div class="v" id="lbCerV">--</div></div>
+      <div class="core-stage">
+        <img class="core-img" src="/moon_core.png" alt="MOON Neural Core">
+        <div class="core-cap">03.01 — MOON NEURAL CORE</div>
+        <div class="floor"></div>
+        <div class="beam"></div>
+        <canvas id="orbCanvas"></canvas>
+        <canvas class="particles" id="particles"></canvas>
+        <div class="scan"></div>
+        <div class="lobe-ring" id="lobeRing"></div>
+        <div class="matrix-label">QUANTUM NEURAL MATRIX<br><small>ENTANGLEMENT VISUALIZATION</small></div>
+        <div class="platform"></div>
+        <div class="core-overlay">
+          <div class="conv">03.04 NEURAL CONVERGENCE <b id="convPct">0.0%</b></div>
+          <div class="conv-bar"><i id="convBar"></i></div>
+          <div class="mat">MOON IS ACTIVE AND AWARE</div>
+          <div class="state-line">
+            <span class="badge" data-st="idle">IDLE</span><span class="badge" data-st="listening">LISTENING</span>
+            <span class="badge" data-st="thinking">THINKING</span><span class="badge" data-st="executing">EXECUTING</span>
+            <span class="badge" data-st="speaking">SPEAKING</span>
           </div>
-          <h3 style="font-size:var(--xs);margin-top:6px">TOPOLOGY</h3>
-          <div class="row"><span>Nodes</span><b id="tpNodes">--</b></div>
-          <div class="row"><span>Connections</span><b id="tpConn">--</b></div>
-          <div class="row"><span>Density</span><b id="tpDen">--</b></div>
-          <div class="row"><span>Plasticity</span><b id="tpPlas">ADAPTIVE</b></div>
-          <div class="row"><span>Learning Rate</span><b id="tpLR">0.000785</b></div>
-          <div class="row"><span>Network Type</span><b id="tpType">SELF-ORGANIZING</b></div>
-        </div>
-        <div class="core-stage">
-          <img class="core-img" src="/moon_core.png" alt="MOON Neural Core">
-          <div class="core-cap">03.01 — MOON NEURAL CORE</div>
-          <div class="floor"></div>
-          <div class="beam"></div>
-          <canvas id="orbCanvas"></canvas>
-          <canvas class="particles" id="particles"></canvas>
-          <div class="scan"></div>
-          <div class="lobe-ring" id="lobeRing"></div>
-          <div class="matrix-label">QUANTUM NEURAL MATRIX<br><small>ENTANGLEMENT VISUALIZATION</small></div>
-          <div class="platform"></div>
-          <div class="core-overlay">
-            <div class="conv">03.04 NEURAL CONVERGENCE <b id="convPct">0.0%</b></div>
-            <div class="conv-bar"><i id="convBar"></i></div>
-            <div class="mat">MOON IS ACTIVE AND AWARE</div>
-            <div class="state-line">
-              <span class="badge" data-st="idle">IDLE</span><span class="badge" data-st="listening">LISTENING</span>
-              <span class="badge" data-st="thinking">THINKING</span><span class="badge" data-st="executing">EXECUTING</span>
-              <span class="badge" data-st="speaking">SPEAKING</span>
-            </div>
-          </div>
-        </div>
-        <div class="col">
-          <h3 style="font-size:var(--xs);margin-bottom:2px">NEURAL TELEMETRY</h3>
-          <div class="row"><span>Neural Density</span><b id="ntDen">--</b></div>
-          <div class="row"><span>Synaptic Act.</span><b id="ntSyn">--</b></div>
-          <div class="row"><span>Signal Freq</span><b id="ntFreq">--</b></div>
-          <div class="row"><span>Net Latency</span><b id="ntLat">--</b></div>
-          <h3 style="font-size:var(--xs);margin-top:6px">CORE CONFIG</h3>
-          <div class="row"><span>Neural Cores</span><b id="ccCores">16,384</b></div>
-          <div class="row"><span>Quantum Nodes</span><b id="ccNodes">1,048,576</b></div>
-          <div class="row"><span>Memory Clusters</span><b id="ccMem">--</b></div>
         </div>
       </div>
       <div class="banner">03.05 — QUANTUM NEURAL MATRIX · ENTANGLEMENT VISUALIZATION · ENERGY PLATFORM ONLINE</div>
@@ -343,10 +357,20 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
   <aside class="right">
     <section class="panel">
       <h3>NEURAL NETWORK TOPOLOGY</h3>
-      <div class="row"><span>Active Nodes</span><b id="rtNodes">--</b></div>
-      <div class="row"><span>Stability</span><b id="rtStab">100%</b></div>
       <div class="donut"><canvas id="topoDonut" width="74" height="74"></canvas>
-        <div class="legend"><div>MESH <b id="topoMesh">--</b></div><div>SYNAPTIC <b id="topoSyn">--</b></div></div></div>
+        <div class="legend">
+          <div>NODES <b id="rtNodes">--</b></div>
+          <div>NODES (calc) <b id="tpNodes">--</b></div>
+          <div>CONNECTIONS <b id="tpConn">--</b></div>
+          <div>DENSITY <b id="tpDen">--</b></div>
+          <div>STABILITY <b id="rtStab">100%</b></div>
+          <div>PLASTICITY <b id="tpPlas">ADAPTIVE</b></div>
+          <div>LEARNING RATE <b id="tpLR">0.000785</b></div>
+          <div>NETWORK TYPE <b id="tpType">SELF-ORGANIZING</b></div>
+          <div>MESH <b id="topoMesh">--</b></div>
+          <div>SYNAPTIC <b id="topoSyn">--</b></div>
+        </div>
+      </div>
     </section>
     <section class="panel">
       <h3>MEMORY CORE STATUS</h3>
@@ -374,29 +398,10 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
     </section>
   </aside>
 
-  <!-- 05 LEFT TELEMETRY -->
-  <aside class="left-tel panel">
-    <h3>05 — NEURAL TELEMETRY</h3>
-    <div class="row"><span>Neural Density</span><b id="tDen">--</b></div><div class="bar"><i id="tDenB"></i></div>
-    <div class="row"><span>Synaptic Activity</span><b id="tSyn">--</b></div><div class="bar"><i id="tSynB"></i></div>
-    <div class="row"><span>Signal Frequency</span><b id="tFreq">--</b></div><div class="bar"><i id="tFreqB"></i></div>
-    <div class="row"><span>Network Latency</span><b id="tLat">--</b></div><div class="bar"><i id="tLatB"></i></div>
-    <h3 style="margin-top:6px">CORE CONFIGURATION</h3>
-    <div class="row"><span>Neural Cores</span><b id="tCores">16,384</b></div>
-    <div class="row"><span>Quantum Nodes</span><b id="tNodes">1,048,576</b></div>
-    <div class="row"><span>Architecture</span><b id="tArch">NEURO-SYNAPTIC</b></div>
-    <h3 style="margin-top:6px">POWER MANAGEMENT</h3>
-    <div class="row"><span>Power Output</span><b id="pOut">--</b></div><div class="bar"><i id="pOutB"></i></div>
-    <div class="row"><span>Energy Reserves</span><b id="pEnergy">--</b></div><div class="bar"><i id="pEnergyB"></i></div>
-    <div class="row"><span>Coolant Eff.</span><b id="pCool">--</b></div><div class="bar"><i id="pCoolB"></i></div>
-    <div class="row"><span>Core Temp</span><b id="pTemp">--</b></div><div class="bar"><i id="pTempB"></i></div>
-    <h3 style="margin-top:6px">SYSTEM LOGS <span class="tag">REAL-TIME EVENT STREAM</span></h3>
-    <div class="logs" id="logs" style="max-height:110px"></div>
-  </aside>
+  <!-- 05 (merged into LEFT column above) -->
 
-  <!-- 06 BOTTOM ANALYTICS -->
+  <!-- 06 BOTTOM ANALYTICS STRIP (full-width, 7 widgets) -->
   <section class="bottom">
-    <div class="panel widget"><h3>SYSTEM LOGS</h3><div class="logs" id="logs2" style="flex:1"></div></div>
     <div class="panel widget"><h3>SYNAPTIC SPECTRUM</h3><canvas id="wavA"></canvas></div>
     <div class="panel widget"><h3>REAL-TIME NEURAL FEED</h3><canvas id="wavB"></canvas></div>
     <div class="panel widget"><h3>MEMORY CORE VISUAL.</h3><canvas id="memGauge" width="90" height="90"></canvas></div>
@@ -409,6 +414,11 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9001;b
     <div class="panel widget"><h3>VOICE SYNTHESIS ANALYZER</h3><canvas id="voiceA"></canvas>
       <div class="row" style="font-size:var(--xs)"><span>Model</span><b>MOON-SYNTH v5.2</b></div>
       <div class="row" style="font-size:var(--xs)"><span>Status</span><b id="voxStat">OPTIMAL</b></div></div>
+    <div class="panel widget"><h3>SYSTEM EFFICIENCY</h3>
+      <div style="display:flex;align-items:center;gap:8px;flex:1;justify-content:center">
+        <canvas id="effG" width="86" height="86"></canvas>
+        <div style="font-family:var(--ff-title);font-size:var(--lg);color:var(--accent-soft);text-shadow:0 0 8px var(--accent-soft)" id="effLab">--%</div>
+      </div></div>
     <div class="panel widget"><h3>QUANTUM CHANNELS</h3>
       <div class="row" style="font-size:var(--xs)"><span>Active</span><b id="qcActive">128</b></div>
       <div class="row" style="font-size:var(--xs)"><span>Entangled</span><b id="qcEnt">1.37M</b></div>
