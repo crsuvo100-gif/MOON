@@ -105,6 +105,37 @@ h3,.nav,.metric strong,.btn,.title,.bcell h4,.logo,.aspectTitle,.ratio,.navcol .
 .appframe .bl{left:0;bottom:0;border-right:0;border-top:0}.appframe .br{right:0;bottom:0;border-left:0;border-top:0}
 /* BRIGHTER + RICHER frame upgrade */
 #app{border:2px solid var(--red);box-shadow:0 0 70px rgba(255,0,0,.35),0 0 140px rgba(255,20,20,.15),inset 0 0 90px rgba(255,0,0,.10)}
+
+/* ===== PER-PANEL SCAN + GLITCH ===== */
+/* each panel gets a thin red scan line that travels down its own body */
+.panel:after{content:"";position:absolute;left:0;right:0;top:0;height:22%;pointer-events:none;z-index:6;
+  background:linear-gradient(180deg,transparent,rgba(255,80,80,.10) 40%,rgba(255,120,120,.42) 50%,rgba(255,80,80,.10) 60%,transparent);
+  transform:translateY(-120%);opacity:0;animation:panelScan 6.5s linear infinite;mix-blend-mode:screen}
+.panel:nth-child(2n):after{animation-duration:8.2s;animation-delay:-2.1s}
+.panel:nth-child(3n):after{animation-duration:5.4s;animation-delay:-3.7s}
+@keyframes panelScan{0%{transform:translateY(-120%);opacity:0}5%{opacity:.8}55%{opacity:.8}70%{transform:translateY(420%);opacity:0}100%{transform:translateY(420%);opacity:0}}
+/* occasional glitch: brief RGB-split + jitter, staggered per panel */
+.panel.glitch{animation:panelGlitch .34s steps(2,end) 1}
+@keyframes panelGlitch{
+  0%{transform:translate(0,0);filter:none}
+  20%{transform:translate(-2px,1px);filter:drop-shadow(2px 0 #f0f) drop-shadow(-2px 0 #0ff)}
+  45%{transform:translate(2px,-1px);filter:drop-shadow(-2px 0 #f0f) drop-shadow(2px 0 #0ff)}
+  70%{transform:translate(-1px,0);filter:drop-shadow(1px 0 #f0f) drop-shadow(-1px 0 #0ff)}
+  100%{transform:translate(0,0);filter:none}
+}
+
+/* ===== BOOT-UP SEQUENCE ===== */
+#boot{position:absolute;inset:0;z-index:200;background:#040000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  font-family:var(--ff-title);color:#ff6b6b;text-align:center;transition:opacity .8s;overflow:hidden}
+#boot.gone{opacity:0;pointer-events:none}
+#boot .blogo{font-size:clamp(22px,4vw,56px);letter-spacing:.16em;text-shadow:0 0 22px #f00;font-weight:900}
+#boot .bsub{color:#ff9a9a;font-size:clamp(9px,1vw,14px);letter-spacing:.32em}
+#boot .bbar{width:min(60%,520px);height:8px;border:1px solid #6a1212;background:#0a0000;margin-top:6px}
+#boot .bbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff2a2a,#ff7a4d);box-shadow:0 0 12px #f33;transition:width .25s ease}
+#boot .bsteps{margin-top:10px;font-size:clamp(8px,.8vw,12px);color:#c96;min-height:1.2em;letter-spacing:.06em;font-family:'Courier New',monospace}
+#boot .bsteps b{color:#5cff88}
+#boot .bcursor{display:inline-block;width:8px;height:13px;background:#ff4d3a;margin-left:3px;animation:blink 1s steps(2) infinite;vertical-align:-1px}
+@keyframes blink{50%{opacity:0}}
 .energy{box-shadow:inset 0 0 80px rgba(255,0,0,.18),0 0 50px rgba(255,0,0,.30)}
 .energy:before{border-top:2px solid rgba(255,120,120,.95);border-bottom:2px solid rgba(255,120,120,.35);box-shadow:0 0 12px #f55}
 .appframe i{border-width:4px;filter:drop-shadow(0 0 14px #ff2a2a)}
@@ -194,6 +225,12 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
 </head>
 <body>
 <div id="app">
+<div id="boot">
+  <div class="blogo">MOON</div>
+  <div class="bsub">NEURAL CORE INTERFACE · QUANTUM MAINFRAME</div>
+  <div class="bbar"><i id="bootBar"></i></div>
+  <div class="bsteps" id="bootSteps">INITIALIZING<span class="bcursor"></span></div>
+</div>
 <div class="grid"></div><div class="scan"></div><div class="hotpulse"></div><div class="gscan"></div>
 <canvas class="fxparticles" id="fxParticles"></canvas>
 <div class="gridfloor"></div>
@@ -463,7 +500,7 @@ function connect(){
 }
 function handle(m){
   switch(m.type){
-    case "ready": case "status": applyStatus(m.status||m); addLog("[SYSTEM] status received."); if((m.status||m).load!=null) window.MOON_UI.onCorePulse && window.MOON_UI.onCorePulse((m.status||m).load/180); break;
+    case "ready": case "status": applyStatus(m.status||m); addLog("[SYSTEM] status received."); if((m.status||m).load!=null) window.MOON_UI.onCorePulse && window.MOON_UI.onCorePulse((m.status||m).load/180); if(m.type==="ready" && typeof window.MOON_UI.onReady==="function") window.MOON_UI.onReady(m); break;
     case "assistant_start": setState("SPEAKING"); addLog("[MOON] thinking…"); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.9); break;
     case "workflow": setState((m.stage||"").toUpperCase(), {stage:m.stage}); addLog("[FLOW] "+(m.stage||"")+": "+(m.detail||"")); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.7); break;
     case "assistant_chunk":
@@ -721,6 +758,49 @@ setIdle(true); _idleTimer=setTimeout(()=>setIdle(true), 9000);
 // any backend activity also keeps MOON "awake"
 const _origOnMsg = window.MOON_UI.onMessage;
 if(typeof _origOnMsg==="function"){ window.MOON_UI.onMessage=(d)=>{ wakeFromIdle(); return _origOnMsg(d); }; }
+
+/* ===== BOOT-UP SEQUENCE (plays once, on first WS connect) ===== */
+const BOOT_STEPS=[
+  "QUANTUM LINK HANDSHAKE",
+  "LOADING NEURAL WEIGHTS",
+  "SYNAPTIC PATHWAYS ONLINE",
+  "MEMORY BUS SYNC",
+  "VOICE ENGINE READY",
+  "MOON CORE AWAKE",
+];
+let _booted=false;
+function runBoot(){
+  const boot=el("boot"); if(!boot||_booted) return; _booted=true;
+  const bar=el("bootBar"), steps=el("bootSteps");
+  let i=0;
+  (function next(){
+    if(i>=BOOT_STEPS.length){
+      bar.style.width="100%";
+      steps.innerHTML='<b>MOON ONLINE</b><span class="bcursor"></span>';
+      setTimeout(()=>{ boot.classList.add("gone"); setTimeout(()=>boot.remove(),900); }, 650);
+      return;
+    }
+    bar.style.width=Math.round(((i+1)/BOOT_STEPS.length)*100)+"%";
+    steps.innerHTML=BOOT_STEPS.slice(0,i+1).map((s,k)=>k===i?("<b>"+s+"</b>"):s).join(" · ")+'<span class="bcursor"></span>';
+    i++; setTimeout(next, 300+Math.random()*220);
+  })();
+}
+/* ===== PER-PANEL GLITCH (staggered, random intervals) ===== */
+function glitchLoop(){
+  const panels=[...document.querySelectorAll(".panel")];
+  if(panels.length){
+    const p=panels[Math.floor(Math.random()*panels.length)];
+    p.classList.add("glitch");
+    setTimeout(()=>p.classList.remove("glitch"), 360);
+  }
+  setTimeout(glitchLoop, 1400+Math.random()*2600);
+}
+glitchLoop();
+// play boot as soon as the WS connects (ready frame) — also safe if already open
+if(typeof window.MOON_UI!=="undefined"){
+  const _origReady=window.MOON_UI.onReady;
+  window.MOON_UI.onReady=function(d){ runBoot(); if(typeof _origReady==="function") return _origReady(d); };
+}
 
 connect();
 
