@@ -7,7 +7,7 @@
 <style>
 :root{
   --bg:#020000;--panel:rgba(8,0,0,.88);--red:#ff1c1c;--hot:#ff5353;
-  --line:#e21b1b;--line2:#ff3a3a;--text:#ff5a5a;--muted:#ff8a8a;
+  --line:#e21b1b;--line2:#ff3a3a;--text:#ff6e6e;--muted:#ff9a9a;
   --green:#5cff88;--amber:#ffb64a;--blue:#7ba7ff;
   --ff:'Rajdhani','Share Tech Mono','Courier New',sans-serif;
   --ff-title:'Orbitron','Rajdhani',sans-serif;
@@ -56,8 +56,8 @@ h3{text-shadow:0 0 10px rgba(255,30,30,.8),0 0 4px rgba(255,80,80,.5)}
 @keyframes cortex{0%,100%{box-shadow:0 0 20px rgba(255,0,0,.8),inset 0 0 24px rgba(255,0,0,.55)}50%{box-shadow:0 0 36px rgba(255,60,60,1),inset 0 0 34px rgba(255,40,40,.8)}}
 .avatar .core{animation:cortex 2.4s ease-in-out infinite}
 /* subtle CRT flicker on whole app */
-@keyframes crt{0%,100%{opacity:1}97%{opacity:1}98%{opacity:.93}99%{opacity:1}}
-#app{animation:crt 6s steps(60) infinite}
+@keyframes crt{0%,100%{opacity:1}50%{opacity:.97}}
+#app{animation:crt 8s ease-in-out infinite}
 .title b{text-shadow:0 0 14px var(--red),0 0 26px rgba(255,0,0,.5)}
 /* MEDIUM + BOLD typography upgrade (terminal fonts medium weight, titles/labels/buttons bold) */
 h3,.nav,.metric strong,.btn,.title,.bcell h4,.logo,.aspectTitle,.ratio,.navcol .nav{font-weight:700}
@@ -65,7 +65,7 @@ h3,.nav,.metric strong,.btn,.title,.bcell h4,.logo,.aspectTitle,.ratio,.navcol .
 .nav small,.metric em,.tag,.sub,.stats,.stats b{font-weight:500}
 .led{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff3a3a;box-shadow:0 0 8px #f22;margin-right:6px;animation:ledblink 1.6s ease-in-out infinite}
 @keyframes ledblink{0%,100%{opacity:1}50%{opacity:.35}}
-@keyframes hotpulse{0%,100%{box-shadow:inset 0 0 120px rgba(255,0,0,.06)}50%{box-shadow:inset 0 0 200px rgba(255,0,0,.16)}}
+@keyframes hotpulse{0%,100%{box-shadow:inset 0 0 120px rgba(255,0,0,.08)}50%{box-shadow:inset 0 0 190px rgba(255,0,0,.18)}}
 /* ADVANCED FRAME (richer, ornate) */
 #app{border-width:2px}
 #app:before,#app:after{content:"";position:absolute;width:7%;height:7%;pointer-events:none;z-index:90;border:2px solid var(--red);box-shadow:0 0 14px rgba(255,0,0,.5)}

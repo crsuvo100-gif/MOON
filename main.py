@@ -106,7 +106,8 @@ def main() -> None:
     elif args.cmd == "terminal":
         _run_terminal()
     else:
-        ap.print_help()
+        # No subcommand (or unknown) -> Moon Terminal is the DEFAULT interface.
+        _run_terminal()
 
 
 if __name__ == "__main__":
