@@ -793,7 +793,7 @@ class Orchestrator:
                     if on_event:
                         try:
                             await on_event({"stage": "tool_call", "detail": call.get("name", "tool")})
-                        except Exception:
+                        except Exception:  # noqa: BLE001
                             pass
                     result = await self._tools.run(call["name"], args, agent=agent)
                     messages.append(ChatMessage(role="tool", content=json.dumps(result.to_dict(), default=str)))
@@ -802,7 +802,16 @@ class Orchestrator:
                     if 12 < len(out) < 600:
                         tool_outputs.append(out)
                 continue
-            final_text = resp.content
+            final_text = resp.content or ""
+            # A per-agent model can occasionally return an EMPTY body (cold-load /
+            # transient). Rescue it instead of failing the whole task: retry once
+            # with the shared/strong LLM so the user always gets a real answer.
+            if not final_text.strip() and llm is not self._llm:
+                try:
+                    resp2 = await self._llm.complete(messages, tools=None)
+                    final_text = resp2.content or ""
+                except Exception as exc:  # noqa: BLE001
+                    logger.info("empty-answer rescue skipped: %s", exc)
             self._history.append(Message.assistant(final_text or ""))
             break
         else:
