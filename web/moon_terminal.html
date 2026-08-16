@@ -172,7 +172,21 @@ header{position:absolute;left:.7%;right:.7%;top:.7%;height:9.1%;display:grid;gri
 .mini{position:absolute;left:8px;right:8px;bottom:8px;height:29%;border-bottom:1px solid #631010}
 .bars{display:flex;gap:2px;height:100%;align-items:end}.bars i{flex:1;display:block;background:#d91616;min-height:2px;animation:bar 1.15s ease-in-out infinite alternate}.bars i:nth-child(2n){animation-delay:-.3s}.bars i:nth-child(3n){animation-delay:-.7s}@keyframes bar{to{height:90%}}
 #center{position:relative;min-width:0;min-height:0}
-.brainPanel{position:absolute;inset:0 0 25.5% 0;background:radial-gradient(circle at 50% 46%,rgba(255,0,0,.12),rgba(3,3,3,.97) 55%)}#brain{position:absolute;inset:0;width:100%;height:100%}
+.brainPanel{position:absolute;inset:0 0 25.5% 0;background:radial-gradient(circle at 50% 46%,rgba(255,0,0,.12),rgba(3,3,3,.97) 55%)}#brain{position:absolute;inset:0;width:100%;height:100%;opacity:0}
+/* MOON neural core replaced by attached holographic sphere, idle-animated 3D */
+.coreSphere{width:46%;top:47%}
+.coreSphere img{width:100%;height:100%;border-radius:50%;object-fit:contain;transform-style:preserve-3d;
+  filter:drop-shadow(0 0 18px rgba(255,30,30,.55)) saturate(1.15);
+  animation:sphereSpin calc(26s / var(--idle-speed,1)) linear infinite;
+  will-change:transform}
+.coreSphere.core-active img{filter:drop-shadow(0 0 32px #f55) brightness(1.35) saturate(1.3)}
+@keyframes sphereSpin{
+  0%{transform:rotateY(0deg) rotateX(8deg) scale(1)}
+  25%{transform:rotateY(90deg) rotateX(-4deg) scale(1.04)}
+  50%{transform:rotateY(180deg) rotateX(6deg) scale(1.06)}
+  75%{transform:rotateY(270deg) rotateX(-4deg) scale(1.04)}
+  100%{transform:rotateY(360deg) rotateX(8deg) scale(1)}
+}
 /* flanking vertical timeline graphs (added vs reference) */
 .tlft,.tlrt{position:absolute;top:9%;width:13%;height:78%;z-index:3;opacity:.8}
 .tlft{left:1%}.tlrt{right:1%}
@@ -287,7 +301,7 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
       <div class="lobe r1">PARIETAL LOBE<div class="wave"><svg viewBox="0 0 100 30"><path d="M0 15 Q10 5 20 15 T40 15 T60 15 T80 15 T100 15"/></svg></div></div>
       <div class="lobe r2">LIMBIC SYSTEM<div class="wave"><svg viewBox="0 0 100 30"><path d="M0 15 L12 12 L20 20 L32 4 L45 25 L57 10 L70 20 L82 5 L100 15"/></svg></div></div>
       <div class="lobe r3">CEREBELLUM<div class="wave"><svg viewBox="0 0 100 30"><path d="M0 15 Q8 0 16 15 T32 15 T48 15 T64 15 T80 15 T100 15"/></svg></div></div>
-      <div class="avatar"><canvas class="core3d" id="core3d"></canvas></div>
+      <div class="avatar coreSphere" id="coreSphere" title="MOON neural core"><img src="/moon_core_sphere.png" alt="MOON neural core"></div>
       <div class="radar"></div>
       <div class="idleTag">◌ MOON IDLE — NEURAL CORE STANDBY ◌</div>
       <div id="talkState">◌ LISTENING ◌</div>
