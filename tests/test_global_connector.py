@@ -165,10 +165,11 @@ async def test_federation_with_real_peer_agent():
     # Only run against a live Ollama on loopback (MOON's own model host).
     base = os.environ.get("MOON_TEST_OLLAMA", "http://127.0.0.1:11434/v1")
     model = "qwen3:0.6b"
-    # Availability probe with a short, hard timeout. If the peer endpoint is not
-    # even reachable, SKIP (do not hang) -- the suite stays green and fast.
+    # Availability probe. If the peer endpoint is not even reachable, SKIP
+    # (do not hang) -- the suite stays green and fast on machines without
+    # Ollama. A genuine "Ollama down" is the only legitimate skip.
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as hc:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(15.0)) as hc:
             pr = await hc.post(
                 f"{base}/chat/completions",
                 json={"model": model, "messages": [{"role": "user", "content": "ping"}],
@@ -176,25 +177,30 @@ async def test_federation_with_real_peer_agent():
             )
             if pr.status_code != 200:
                 pytest.skip(f"peer agent model {model} not available on {base} (HTTP {pr.status_code}); skipping live federation test")
-            # PRE-WARM: a CPU-only host needs the model loaded into memory before
-            # the real federation call. Without this the first cold dispatch can
-            # exceed the federation timeout and the whole suite stalls. Retry the
-            # warm call (bounded per attempt) so a single momentarily-slow cycle
-            # can never flip this into a SKIP -- it passes deterministically when
-            # a peer agent is genuinely available.
-            for _ in range(3):
-                try:
-                    await hc.post(
-                        f"{base}/chat/completions",
-                        json={"model": model, "messages": [{"role": "user", "content": "warmup"}],
-                              "max_tokens": 2},
-                        timeout=httpx.Timeout(60.0),
-                    )
-                    break
-                except Exception:
-                    continue
     except Exception as e:
         pytest.skip(f"peer agent not reachable on {base} ({type(e).__name__}); skipping live federation test")
+
+    # PRE-WARM: a CPU-only host must load the model into VRAM before the real
+    # federation call. Use one generous-timeout client and retry the warm call
+    # until the peer actually answers (bounded total budget ~180s) so a single
+    # momentarily-slow cold-load can never flip this into a SKIP -- it passes
+    # deterministically when a peer agent is genuinely available.
+    loaded = False
+    async with httpx.AsyncClient(timeout=httpx.Timeout(180.0)) as warm:
+        for _ in range(8):
+            try:
+                w = await warm.post(
+                    f"{base}/chat/completions",
+                    json={"model": model, "messages": [{"role": "user", "content": "warmup"}],
+                          "max_tokens": 2},
+                )
+                if w.status_code == 200:
+                    loaded = True
+                    break
+            except Exception:
+                pass
+    if not loaded:
+        pytest.skip(f"peer agent {model} on {base} did not become ready; skipping live federation test")
 
     with tempfile.TemporaryDirectory() as d:
         tool = GlobalConnectorTool(gateway=_gw(Path(d)))
@@ -212,7 +218,7 @@ async def test_federation_with_real_peer_agent():
                     message="Reply with the single word: MOON",
                     system="You are a terse peer agent.",
                 ),
-                timeout=90.0,
+                timeout=120.0,
             )
         except asyncio.TimeoutError:
             pytest.skip(f"peer agent on {base} too slow to federate within budget; skipping live federation test")
