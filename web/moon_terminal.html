@@ -175,10 +175,11 @@ header{position:absolute;left:.7%;right:.7%;top:.7%;height:9.1%;display:grid;gri
 .brainPanel{position:absolute;inset:0 0 25.5% 0;background:radial-gradient(circle at 50% 46%,rgba(255,0,0,.12),rgba(3,3,3,.97) 55%);perspective:900px}#brain{position:absolute;inset:0;width:100%;height:100%;opacity:0}
 /* MOON neural core replaced by attached Ultron-style orbital brain, idle-animated 3D + reacts to brain workflow */
 .coreSphere{width:46%;top:47%;perspective:900px}
-.coreSphere img{position:relative;z-index:3;width:100%;height:100%;border-radius:50%;object-fit:contain;transform-style:preserve-3d;
-  filter:drop-shadow(0 0 12px rgba(255,120,40,.32)) drop-shadow(0 0 20px rgba(0,180,255,.16)) saturate(1.05);
-  animation:coreSpin calc(44s / var(--idle-speed,1)) linear infinite, coreBreathe calc(7s / var(--idle-speed,1)) ease-in-out infinite;
+.coreSphere .nucleus{position:relative;z-index:4;width:62%;height:62%;left:19%;top:19%;border-radius:50%;object-fit:contain;transform-style:preserve-3d;
+  filter:drop-shadow(0 0 14px rgba(255,140,50,.7)) drop-shadow(0 0 26px rgba(0,180,255,.4)) saturate(1.2) brightness(1.08);
+  animation:coreSpin calc(40s / var(--idle-speed,1)) linear infinite, coreBreathe calc(4.5s / var(--idle-speed,1)) ease-in-out infinite;
   will-change:transform}
+.coreSphere #coreBrain{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;border-radius:50%}
 .coreSphere .orbit{position:absolute;left:50%;top:50%;border-radius:50%;border:1px solid rgba(255,90,40,.38);
   box-shadow:0 0 7px rgba(255,90,40,.2),inset 0 0 7px rgba(0,180,255,.1);
   transform:translate(-50%,-50%);pointer-events:none;will-change:transform}
@@ -189,7 +190,7 @@ header{position:absolute;left:.7%;right:.7%;top:.7%;height:9.1%;display:grid;gri
   background:radial-gradient(circle,rgba(255,150,60,.16),rgba(0,140,255,.06) 45%,transparent 70%);z-index:1;pointer-events:none;
   animation:coreGlowPulse calc(8s / var(--idle-speed,1)) ease-in-out infinite}
 /* energized by MOON's brain workflow (events / thinking) */
-.coreSphere.core-active img{filter:drop-shadow(0 0 22px #ff7a2a) drop-shadow(0 0 30px #29b6ff) brightness(1.2) saturate(1.15)}
+.coreSphere.core-active .nucleus{filter:drop-shadow(0 0 28px #ff8a3a) drop-shadow(0 0 40px #29b6ff) brightness(1.35) saturate(1.3)}
 .coreSphere.energized .o1{animation-duration:calc(7s / var(--idle-speed,1));border-color:rgba(255,170,80,.7);box-shadow:0 0 12px rgba(255,150,60,.45)}
 .coreSphere.energized .o2{animation-duration:calc(10s / var(--idle-speed,1));border-color:rgba(80,210,255,.7)}
 .coreSphere.energized .o3{animation-duration:calc(13s / var(--idle-speed,1));border-color:rgba(255,120,60,.65)}
@@ -314,7 +315,7 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
       <div class="lobe r1">PARIETAL LOBE<div class="wave"><svg viewBox="0 0 100 30"><path d="M0 15 Q10 5 20 15 T40 15 T60 15 T80 15 T100 15"/></svg></div></div>
       <div class="lobe r2">LIMBIC SYSTEM<div class="wave"><svg viewBox="0 0 100 30"><path d="M0 15 L12 12 L20 20 L32 4 L45 25 L57 10 L70 20 L82 5 L100 15"/></svg></div></div>
       <div class="lobe r3">CEREBELLUM<div class="wave"><svg viewBox="0 0 100 30"><path d="M0 15 Q8 0 16 15 T32 15 T48 15 T64 15 T80 15 T100 15"/></svg></div></div>
-      <div class="avatar coreSphere" id="coreSphere" title="MOON neural core"><span class="coreGlow"></span><span class="orbit o1"></span><span class="orbit o2"></span><span class="orbit o3"></span><img src="/moon_core_sphere.png" alt="MOON neural core"></div>
+      <div class="avatar coreSphere" id="coreSphere" title="MOON neural core"><span class="coreGlow"></span><span class="orbit o1"></span><span class="orbit o2"></span><span class="orbit o3"></span><canvas id="coreBrain"></canvas><img class="nucleus" src="/moon_core_sphere.png" alt="MOON neural core"></div>
       <div class="radar"></div>
       <div class="idleTag">◌ MOON IDLE — NEURAL CORE STANDBY ◌</div>
       <div id="talkState">◌ LISTENING ◌</div>
@@ -596,51 +597,75 @@ function timeline(id,t,phase){const e=el(id);if(!e)return;const ctx=e.getContext
   ctx.fillStyle="rgba(255,80,80,.7)";ctx.font="8px monospace";
   [15,30,45,60,75].forEach(v=>ctx.fillText(v.toFixed(2)+"s",2,h*(v/80)));
 }
-function loop(t){brain(t);matrix(t);timeline("tlL",t,0);timeline("tlR",t,2);core3d(t);requestAnimationFrame(loop)}
-/* 3D animated MOON neural core — rotates + reacts to Moon's brain (load/workflow) */
-const coreCv=el("core3d"); let coreCtx=null, coreNodes=[], coreActivity=0;
-if(coreCv){ coreCtx=coreCv.getContext("2d");
-  for(let i=0;i<70;i++){ // fibonacci-ish sphere distribution
-    const y=1-(i/(70-1))*2, r=Math.sqrt(1-y*y), th=i*2.399963;
-    coreNodes.push({x:Math.cos(th)*r, y:y, z:Math.sin(th)*r});
+function loop(t){brain(t);matrix(t);timeline("tlL",t,0);timeline("tlR",t,2);coreBrain(t);requestAnimationFrame(loop)}
+/* Living 3D neural brain core — dense rotating node network with firing synapses,
+   a pulsing nucleus, and reaction to MOON's brain workflow (coreActivity). */
+const brainCv=el("coreBrain"); let bCtx=null, bNodes=[], bLinks=[], bSignal=[], bActivity=0, bFiring=0;
+if(brainCv){
+  bCtx=brainCv.getContext("2d");
+  const N=150; // dense, HD node count
+  for(let i=0;i<N;i++){ // fibonacci sphere -> even distribution
+    const y=1-(i/(N-1))*2, r=Math.sqrt(1-y*y), th=i*2.399963;
+    bNodes.push({x:Math.cos(th)*r, y:y, z:Math.sin(th)*r, ph:Math.random()*Math.PI*2, lit:0});
   }
+  // precompute nearby links (synapses) for performance
+  for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){
+    const dx=bNodes[i].x-bNodes[j].x, dy=bNodes[i].y-bNodes[j].y, dz=bNodes[i].z-bNodes[j].z;
+    if(dx*dx+dy*dy+dz*dz < 0.34) bLinks.push([i,j]);
+  }
+  setInterval(()=>{ // spawn a firing synapse wave from a random node
+    if(bNodes.length){ const s=(Math.random()*N)|0; bSignal.push({from:s, t:0, speed:0.02+Math.random()*0.02}); }
+  }, 320);
 }
-function core3d(t){
-  if(!coreCv||!coreCtx) return;
-  const d=devicePixelRatio||1, w=coreCv.clientWidth, h=coreCv.clientHeight;
-  if(coreCv.width!==w*d){coreCv.width=w*d;coreCv.height=h*d;} coreCtx.setTransform(d,0,0,d,0,0);
-  coreCtx.clearRect(0,0,w,h);
-  const cx=w/2, cy=h/2, R=Math.min(w,h)*0.42;
-  const ax=t*0.00045, ay=t*0.00030;
+function coreBrain(t){
+  if(!brainCv||!bCtx) return;
+  const d=devicePixelRatio||1, w=brainCv.clientWidth, h=brainCv.clientHeight;
+  if(brainCv.width!==w*d){brainCv.width=w*d;brainCv.height=h*d;}
+  bCtx.setTransform(d,0,0,d,0,0); bCtx.clearRect(0,0,w,h);
+  const cx=w/2, cy=h/2, R=Math.min(w,h)*0.40;
+  const idle=0.00018, spd=idle*(1+bActivity*1.4);
+  const ax=t*spd, ay=t*spd*0.7;
   const ca=Math.cos(ax), sa=Math.sin(ax), cb=Math.cos(ay), sb=Math.sin(ay);
-  const act=Math.min(1,coreActivity); // 0..1 reactive energy from backend
-  const pulse=1+0.06*Math.sin(t*0.004)+act*0.10;
-  const pts=coreNodes.map(n=>{
+  const act=Math.min(1,bActivity), pulse=1+0.05*Math.sin(t*0.005)+act*0.12;
+  const pts=bNodes.map(n=>{
     let x=n.x*R, y=n.y*R, z=n.z*R;
-    let x1=x*ca - z*sa, z1=x*sa + z*ca;       // rotate Y
-    let y1=y*cb - z1*sb, z2=y*sb + z1*cb;       // rotate X
+    let x1=x*ca - z*sa, z1=x*sa + z*ca;
+    let y1=y*cb - z1*sb, z2=y*sb + z1*cb;
     return {x:cx+x1*pulse, y:cy+y1*pulse, z:z2, s:(z2/R+1)/2};
   });
-  pts.sort((a,b)=>a.z-b.z);
-  // wireframe links between nearby nodes
-  for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
-    const dx=pts[i].x-pts[j].x, dy=pts[i].y-pts[j].y, dz=pts[i].z-pts[j].z;
-    if(dx*dx+dy*dy+dz*dz < (R*0.42)*(R*0.42)){
-      coreCtx.beginPath();coreCtx.moveTo(pts[i].x,pts[i].y);coreCtx.lineTo(pts[j].x,pts[j].y);
-      coreCtx.strokeStyle=`rgba(255,${(60+act*120)|0},${(60+act*80)|0},${0.10+ (1-pts[i].s)*0.10})`;coreCtx.lineWidth=0.8;coreCtx.stroke();
-    }
+  // synapses (wireframe) depth-shaded
+  bCtx.lineWidth=0.7;
+  for(const [i,j] of bLinks){
+    const a=pts[i], b=pts[j];
+    const dg=(1-((a.s+b.s)/2));
+    bCtx.strokeStyle=`rgba(255,${(70+act*120)|0},${(90+act*60)|0},${0.05+dg*0.12})`;
+    bCtx.beginPath();bCtx.moveTo(a.x,a.y);bCtx.lineTo(b.x,b.y);bend(bCtx,a,b);bCtx.stroke();
   }
+  // advance + draw firing signals traveling along links
+  for(let k=bSignal.length-1;k>=0;k--){
+    const sg=bSignal[k]; sg.t+=sg.speed*(1+act*1.5);
+    if(sg.t>=1){ bNodes[sg.from].lit=1; bSignal.splice(k,1); continue; }
+    const a=pts[sg.from], b=pts[(sg.from+1)%pts.length];
+    const x=a.x+(b.x-a.x)*sg.t, y=a.y+(b.y-a.y)*sg.t;
+    bCtx.beginPath();bCtx.arc(x,y,2.2+act*2,0,Math.PI*2);
+    bCtx.fillStyle=`rgba(120,220,255,${0.9})`; bCtx.shadowBlur=10; bCtx.shadowColor="#3cf"; bCtx.fill(); bCtx.shadowBlur=0;
+  }
+  // nodes: depth-based size/alpha, lit ones flare
   pts.forEach((p,i)=>{
-    coreCtx.beginPath();coreCtx.arc(p.x,p.y,(0.8+(1-p.s)*1.6)+act*1.5,0,Math.PI*2);
-    coreCtx.fillStyle=i%17===0?`rgba(255,200,200,${0.9})`:`rgba(255,${(40+act*120)|0},40,${0.55+ (1-p.s)*0.35})`;
-    coreCtx.shadowBlur=6+act*10;coreCtx.shadowColor="#f22";coreCtx.fill();
+    const n=bNodes[i]; n.lit*=0.92;
+    const sz=(0.7+(1-p.s)*1.8)+n.lit*2.4+act*1.2;
+    const a=0.35+(1-p.s)*0.55+n.lit*0.5;
+    bCtx.beginPath();bCtx.arc(p.x,p.y,sz,0,Math.PI*2);
+    const hot=n.lit>0.25;
+    bCtx.fillStyle=hot?`rgba(150,230,255,${Math.min(1,a)})`:`rgba(255,${(60+act*100)|0},70,${a})`;
+    bCtx.shadowBlur=(hot?12:5)+act*8; bCtx.shadowColor=hot?"#6cf":"#f33"; bCtx.fill();
   });
-  coreCtx.shadowBlur=0;
-  // decay activity over time so it pulses on events then calms
-  coreActivity*=0.985;
+  bCtx.shadowBlur=0;
+  bActivity*=0.97; // decay so it calms after MOON stops thinking
 }
+function bend(c,a,b){ /* slight curve for organic synapse look */ const mx=(a.x+b.x)/2+(b.y-a.y)*0.12, my=(a.y+b.y)/2-(b.x-a.x)*0.12; c.quadraticCurveTo(mx,my,b.x,b.y); }
 // allow backend events to energize the core (interacts with Moon brain)
-window.MOON_UI.onCorePulse = (amt)=>{ coreActivity=Math.min(1.4,(coreActivity||0)+(amt||0.6));
+window.MOON_UI.onCorePulse = (amt)=>{ bActivity=Math.min(1.4,(bActivity||0)+(amt||0.6));
   const av=document.querySelector(".avatar"); if(av){av.classList.add("core-active","energized");clearTimeout(av._t);av._t=setTimeout(()=>av.classList.remove("core-active","energized"),900+ (amt||0.6)*600);} };
 /* floating sparkle particles (futuristic polish) */
 (function(){
