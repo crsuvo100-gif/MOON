@@ -560,9 +560,12 @@ class Orchestrator:
         """Single-call answer for simple queries (no tool loop, no two-phase refine)."""
         persona = self._agent_persona(task.agent_name)
         sys_p = f"{persona}\n\nAnswer concisely and accurately."
+        # build() returns a list[Message]; _complete_with_fallback accepts a
+        # list[Message]/list[ChatMessage] or a plain string. (Passing ctx.prompt
+        # was a bug -- the list has no .prompt attribute and crashed the path.)
         ctx = await self._context.build(task=task, history=self._history, system_override=sys_p)
         resp = await self._complete_with_fallback(
-            ctx.prompt, max_tokens=self._settings.model_max_tokens,
+            ctx, max_tokens=self._settings.model_max_tokens,
             temperature=self._settings.model_temperature,
         )
         text, tokens = (resp.content or "").strip(), 0
@@ -804,12 +807,17 @@ class Orchestrator:
                 continue
             final_text = resp.content or ""
             # A per-agent model can occasionally return an EMPTY body (cold-load /
-            # transient). Rescue it instead of failing the whole task: retry once
-            # with the shared/strong LLM so the user always gets a real answer.
-            if not final_text.strip() and llm is not self._llm:
+            # transient / Ollama hiccup). Rescue it instead of failing the whole
+            # task: retry on the shared main LLM and, failing that, the full
+            # multi-tier fallback chain (local -> OpenAI -> OpenRouter -> HF) so
+            # MOON always returns a real answer once ANY backend is reachable.
+            if not final_text.strip():
                 try:
-                    resp2 = await self._llm.complete(messages, tools=None)
-                    final_text = resp2.content or ""
+                    r2 = await self._complete_with_fallback(
+                        messages, max_tokens=self._settings.model_max_tokens,
+                        temperature=self._settings.model_temperature,
+                    )
+                    final_text = (r2.content or "") if r2 is not None else ""
                 except Exception as exc:  # noqa: BLE001
                     logger.info("empty-answer rescue skipped: %s", exc)
             self._history.append(Message.assistant(final_text or ""))

@@ -24,6 +24,13 @@ class Task:
     def mark_running(self) -> None:
         self.status = "running"
 
+    def mark_done(self) -> None:
+        # Idempotent terminal marker used by the fast-path / parallel fan-out
+        # before returning the result (Task.complete() already sets "completed";
+        # this mirrors mark_running for symmetry and avoids AttributeError).
+        if self.status not in ("completed", "failed"):
+            self.status = "done"
+
     def complete(self, result: str, *, data: dict[str, Any] | None = None, tokens_used: int = 0) -> None:
         self.status = "completed"
         self.result = result
