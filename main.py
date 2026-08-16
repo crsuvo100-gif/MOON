@@ -99,10 +99,10 @@ def _run_terminal() -> None:
     import subprocess
     import sys
 
-    print("🌙 MOON Terminal starting at http://127.0.0.1:8777")
+    print("🌙 MOON Terminal starting at http://0.0.0.0:8777  (LAN: http://<this-host-ip>:8777)")
     subprocess.run([
         sys.executable, "-m", "uvicorn", "app.terminal_interface:app",
-        "--host", "127.0.0.1", "--port", "8777", "--log-level", "info",
+        "--host", "0.0.0.0", "--port", "8777", "--log-level", "info",
     ])
 
 
