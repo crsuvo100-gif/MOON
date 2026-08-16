@@ -1,0 +1,21 @@
+[Unit]
+Description=MOON Neural Core Terminal Interface
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=__MOON_HOME__
+ExecStart=__MOON_HOME__/.venv/bin/python main.py start
+# Clear PYTHONPATH so the broken system Python path can't shadow MOON's venv
+Environment=PYTHONPATH=
+# Auto-restart on crash / exit so the terminal always comes back
+Restart=always
+RestartSec=3
+# Give the port a moment to free if we restart quickly
+ExecStartPre=/bin/sleep 1
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
