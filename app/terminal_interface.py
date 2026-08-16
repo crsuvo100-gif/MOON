@@ -184,6 +184,14 @@ async def moon_core_sphere_png():
     return HTMLResponse("<svg/>", status_code=404)
 
 
+@app.get("/moon_brain.webp")
+async def moon_brain_webp():
+    f = WEB_DIR / "assets" / "moon_brain.webp"
+    if f.exists():
+        return FileResponse(str(f), media_type="image/webp")
+    return HTMLResponse("<svg/>", status_code=404)
+
+
 @app.get("/core_ai.png")
 async def core_ai_png():
     f = WEB_DIR / "core_ai.png"
