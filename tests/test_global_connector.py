@@ -154,15 +154,35 @@ async def test_federation_with_real_peer_agent():
     Registers Ollama's /v1 endpoint as a peer 'agent' connection, then delegates
     a prompt via the `federate` action and asserts the peer actually replies with
     real content. This is the live proof of 'connect to any AI agent'.
+
+    Skips (does not hang) when the peer model is not actually available/ready on
+    loopback, so the suite always terminates and stays green on machines without a
+    pulled model. The federation path itself is still exercised whenever a peer
+    agent answers.
     """
     import os
+    import httpx
     # Only run against a live Ollama on loopback (MOON's own model host).
     base = os.environ.get("MOON_TEST_OLLAMA", "http://127.0.0.1:11434/v1")
+    model = "qwen3:0.6b"
+    # Availability probe with a short, hard timeout so we SKIP instead of hang
+    # when the peer model is not pulled/ready (e.g. cold Ollama, no GPU).
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(5.0)) as hc:
+            pr = await hc.post(
+                f"{base}/chat/completions",
+                json={"model": model, "messages": [{"role": "user", "content": "ping"}], "max_tokens": 8},
+            )
+        if pr.status_code != 200:
+            pytest.skip(f"peer agent model {model} not available on {base} (HTTP {pr.status_code}); skipping live federation test")
+    except Exception as e:
+        pytest.skip(f"peer agent not reachable on {base} ({type(e).__name__}); skipping live federation test")
+
     with tempfile.TemporaryDirectory() as d:
         tool = GlobalConnectorTool(gateway=_gw(Path(d)))
         out = await tool.execute(
             action="connect", name="peer", url=base, kind="agent",
-            model="qwen3:0.6b",
+            model=model,
         )
         assert "registered" in out
         # Delegate a prompt to the peer agent.
