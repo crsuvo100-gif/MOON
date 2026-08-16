@@ -175,9 +175,9 @@ header{position:absolute;left:.7%;right:.7%;top:.7%;height:9.1%;display:grid;gri
 .brainPanel{position:absolute;inset:0 0 25.5% 0;background:radial-gradient(circle at 50% 46%,rgba(255,0,0,.12),rgba(3,3,3,.97) 55%);perspective:900px}#brain{position:absolute;inset:0;width:100%;height:100%;opacity:0}
 /* MOON neural core replaced by attached Ultron-style orbital brain, idle-animated 3D + reacts to brain workflow */
 .coreSphere{width:46%;top:47%;perspective:900px}
-.coreSphere .nucleus{position:relative;z-index:4;width:62%;height:62%;left:19%;top:19%;border-radius:50%;object-fit:contain;transform-style:preserve-3d;
-  filter:drop-shadow(0 0 14px rgba(255,140,50,.7)) drop-shadow(0 0 26px rgba(0,180,255,.4)) saturate(1.2) brightness(1.08);
-  animation:coreSpin calc(40s / var(--idle-speed,1)) linear infinite, coreBreathe calc(4.5s / var(--idle-speed,1)) ease-in-out infinite;
+.coreSphere .nucleus{position:relative;z-index:4;width:82%;height:82%;left:9%;top:9%;border-radius:50%;object-fit:contain;transform-style:preserve-3d;
+  filter:drop-shadow(0 0 18px rgba(255,150,60,.85)) drop-shadow(0 0 34px rgba(0,190,255,.5)) saturate(1.25) brightness(1.12);
+  animation:coreSpin calc(36s / var(--idle-speed,1)) linear infinite, coreBreathe calc(4s / var(--idle-speed,1)) ease-in-out infinite;
   will-change:transform}
 .coreSphere #coreBrain{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;border-radius:50%}
 .coreSphere .orbit{position:absolute;left:50%;top:50%;border-radius:50%;border:1px solid rgba(255,90,40,.38);
@@ -535,13 +535,14 @@ function connect(){
 function handle(m){
   switch(m.type){
     case "ready": case "status": applyStatus(m.status||m); addLog("[SYSTEM] status received."); if((m.status||m).load!=null) window.MOON_UI.onCorePulse && window.MOON_UI.onCorePulse((m.status||m).load/180); if(m.type==="ready" && typeof window.MOON_UI.onReady==="function") window.MOON_UI.onReady(m); break;
-    case "assistant_start": setState("SPEAKING"); addLog("[MOON] thinking…"); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.9);
+    case "assistant_start": setState("SPEAKING"); addLog("[MOON] thinking…"); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.9); if(typeof fireBurst==="function") fireBurst(14);
       _moonSpeaking=true; if(_recog){ try{ _recog.stop(); }catch(_){} } if(_talkState) setTalkState("◌ MOON IS SPEAKING ◌", false); break;
     case "workflow": setState((m.stage||"").toUpperCase(), {stage:m.stage}); addLog("[FLOW] "+(m.stage||"")+": "+(m.detail||"")); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.7); break;
     case "assistant_chunk":
       addLog("[MOON] "+(m.content||""));
       if(lastAction==="list_tools"){ toolBuf += (m.content||""); }
       window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.25);
+      if(typeof fireBurst==="function") fireBurst(5);
       break;
     case "audio": playWav(m.data); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.5); break;
     case "assistant_done":
@@ -613,10 +614,11 @@ if(brainCv){
     const dx=bNodes[i].x-bNodes[j].x, dy=bNodes[i].y-bNodes[j].y, dz=bNodes[i].z-bNodes[j].z;
     if(dx*dx+dy*dy+dz*dz < 0.34) bLinks.push([i,j]);
   }
-  setInterval(()=>{ // spawn a firing synapse wave from a random node
-    if(bNodes.length){ const s=(Math.random()*N)|0; bSignal.push({from:s, t:0, speed:0.02+Math.random()*0.02}); }
-  }, 320);
+  // baseline firing: continuous synapse pulses so the brain is always alive
+  setInterval(()=>{ if(bNodes.length){ const n=1+(Math.random()<0.4?1:0); for(let k=0;k<n;k++){ const s=(Math.random()*bNodes.length)|0; bSignal.push({from:s, t:Math.random()*0.2, speed:0.025+Math.random()*0.03}); } } }, 220);
 }
+// spawn a burst of firing synapses (used when MOON speaks / thinks)
+function fireBurst(n){ if(!bNodes.length) return; n=n||8; for(let k=0;k<n;k++){ const s=(Math.random()*bNodes.length)|0; bSignal.push({from:s, t:Math.random()*0.15, speed:0.04+Math.random()*0.05}); } bActivity=Math.min(1.6, bActivity+0.5); }
 function coreBrain(t){
   if(!brainCv||!bCtx) return;
   const d=devicePixelRatio||1, w=brainCv.clientWidth, h=brainCv.clientHeight;
