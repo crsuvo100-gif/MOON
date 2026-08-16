@@ -125,10 +125,20 @@ def install_voice_stack():
     else:
         print("No supported system package manager found; skipping espeak-ng/sox "
               "system install. Install them manually for TTS: https://github.com/espeak-ng/espeak-ng")
-    # Optional offline dictation (vosk). Pulled on demand; not required to run.
+    # Offline dictation (vosk + pyaudio) and the XTTS-v2 cloning engine (TTS).
+    # Pulled best-effort; none of these block the core install.
     py = ROOT / ".venv" / "bin" / "python"
     _run([str(py), "-m", "pip", "install", "vosk", "pyaudio"])
+    try:
+        _run([str(py), "-m", "pip", "install", "TTS"])
+    except Exception as exc:  # noqa: BLE001
+        print("XTTS-v2 install skipped (heavy; install on a capable host for cloning):", exc)
+    try:
+        _run([str(py), "-m", "pip", "install", "openai"])
+    except Exception as exc:  # noqa: BLE001
+        print("openai install skipped:", exc)
     print("Voice stack: espeak-ng+sox for TTS (system, best-effort); "
+          "XTTS-v2 for local cloning + openai for cloud female; "
           "vosk+pyaudio optional for mic dictation.")
 
 

@@ -142,7 +142,22 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
 .term{padding:8px;border-right:1px solid #631010;overflow:auto}.term:last-child{border-right:0}.term h4{margin:0 0 5px;color:#ff3333;font-family:var(--ff-title)}.line{color:#c96767;line-height:1.4;white-space:pre-wrap;word-break:break-word}.ok{color:var(--green)}.warn{color:var(--amber)}.you{color:#fff}
 #aspect{position:absolute;right:1%;top:11%;width:21%;z-index:40;background:#070000f5;border:1px solid #d21b1b;padding:10px;display:none}.aspectTitle{color:#ff4040;font-weight:700;margin-bottom:7px;font-size:12px;font-family:var(--ff-title)}.ratio{width:100%;margin:4px 0;padding:7px;background:#090000;border:1px solid #5d1010;color:#ddd;text-align:left;cursor:pointer}.ratio.sel{box-shadow:inset 3px 0 #f22}
 @media(max-width:1000px){#app{font-size:8px}.main{grid-template-columns:7.5% 22% 40% 30.5%}.rightThreat{display:none}}
-</style>
+.overlay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(46%,640px);max-height:70%;z-index:60;background:#070000f8;border:1px solid #d21b1b;box-shadow:0 0 30px #f002;display:flex;flex-direction:column}
+.overlay.hidden{display:none}
+.ovHead{background:#1a0404;color:#ff5a5a;font-family:var(--ff-title);font-weight:700;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;letter-spacing:1px}
+.ovClose{background:#300;color:#f88;border:1px solid #a33;cursor:pointer;padding:2px 8px}
+.ovBody{padding:12px;overflow:auto;color:#e8c8c8;font-size:13px}
+.ovRow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.ovRow label{color:#ff8a8a;font-size:11px;width:100%}
+.ovBtn{background:#120000;border:1px solid #7a1414;color:#ff7a7a;padding:6px 12px;cursor:pointer;font-family:var(--ff-title);font-size:11px}
+.ovBtn:hover{background:#2a0606}
+#voiceSel{background:#0b0000;border:1px solid #5d1010;color:#fff;padding:5px}
+.ovLog{margin-top:10px;background:#0a0000;border:1px solid #4b0b0b;padding:8px;min-height:60px;font-family:'Courier New',monospace;font-size:11px;color:#ff9a9a;white-space:pre-wrap}
+#toolRun{flex:1;background:#0b0000;border:1px solid #4b0b0b;color:#fff;padding:6px}
+.toolGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:240px;overflow:auto}
+.toolGrid .t{background:#0c0000;border:1px solid #4b0b0b;padding:5px 7px;font-size:11px;color:#ffb3b3;cursor:pointer}
+.toolGrid .t:hover{background:#220404}
+
 </head>
 <body>
 <div id="app">
@@ -234,10 +249,32 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
 
 <div id="aspect"><div class="aspectTitle">DISPLAY / ASPECT RATIO</div><button class="ratio sel" data-r="auto">AUTO — FIT DISPLAY</button><button class="ratio" data-r="16:9">16:9 — WIDESCREEN</button><button class="ratio" data-r="21:9">21:9 — ULTRAWIDE</button><button class="ratio" data-r="32:9">32:9 — SUPER ULTRAWIDE</button><button class="ratio" data-r="16:10">16:10 — WIDESCREEN</button><button class="ratio" data-r="4:3">4:3 — STANDARD</button><button class="ratio" data-r="1:1">1:1 — SQUARE</button><button class="ratio" data-r="9:16">9:16 — PORTRAIT</button></div>
 
+<div id="voicePanel" class="overlay hidden">
+  <div class="ovHead">MOON VOICE <button class="ovClose" onclick="toggleVoice(false)">✕</button></div>
+  <div class="ovBody">
+    <div class="ovRow"><label>Female voice</label>
+      <select id="voiceSel"><option value="default">default (best available)</option><option value="nova">nova — sultry female</option><option value="shimmer">shimmer — soft female</option><option value="aria">aria — studio female</option><option value="seductive">seductive — intimate</option></select>
+      <button class="ovBtn" onclick="applyVoice()">SET</button>
+    </div>
+    <div class="ovRow"><button class="ovBtn" onclick="voiceStatus()">STATUS</button><button class="ovBtn" onclick="voiceList()">LIST VOICES</button><button class="ovBtn" onclick="voiceTest()">SPEAK TEST</button><button class="ovBtn" id="muteToggle" onclick="toggleMute()">MUTE</button></div>
+    <div class="ovRow"><label>Clone a voice (upload WAV you heard)</label><input type="file" id="voiceSample" accept="audio/*"><button class="ovBtn" onclick="cloneVoice()">CLONE</button></div>
+    <div class="ovLog" id="voiceLog">MOON can clone and speak using any voice she hears.</div>
+  </div>
+</div>
+
+<div id="toolsPanel" class="overlay hidden">
+  <div class="ovHead">MOON TOOL BUS <button class="ovClose" onclick="toggleTools(false)">✕</button></div>
+  <div class="ovBody">
+    <div class="ovRow"><input id="toolRun" placeholder="run a tool: name key=val key=val"><button class="ovBtn" onclick="runTool()">RUN</button><button class="ovBtn" onclick="listTools()">REFRESH</button></div>
+    <div class="ovRow"><label>All functions (click to load args):</label></div>
+    <div class="toolGrid" id="toolGrid">loading…</div>
+  </div>
+</div>
+
 <footer>
   <div class="cmd"><b style="color:#ff6b6b">MOON&gt;</b><input id="command" placeholder="Enter command or ask MOON…"><button id="send" class="btn">➤</button></div>
   <div class="btn active" id="termBtn">▣ TERMINAL</div>
-  <div class="btn" id="aiChat">◉ AI CHAT</div><div class="btn" id="tasks">☷ TASKS</div><div class="btn" id="updates">◌ UPDATES</div><div class="btn" id="diag">⚙ DIAGNOSTICS</div><div class="btn" id="help">? HELP</div><div class="btn on" id="audioBtn">🔊 AUDIO</div><div class="btn" id="aspectBtn">⛶ DISPLAY</div>
+  <div class="btn" id="aiChat">◉ AI CHAT</div><div class="btn" id="tasks">☷ TASKS</div><div class="btn" id="updates">◌ UPDATES</div><div class="btn" id="diag">⚙ DIAGNOSTICS</div><div class="btn" id="help">? HELP</div><div class="btn" id="voiceBtn">VOICE</div><div class="btn" id="toolsBtn">TOOLS</div><div class="btn on" id="audioBtn">🔊 AUDIO</div><div class="btn" id="aspectBtn">⛶ DISPLAY</div>
 </footer>
 </div>
 
@@ -373,7 +410,8 @@ function command(cmd){
 
 /* ===== WebSocket to Moon's real backend (/ws) ===== */
 let ws=null, _muted=false;
-function wsSend(o){ if(ws && ws.readyState===1) ws.send(JSON.stringify(o)); }
+let lastAction=null, toolBuf="";
+function wsSend(o){ if(ws && ws.readyState===1){ if(o.action) lastAction=o.action; ws.send(JSON.stringify(o)); } }
 function connect(){
   const pr=location.protocol==="https:"?"wss":"ws";
   ws=new WebSocket(`${pr}://${location.host}/ws`);
@@ -387,9 +425,16 @@ function handle(m){
     case "ready": case "status": applyStatus(m.status||m); addLog("[SYSTEM] status received."); if((m.status||m).load!=null) window.MOON_UI.onCorePulse && window.MOON_UI.onCorePulse((m.status||m).load/180); break;
     case "assistant_start": setState("SPEAKING"); addLog("[MOON] thinking…"); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.9); break;
     case "workflow": setState((m.stage||"").toUpperCase(), {stage:m.stage}); addLog("[FLOW] "+(m.stage||"")+": "+(m.detail||"")); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.7); break;
-    case "assistant_chunk": addLog("[MOON] "+(m.content||"")); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.25); break;
+    case "assistant_chunk":
+      addLog("[MOON] "+(m.content||""));
+      if(lastAction==="list_tools"){ toolBuf += (m.content||""); }
+      window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.25);
+      break;
     case "audio": playWav(m.data); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.5); break;
-    case "assistant_done": setState("IDLE"); addLog("[MOON] done in "+(m.elapsed||0)+"s"+(m.locked?" [locked]":"")); break;
+    case "assistant_done":
+      setState("IDLE"); addLog("[MOON] done in "+(m.elapsed||0)+"s"+(m.locked?" [locked]":""));
+      if(lastAction==="list_tools"){ renderToolGrid(toolBuf); toolBuf=""; }
+      break;
   }
 }
 function playWav(b64){
@@ -531,10 +576,36 @@ el("diag").onclick=doDiagnostics;
 el("help").onclick=doHelp;
 el("audioBtn").onclick=doAudio;
 el("aspectBtn").onclick=doAspect;
+el("voiceBtn").onclick=()=>toggleVoice(true);
+el("toolsBtn").onclick=()=>toggleTools(true);
 el("send").onclick=doSend;
 el("command").addEventListener("keydown",e=>{if(e.key==="Enter")el("send").click();});
 $$(".nav").forEach(n=>n.onclick=()=>doNav(n));
 const avatarEl=document.querySelector(".avatar"); if(avatarEl) avatarEl.onclick=doCoreSync;
+
+/* ===== Voice + Tools panels ===== */
+function toggleVoice(on){ const p=el("voicePanel"); if(!p)return; p.classList.toggle("hidden", !on); if(on) voiceStatus(); }
+function toggleTools(on){ const p=el("toolsPanel"); if(!p)return; p.classList.toggle("hidden", !on); if(on) listTools(); }
+function vlog(s){ const l=el("voiceLog"); if(l) l.textContent = (l.textContent?l.textContent.split("\n").slice(-6).join("\n")+"\n":"")+s; }
+function applyVoice(){ const v=el("voiceSel").value; wsSend({action:"voice",command:"set "+v}); vlog("set voice -> "+v); }
+function voiceStatus(){ wsSend({action:"voice",command:"status"}); }
+function voiceList(){ wsSend({action:"voice",command:"list"}); }
+function voiceTest(){ wsSend({action:"send_message",text:"MOON love you three thousand"}); vlog("speaking test…"); }
+function toggleMute(){ wsSend({action:_muted?"unmute":"mute"}); _muted=!_muted; const b=el("muteToggle"); if(b)b.textContent=_muted?"UNMUTE":"MUTE"; }
+async function cloneVoice(){
+  const f=el("voiceSample").files[0]; if(!f){ vlog("select a WAV sample first"); return; }
+  const buf=await f.arrayBuffer(); const b64=btoa(String.fromCharCode(...new Uint8Array(buf)));
+  wsSend({action:"voice",command:"clone user_voice",sample:b64}); vlog("cloning voice from sample…");
+}
+function listTools(){ wsSend({action:"list_tools"}); }
+function runTool(){ const v=el("toolRun").value.trim(); if(!v)return; wsSend({action:"tool",command:v}); }
+function renderToolGrid(text){
+  const grid=el("toolGrid"); if(!grid) return;
+  // list_tools returns "43 tools registered:\nname, name, ..." -> extract comma list
+  const m = (text||"").match(/registered:\s*(.*)/s);
+  const names = (m? m[1] : text).split(",").map(s=>s.trim()).filter(Boolean);
+  grid.innerHTML = names.map(n=>`<div class="t" onclick="el('toolRun').value='${n.replace(/'/g,"")}'">${n}</div>`).join("");
+}
 // expose for provider-neutral bridge / external control
 window.MOON_UI.doDiagnostics=doDiagnostics; window.MOON_UI.doHelp=doHelp; window.MOON_UI.doTerminal=doTerminal; window.MOON_UI.coreSync=doCoreSync;
 

@@ -76,8 +76,8 @@ async def _get_orchestrator():
         return _ORCH
 
 
-# Voice / TTS (real MOON female voice via app.voice.Voice)
-_voice = None
+# Voice / TTS (MOON's premium female voice + cloning via VoiceEngine)
+_voice_engine = None
 _voice_muted = False
 _stop_requested = False
 _last_error = False
@@ -95,15 +95,17 @@ def _current_emotion(locked: bool) -> dict:
     return {"value": 72, "label": "ENGAGED"}
 
 
-def _get_voice():
-    global _voice
-    if _voice is None:
+def _get_voice_engine():
+    global _voice_engine
+    if _voice_engine is None:
         try:
-            from app.voice import Voice
-            _voice = Voice()
+            from app.voice_engine import VoiceEngine
+
+            s = _ORCH._settings if _ORCH is not None else None
+            _voice_engine = VoiceEngine(settings=s)
         except Exception:
-            _voice = False  # unavailable -> cached so we don't retry forever
-    return _voice or None
+            _voice_engine = False  # unavailable -> cached so we don't retry forever
+    return _voice_engine or None
 
 
 async def _speak(text: str):
@@ -112,11 +114,11 @@ async def _speak(text: str):
     global _voice_muted
     if _voice_muted:
         return None
-    v = _get_voice()
-    if not v:
+    eng = _get_voice_engine()
+    if not eng:
         return None
     try:
-        wav = await v.speak(text)
+        wav = await eng.speak(text)
         if not wav or not os.path.exists(wav):
             return None
         b64 = base64.b64encode(Path(wav).read_bytes()).decode("ascii")
@@ -131,7 +133,7 @@ async def _speak(text: str):
 
 @app.on_event("startup")
 async def _term_startup():
-    _get_voice()  # probe TTS availability at boot so MODE reflects truth
+    _get_voice_engine()  # probe TTS availability at boot so MODE reflects truth
 
 
 def _stream_text(text: str):
@@ -375,7 +377,7 @@ async def _moon_status(orch) -> dict:
         "pipeline": pipeline,
         "voice": {
             "mode": "MUTED" if _voice_muted else "AUTO",
-            "available": bool(_get_voice()),
+            "available": bool(_get_voice_engine()),
         },
         "sensors": {
             "voice": True,
@@ -622,6 +624,70 @@ async def ws_endpoint(ws: WebSocket):
                 for chunk in _stream_text(out):
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
+            elif action == "voice":
+                # MOON's premium female voice + cloning control surface.
+                await send(type="assistant_start")
+                await send(type="workflow", stage="voice", detail="voice engine")
+                sub = (data.get("command") or data.get("query") or "status").strip().lower()
+                eng = _get_voice_engine()
+                if eng is None:
+                    out = "[voice] engine unavailable."
+                elif sub.startswith("list"):
+                    vs = eng.list_voices()
+                    out = "MOON voices:\n" + "\n".join(
+                        f"  - {v['name']} [{v['backend']}]{' (cloned)' if v['cloned'] else ''} :: {v['desc']}"
+                        for v in vs)
+                elif sub.startswith("set"):
+                    name = sub.split(None, 1)[1] if " " in sub else ""
+                    out = eng.set_voice(name) if name else "voice set requires a name (see 'voice list')."
+                elif sub.startswith("clone"):
+                    parts = sub.split(None, 2)
+                    name = parts[1] if len(parts) > 1 else ""
+                    sample = data.get("sample") or (parts[2] if len(parts) > 2 else "")
+                    out = eng.clone_voice(name, sample) if (name and sample) else \
+                        "voice clone requires name + base64 sample (audio field)."
+                elif sub.startswith("female"):
+                    out = eng.set_voice("default")
+                elif sub.startswith("status"):
+                    st = eng.backend_status()
+                    out = (f"[voice] current={st['current']} | xtts={st['xtts']} "
+                           f"openai={st['openai']} espeak={st['espeak']}\n"
+                           f"cloned voices: {', '.join(st['cloned_voices']) or 'none'}")
+                else:
+                    out = ("[voice] actions: list | set <name> | clone <name> <b64sample> | "
+                           "female | status")
+                for chunk in _stream_text(out):
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
+            elif action == "tool":
+                # Run ANY registered tool directly from the terminal (all functions
+                # exposed). Iterative: parse "name key=val key=val".
+                await send(type="assistant_start")
+                await send(type="workflow", stage="tools", detail="executing tool")
+                cmd = (data.get("command") or data.get("query") or "").strip()
+                parts = cmd.split()
+                if not parts:
+                    out = "[tool] usage: tool <name> [key=val ...] (use 'list_tools' for names)"
+                else:
+                    name = parts[0]
+                    args = {}
+                    for tok in parts[1:]:
+                        if "=" in tok:
+                            k, v = tok.split("=", 1)
+                            v = v.strip().strip("'\"")
+                            args[k] = v
+                    try:
+                        tool = orch._tools._registry.get(name) if orch._tools else None
+                        if tool is None:
+                            out = f"[tool] unknown tool '{name}'. Use 'list_tools'."
+                        else:
+                            res = await orch._tools.run(name, args, agent=None)
+                            out = f"[tool:{name}] " + str(getattr(res, "output", res))
+                    except Exception as e:  # noqa: BLE001
+                        out = f"[tool] error: {e}"
+                for chunk in _stream_text(out):
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "network":
                 await send(type="assistant_start")
                 await send(type="workflow", stage="tools", detail="reading network")
@@ -813,7 +879,7 @@ async def ws_endpoint(ws: WebSocket):
                 payload = await _moon_status(orch)
                 payload["voice"] = {
                     "mode": "MUTED" if _voice_muted else "AUTO",
-                    "available": bool(_get_voice()),
+                    "available": bool(_get_voice_engine()),
                 }
                 await send(type="status", **payload)
             elif action in ("mute", "unmute"):
@@ -821,7 +887,7 @@ async def ws_endpoint(ws: WebSocket):
                 payload = await _moon_status(orch)
                 payload["voice"] = {
                     "mode": "MUTED" if _voice_muted else "AUTO",
-                    "available": bool(_get_voice()),
+                    "available": bool(_get_voice_engine()),
                 }
                 await send(type="status", **payload)
                 await send(type="notice", message=f"[VOICE] mode {'MUTED' if _voice_muted else 'AUTO'}")

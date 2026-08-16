@@ -34,6 +34,9 @@ capabilities/cache/
 # Global Connector runtime connection registry (permission-gated; written at runtime)
 connections/registry.json
 
+# Voice engine runtime: cloned-voice samples + registry (user audio, written at runtime)
+voices/
+
 # Test caches
 .pytest_cache/
 .mypy_cache/

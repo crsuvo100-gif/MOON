@@ -51,10 +51,16 @@ tenacity>=8.2          # retry / error-recovery policies
 # moon_terminal.html were removed; textual/flask are no longer needed for the
 # terminal UI.)
 
-# --- Voice (installed by install_moon.py; listed for completeness) ----------
-# espeakng, SpeechRecognition, pyaudio, piper-tts  -> added by the installer
-# (piper-tts pulls natural neural TTS; espeak-ng is the offline fallback).
-# sox is required at the SYSTEM level for tone/voice transforms (apt install sox).
+# --- Voice engine (MOON's female voice + cloning; all optional, graceful fallback) -
+# XTTS-v2 = local, high-quality, cloneable female voice (needs a capable host).
+# openai = cloud 'nova'/'shimmer' alluring female voices (needs OPENAI_API_KEY).
+# vosk + pyaudio = offline speech-to-text (to HEAR and clone any user's voice).
+# espeak-ng + sox are system packages (apt install espeak-ng sox) for the
+# always-available CPU fallback voice.
+TTS>=0.22
+openai>=2.53
+vosk>=0.3
+pyaudio>=0.2
 
 # --- Testing / quality ------------------------------------------------------
 pytest>=8.0
