@@ -26,7 +26,8 @@ body{display:grid;place-items:center}
 .grid{position:absolute;inset:0;opacity:.16;background-image:linear-gradient(rgba(255,0,0,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(255,0,0,.12) 1px,transparent 1px);background-size:28px 28px;mask-image:radial-gradient(circle at 50% 50%,#000,transparent 82%);pointer-events:none;z-index:0}
 .scan{position:absolute;inset:0;pointer-events:none;z-index:99;background:repeating-linear-gradient(0deg,rgba(255,0,0,.014) 0 1px,transparent 1px 4px)}
 /* FUTURISTIC POLISH PASS (additive — enhances look, keeps all data wiring) */
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap');
+/* NOTE: external web-font @import removed — it blocked first paint when offline.
+   Font stacks fall back to local 'Courier New'/sans-serif (see :root --ff/--ff-title). */
 .fxparticles{position:absolute;inset:0;pointer-events:none;z-index:96}
 .gridfloor{position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;z-index:1;
   background:
@@ -166,6 +167,7 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
 .funcGrid .f .fn{color:#ff7a7a;font-family:var(--ff-title);font-size:11px;letter-spacing:.4px}
 .funcGrid .f .fd{color:#9a7a7a;font-size:9px;line-height:1.2}
 
+</style>
 </head>
 <body>
 <div id="app">
