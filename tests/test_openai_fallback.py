@@ -13,6 +13,8 @@ from types import SimpleNamespace
 
 import pytest
 
+pytestmark = pytest.mark.live  # requires a live model backend (Ollama)
+
 from app.brain.orchestrator import Orchestrator
 from app.config.settings import get_settings
 from app.services.llm_service import CompletionResult

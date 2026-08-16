@@ -18,6 +18,36 @@ logger = get_logger(__name__)
 
 
 
+def _ensure_default_peer() -> None:
+    """Idempotently register MOON's own loopback peer so the global connector
+    always shows a LIVE connection (verified via 'connect health'/'federate').
+
+    This is additive: it only registers the peer if absent, and never clobbers a
+    user-managed registry. The default registry file (connections/registry.json)
+    already seeds this; this is a belt-and-suspenders for fresh clones.
+    """
+    try:
+        from app.connector.gateway import ConnectionGateway
+
+        gw = ConnectionGateway()
+        if gw.get("moon_local") is None:
+            from app.connector.gateway import ConnectionRecord
+
+            from app.config.settings import get_settings
+
+            s = get_settings()
+            gw.register(ConnectionRecord(
+                name="moon_local", kind="agent",
+                url=s.model_base_url.rstrip("/"), model=s.model_name,
+                scope="network.agent", permissions=("network.agent",),
+                credential_ref="", enabled=True,
+                metadata={"note": "Loopback peer: MOON's own Ollama-compatible endpoint (default live connection)."},
+            ))
+            print("🌙 Registered default loopback peer 'moon_local' (global connector)")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("default peer registration skipped: %s", exc)
+
+
 async def _prefetch_models():
     import json
 
@@ -89,6 +119,7 @@ def main() -> None:
     sub.add_parser("tui", help="Launch MOON's curses text-mode terminal UI (headless/SSH)")
     sub.add_parser("telegram", help="Run MOON as a Telegram bot (polling listener)")
     args = ap.parse_args()
+    _ensure_default_peer()
     if args.cmd == "start":
         _run_terminal()
     elif args.cmd == "run":

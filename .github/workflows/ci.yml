@@ -1,10 +1,9 @@
-name: CI
+name: MOON CI
 
 on:
   push:
     branches: [main, master]
   pull_request:
-    branches: [main, master]
 
 jobs:
   test:
@@ -12,28 +11,43 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Create venv and install deps
+
+      - name: Create virtualenv and install deps
         run: |
           python -m venv .venv
           . .venv/bin/activate
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Import smoke test (all app modules)
+          pip install pytest pytest-asyncio
+
+      - name: "Best-effort: start Ollama and pull a tiny model"
+        # Live tests are marked @pytest.mark.live and auto-skip when Ollama is
+        # unreachable. If we can bring Ollama up here, they actually run; if not,
+        # the suite stays green (skips are clearly labeled). Either way CI is honest.
+        continue-on-error: true
         run: |
-          . .venv/bin/activate
-          python -c "import app.terminal_interface, app.dashboard, app.voice, app.brain.orchestrator"
+          curl -fsSL https://ollama.com/install.sh | sh || true
+          which ollama && (ollama serve >/tmp/ollama.log 2>&1 &) || true
+          for i in $(seq 1 20); do curl -s http://127.0.0.1:11434/api/tags >/dev/null 2>&1 && break; sleep 2; done
+          ollama pull qwen2.5:0.5b || true
+
       - name: Run tests
         run: |
           . .venv/bin/activate
-          env -u PYTHONPATH python -m pytest tests -q
-      - name: Lint (ruff, non-blocking)
+          unset PYTHONPATH
+          python -m pytest tests -q -p no:cacheprovider
+
+      - name: Import sweep (every module imports cleanly)
         run: |
           . .venv/bin/activate
-          ruff --version && ruff check app || true
+          unset PYTHONPATH
+          python -c "import importlib, pkgutil, app; [importlib.import_module(m.name) for m in pkgutil.walk_packages(app.__path__,'app.')]; print('IMPORT_SWEEP_OK')"
