@@ -730,7 +730,7 @@ const MOON_FUNCTIONS=[
   {i:"🔇",n:"MUTE",d:"Toggle audio output",a:{action:"mute"}},
   {i:"⏻",n:"WAKE",d:"Wake word trigger",a:{action:"wake"}},
   {i:"❔",n:"HELP",d:"Command reference",a:{action:"help"}},
-  {i:"🧠",n:"RUN TASK",d:"Run a task prompt",a:{action:"run"}},
+  {i:"🧠",n:"RUN TASK",d:"Run a task prompt",a:{action:"run",command:"summarize my current system status"}},
   {i:"🗣",n:"VOICE STATUS",d:"Engine capability",a:{action:"voice",command:"status"}},
 ];
 function toggleFunc(on){ const p=el("funcPanel"); if(!p)return; p.classList.toggle("hidden", !on); if(on) renderFuncGrid(); }
@@ -750,7 +750,7 @@ function doFunc(i){
 window.MOON_UI.doDiagnostics=doDiagnostics; window.MOON_UI.doHelp=doHelp; window.MOON_UI.doTerminal=doTerminal; window.MOON_UI.coreSync=doCoreSync;
 
 /* ===== boot ===== */
-setText("cliOut",'<div class="line">NEURAL COMMAND LINE INTERFACE</div>');
+(function(){ const b=el("cliOut"); if(b){ const d=document.createElement("div"); d.className="line"; d.textContent="NEURAL COMMAND LINE INTERFACE"; b.appendChild(d); } })();
 ["[CORE] Quantum link handshake complete.","[NEURAL] Synaptic pathways optimized.","[LEARNING] Deep pattern recognition active.","[SECURITY] Threat vector scan completed.","[MEMORY] Long-term memory consolidation complete.","[SYSTEM] All systems nominal.","[NETWORK] Uplink bandwidth stable."].forEach(addLog);
 setInterval(()=>addLog("[COGNITIVE] Autonomous processes running."),2600);
 const bars=el("bars"); if(bars) for(let i=0;i<28;i++){const e=document.createElement("i");e.style.height=(15+Math.random()*75)+"%";bars.appendChild(e);}
