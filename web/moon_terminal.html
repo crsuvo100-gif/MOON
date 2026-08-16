@@ -186,7 +186,12 @@ header{position:absolute;left:.7%;right:.7%;top:.7%;height:9.1%;display:grid;gri
 .pipeline{display:flex;justify-content:space-between;gap:2px;margin-top:10px}.step{flex:1;text-align:center;font-size:clamp(5px,.4vw,8px);color:#d55}.step b{display:grid;place-items:center;width:21px;height:21px;border:1px solid #d22;border-radius:50%;margin:auto;color:#f44;background:#150202}.step.on b{background:#ff2a2a;color:#fff;box-shadow:0 0 12px #f00}.step.done b{background:#5cff88;color:#021;border-color:#5cff88}.flow{height:4px;margin-top:10px;background:linear-gradient(90deg,#f22 60%,#260606 60%);box-shadow:0 0 7px #f00}
 .threat{height:100%;display:grid;grid-template-columns:60% 40%;gap:6px;padding:8px}.map{background:radial-gradient(circle at 50% 50%,rgba(255,0,0,.35),transparent 40%),repeating-linear-gradient(45deg,rgba(255,0,0,.12) 0 1px,transparent 1px 9px);border:1px solid #651010}
 .bottom{position:absolute;left:.7%;right:.7%;bottom:5.6%;height:11.6%;display:grid;grid-template-columns:16% 16% 16% 16% 16% 9% 11%;gap:.5%;z-index:6}.bcell{padding:6px 8px}.bcell h4{margin:0 0 3px;font-size:clamp(8px,.62vw,13px);font-weight:700;font-family:var(--ff-title);color:#ffb0b0;text-shadow:0 0 8px rgba(255,30,30,.6)}.spark{height:70%;position:relative;background:linear-gradient(90deg,transparent,#330505,transparent);overflow:hidden}.spark canvas{width:100%;height:100%}
-footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;grid-template-columns:23% repeat(7,1fr) 13%;gap:.3%;z-index:20}.cmd{display:flex;align-items:center;gap:7px;padding:0 8px;border:1px solid #711010;background:#070000;font-size:clamp(8px,.66vw,13px);font-weight:600}.cmd input{flex:1;background:#0b0000;border:1px solid #4b0b0b;color:#fff;height:70%;outline:none;font-weight:600}.btn{display:grid;place-items:center;border:1px solid #711010;background:#080000;color:#e06a6a;font-size:clamp(8px,.64vw,13px);font-weight:700;cursor:pointer;letter-spacing:.02em}.btn:hover,.btn.active{background:#300606;color:#fff;box-shadow:0 0 14px rgba(255,0,0,.28)}
+footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;grid-template-columns:15% repeat(12,1fr);gap:.25%;z-index:20}.cmd{display:flex;align-items:center;gap:7px;padding:0 8px;border:1px solid #711010;background:#070000;font-size:clamp(8px,.66vw,13px);font-weight:600}.cmd input{flex:1;background:#0b0000;border:1px solid #4b0b0b;color:#fff;height:70%;outline:none;font-weight:600}.btn{display:grid;place-items:center;border:1px solid #711010;background:#080000;color:#e06a6a;font-size:clamp(8px,.64vw,13px);font-weight:700;cursor:pointer;letter-spacing:.02em}.btn:hover,.btn.active{background:#300606;color:#fff;box-shadow:0 0 14px rgba(255,0,0,.28)}
+.btn.talking{background:#5a0a0a!important;color:#fff!important;box-shadow:0 0 20px rgba(255,40,40,.7);animation:talkpulse 1.1s ease-in-out infinite}
+@keyframes talkpulse{0%,100%{box-shadow:0 0 10px rgba(255,40,40,.45)}50%{box-shadow:0 0 26px rgba(255,60,60,.95)}}
+#talkState{position:absolute;left:50%;top:5.3%;transform:translateX(-50%);z-index:35;font-family:var(--ff-title);font-size:clamp(8px,.7vw,13px);letter-spacing:.14em;color:#ff7a7a;text-shadow:0 0 10px #f00;opacity:0;transition:opacity .3s;pointer-events:none}
+#talkState.show{opacity:.95;animation:idlblink 2s ease-in-out infinite}
+#talkState.live{color:#ff4040}
 
 /* expandable CLI terminal (merged from folder + wired to real backend) */
 #terminal{position:absolute;left:9%;right:12.5%;bottom:5.7%;height:27%;background:#030000f5;border:1px solid #ff2525;box-shadow:0 0 30px rgba(255,0,0,.22);z-index:30;display:none;grid-template-columns:31% 27% 22% 20%;font-family:"Courier New",monospace;font-size:clamp(6px,.55vw,11px)}
@@ -285,6 +290,7 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
       <div class="avatar"><canvas class="core3d" id="core3d"></canvas></div>
       <div class="radar"></div>
       <div class="idleTag">◌ MOON IDLE — NEURAL CORE STANDBY ◌</div>
+      <div id="talkState">◌ LISTENING ◌</div>
       <div class="brainStatus">NEURAL CONVERGENCE IN PROGRESS &nbsp; <b id="conv">87.6%</b></div>
       <div class="barline"><i id="convBar"></i></div>
     </div>
@@ -352,7 +358,7 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
 <footer>
   <div class="cmd"><b style="color:#ff6b6b">MOON&gt;</b><input id="command" placeholder="Enter command or ask MOON…"><button id="send" class="btn">➤</button></div>
   <div class="btn active" id="termBtn">▣ TERMINAL</div>
-  <div class="btn" id="aiChat">◉ AI CHAT</div><div class="btn" id="tasks">☷ TASKS</div><div class="btn" id="updates">◌ UPDATES</div><div class="btn" id="diag">⚙ DIAGNOSTICS</div><div class="btn" id="help">? HELP</div><div class="btn" id="funcBtn">FUNCTIONS</div><div class="btn" id="voiceBtn">VOICE</div><div class="btn" id="toolsBtn">TOOLS</div><div class="btn on" id="audioBtn">🔊 AUDIO</div><div class="btn" id="aspectBtn">⛶ DISPLAY</div>
+  <div class="btn" id="aiChat">◉ AI CHAT</div><div class="btn" id="tasks">☷ TASKS</div><div class="btn" id="updates">◌ UPDATES</div><div class="btn" id="diag">⚙ DIAGNOSTICS</div><div class="btn" id="help">? HELP</div><div class="btn" id="funcBtn">FUNCTIONS</div><div class="btn" id="voiceBtn">VOICE</div><div class="btn" id="toolsBtn">TOOLS</div><div class="btn on" id="audioBtn">🔊 AUDIO</div><div class="btn" id="talkBtn">🎙 TALK</div><div class="btn" id="aspectBtn">⛶ DISPLAY</div>
 </footer>
 </div>
 
@@ -501,7 +507,8 @@ function connect(){
 function handle(m){
   switch(m.type){
     case "ready": case "status": applyStatus(m.status||m); addLog("[SYSTEM] status received."); if((m.status||m).load!=null) window.MOON_UI.onCorePulse && window.MOON_UI.onCorePulse((m.status||m).load/180); if(m.type==="ready" && typeof window.MOON_UI.onReady==="function") window.MOON_UI.onReady(m); break;
-    case "assistant_start": setState("SPEAKING"); addLog("[MOON] thinking…"); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.9); break;
+    case "assistant_start": setState("SPEAKING"); addLog("[MOON] thinking…"); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.9);
+      _moonSpeaking=true; if(_recog){ try{ _recog.stop(); }catch(_){} } if(_talkState) setTalkState("◌ MOON IS SPEAKING ◌", false); break;
     case "workflow": setState((m.stage||"").toUpperCase(), {stage:m.stage}); addLog("[FLOW] "+(m.stage||"")+": "+(m.detail||"")); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.7); break;
     case "assistant_chunk":
       addLog("[MOON] "+(m.content||""));
@@ -512,6 +519,7 @@ function handle(m){
     case "assistant_done":
       setState("IDLE"); addLog("[MOON] done in "+(m.elapsed||0)+"s"+(m.locked?" [locked]":""));
       if(lastAction==="list_tools"){ renderToolGrid(toolBuf); toolBuf=""; }
+      _moonSpeaking=false; if(_talking && _recog){ try{ _recog.start(); }catch(_){} } if(_talkState && _talking) setTalkState("◌ LISTENING — SAY 'MOON' OR SPEAK ◌", true);
       break;
   }
 }
@@ -519,9 +527,11 @@ function playWav(b64){
   try{
     const bin=atob(b64); const buf=new Uint8Array(bin.length);
     for(let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i);
-    new AudioContext().decodeAudioData(buf.buffer.slice(0),a=>{
-      if(_muted)return; const src=new AudioContext().createBufferSource(); src.buffer=a; src.connect(new AudioContext().destination); src.start();
-    });
+    const ac=audioCtx(); if(!ac) return;
+    if(ac.state==="suspended") ac.resume();
+    ac.decodeAudioData(buf.buffer.slice(0),a=>{
+      if(_muted)return; const src=ac.createBufferSource(); src.buffer=a; src.connect(ac.destination); src.start();
+    },()=>{});
   }catch(_){}
 }
 
@@ -819,6 +829,57 @@ function bootChime(){ const ac=audioCtx(); if(!ac) return;
   tone(440,0.12,"triangle",0.07,0); tone(660,0.12,"triangle",0.07,0.10); tone(880,0.22,"triangle",0.08,0.20); }
 // soft blip for live data/reactive glitch
 function blip(){ const ac=audioCtx(); if(!ac) return; if(ac.state==="suspended") ac.resume(); tone(220,0.06,"square",0.03,0); }
+/* ===== JARVIS DUPLEX VOICE INTERACTION =====
+   Mic (Web Speech Recognition) hears ANYONE -> sends to MOON brain ->
+   MOON replies with voice (audio frame -> playWav). Mic pauses while she
+   speaks to avoid echo. Toggle with the TALK footer button. */
+let _recog=null, _talking=false, _moonSpeaking=false, _heardBuf="";
+const _talkBtn=el("talkBtn"), _talkState=el("talkState");
+function setTalkState(txt, live){
+  if(!_talkState) return;
+  _talkState.textContent = txt;
+  _talkState.classList.toggle("show", !!txt);
+  _talkState.classList.toggle("live", !!live);
+}
+function buildRecog(){
+  const R=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!R){ addLog("[TALK] speech recognition unavailable in this browser (use Chrome/Edge)."); return null; }
+  const r=new R(); r.lang="en-US"; r.continuous=true; r.interimResults=true;
+  r.onresult=(e)=>{
+    let final="";
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      const t=e.results[i][0].transcript;
+      if(e.results[i].isFinal) final+=t; else _heardBuf=t;
+    }
+    if(final.trim()){ onHeard(final.trim()); _heardBuf=""; }
+  };
+  r.onerror=(e)=>{ if(e.error==="not-allowed"){ stopTalk(); addLog("[TALK] microphone permission denied."); } };
+  r.onend=()=>{ if(_talking && !_moonSpeaking){ try{ r.start(); }catch(_){} } };
+  return r;
+}
+function onHeard(text){
+  addLog("[YOU] "+text);
+  setTalkState("◌ MOON IS THINKING ◌", false);
+  wsSend({action:"send_message", text:text});
+  blip();
+}
+function startTalk(){
+  if(!_recog) _recog=buildRecog();
+  if(!_recog) return;
+  const ac=audioCtx(); if(ac && ac.state==="suspended") ac.resume(); // unlock audio on gesture
+  _talking=true; _talkBtn.classList.add("talking");
+  setTalkState("◌ LISTENING — SAY 'MOON' OR SPEAK ◌", true);
+  try{ _recog.start(); }catch(_){}
+  addLog("[TALK] voice interaction ON — MOON is listening.");
+}
+function stopTalk(){
+  _talking=false; _talkBtn.classList.remove("talking");
+  setTalkState("", false);
+  if(_recog){ try{ _recog.stop(); }catch(_){} }
+  addLog("[TALK] voice interaction OFF.");
+}
+function toggleTalk(){ _talking? stopTalk() : startTalk(); }
+el("talkBtn").onclick=toggleTalk;
 if(typeof window.MOON_UI!=="undefined"){
   const _origReady=window.MOON_UI.onReady;
   window.MOON_UI.onReady=function(d){ runBoot(); if(typeof _origReady==="function") return _origReady(d); };
