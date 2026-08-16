@@ -147,8 +147,11 @@ def _stream_text(text: str):
 async def terminal_page() -> HTMLResponse:
     # Serves the rebuilt MOON NEURAL CORE INTERFACE (web/moon_terminal.html),
     # a red/black HUD wired to the live /ws backend.
+    headers = {"Cache-Control": "no-store, no-cache, must-revalidate"}
     if TERMINAL_HTML.exists():
-        return HTMLResponse(TERMINAL_HTML.read_text(encoding="utf-8"))
+        return HTMLResponse(
+            TERMINAL_HTML.read_text(encoding="utf-8"), headers=headers
+        )
     return HTMLResponse(
         "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
         "<title>MOON Terminal</title></head><body style='background:#050505;color:#ff4d4d;"
