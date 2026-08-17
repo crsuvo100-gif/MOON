@@ -99,6 +99,9 @@ def _run_terminal() -> None:
     import os
     import subprocess
     import sys
+    import threading
+    import time
+    import urllib.request
 
     # The project venv is 3.13, but a global PYTHONPATH may point at an
     # incompatible (3.11) site-packages and shadow pydantic_core at import time.
@@ -107,10 +110,51 @@ def _run_terminal() -> None:
     env = dict(os.environ)
     env.pop("PYTHONPATH", None)
 
+    PORT = 8777
+    URL = f"http://127.0.0.1:{PORT}/"
+
+    # --- Auto-open the MOON HUD on MOON's own boot (not system/login boot) ---
+    # A background thread waits for the backend to come up, then launches the
+    # terminal UI in Chromium (kiosk/app mode). On headless/SSH sessions where no
+    # display exists it simply skips silently. This ties the UI opening to MOON
+    # starting, exactly as requested.
+    def _auto_open_ui():
+        # Wait until the backend is reachable (max ~30s).
+        for _ in range(30):
+            try:
+                with urllib.request.urlopen(URL, timeout=2):
+                    break
+            except Exception:
+                time.sleep(1)
+        else:
+            return  # backend never came up; don't spam
+        # Only open if a graphical display is available.
+        if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
+            return
+        chrome = (os.environ.get("MOON_CHROME_BIN")
+                  or shutil_which("chromium")
+                  or shutil_which("chromium-browser")
+                  or shutil_which("google-chrome"))
+        if not chrome:
+            return
+        subprocess.Popen([
+            chrome, "--no-sandbox", "--disable-gpu",
+            f"--app={URL}", "--window-size=1366,768", "--start-maximized",
+            "--disable-infobars", "--no-first-run", "--no-default-browser-check",
+            "--kiosk",
+        ], env={**os.environ, "PYTHONPATH": ""}, stdout=subprocess.DEVNULL,
+             stderr=subprocess.DEVNULL)
+
+    def shutil_which(name):
+        from shutil import which
+        return which(name)
+
+    threading.Thread(target=_auto_open_ui, daemon=True).start()
+
     print("🌙 MOON Terminal starting at http://0.0.0.0:8777  (LAN: http://<this-host-ip>:8777)")
     subprocess.run([
         sys.executable, "-m", "uvicorn", "app.terminal_interface:app",
-        "--host", "0.0.0.0", "--port", "8777", "--log-level", "info",
+        "--host", "0.0.0.0", "--port", str(PORT), "--log-level", "info",
     ], env=env)
 
 
