@@ -730,17 +730,18 @@ function coreFx(t){
       fxCtx.beginPath();fxCtx.arc(x,y,1.4,0,Math.PI*2);fxCtx.fillStyle="rgba("+rg.col+","+(0.7+e*0.3)+")";fxCtx.fill();}
     fxCtx.restore();});
   fxCtx.shadowBlur=0;
-  // glowing core sphere (white -> orange -> red bloom)
+  // glowing core bloom (warm amber -> deep red; no harsh white/ -yellow disc,
+  // so the edited fiery backdrop shows through as the core's surface)
   const g=fxCtx.createRadialGradient(cx,cy,0,cx,cy,R*1.05*pulse);
-  g.addColorStop(0,"rgba(255,255,245,"+(0.98)+")");
-  g.addColorStop(0.25,"rgba(255,225,140,"+(0.95)+")");
-  g.addColorStop(0.55,"rgba(255,140,40,"+(0.85+e*0.1)+")");
-  g.addColorStop(0.82,"rgba(220,60,20,"+(0.6+e*0.1)+")");
+  g.addColorStop(0,"rgba(255,210,150,"+(0.55+e*0.15)+")");
+  g.addColorStop(0.25,"rgba(255,180,90,"+(0.60+e*0.1)+")");
+  g.addColorStop(0.55,"rgba(255,130,40,"+(0.70+e*0.1)+")");
+  g.addColorStop(0.82,"rgba(210,60,20,"+(0.6+e*0.1)+")");
   g.addColorStop(1,"rgba(120,20,10,0)");
   fxCtx.save();fxCtx.shadowBlur=40+e*45;fxCtx.shadowColor="#ff7a2a";fxCtx.fillStyle=g;
   fxCtx.beginPath();fxCtx.arc(cx,cy,R*1.02*pulse,0,Math.PI*2);fxCtx.fill();fxCtx.restore();
-  // hot inner point
-  fxCtx.beginPath();fxCtx.arc(cx,cy,R*0.18*pulse,0,Math.PI*2);fxCtx.fillStyle="rgba(255,255,250,"+(0.9+e*0.1)+")";fxCtx.shadowBlur=20;fxCtx.shadowColor="#fff";fxCtx.fill();fxCtx.shadowBlur=0;
+  // soft inner highlight (small, warm — not a bright white/yellow circle)
+  fxCtx.beginPath();fxCtx.arc(cx,cy,R*0.10*pulse,0,Math.PI*2);fxCtx.fillStyle="rgba(255,200,140,"+(0.35+e*0.2)+")";fxCtx.shadowBlur=14;fxCtx.shadowColor="#ff9a4a";fxCtx.fill();fxCtx.shadowBlur=0;
   coreEnergy*=0.965; // decay after MOON stops thinking
 }
 

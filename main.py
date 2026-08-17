@@ -194,7 +194,7 @@ def _run_terminal() -> None:
         chrome = _detect_browser()
         if not chrome:
             return
-        args = [chrome, "--no-sandbox", "--disable-gpu",
+        args = [chrome, "--disable-setuid-sandbox", "--disable-gpu",
                 f"--app={URL}", "--window-size=1920,1080", "--start-maximized",
                 "--disable-infobars", "--no-first-run", "--no-default-browser-check"]
         if wayland:
