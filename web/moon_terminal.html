@@ -943,6 +943,22 @@ if(typeof window.MOON_UI!=="undefined"){
   window.MOON_UI.onReady=function(d){ runBoot(); if(typeof _origReady==="function") return _origReady(d); };
 }
 
+// Continuous live monitoring: refresh status every 3s so panels always reflect
+// real backend data (cpu/ram/threat/agents), independent of the initial push.
+(function monitorHeartbeat(){
+  let tries=0;
+  const iv=setInterval(()=>{
+    if(ws && ws.readyState===1){
+      wsSend({action:"status"});
+      tries++;
+      if(tries>3 && document.getElementById("boot")){
+        // safety: if boot never cleared, force-reveal the HUD
+        const b=document.getElementById("boot");
+        if(b && getComputedStyle(b).display!=="none"){ b.classList.add("gone"); setTimeout(()=>b.remove(),900); }
+      }
+    }
+  }, 3000);
+})();
 connect();
 
 /* Generic AI transports (kept from attached folder) */

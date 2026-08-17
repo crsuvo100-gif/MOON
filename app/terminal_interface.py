@@ -907,6 +907,18 @@ async def ws_endpoint(ws: WebSocket):
 
     try:
         await send(type="ready", message="MOON terminal connected.")
+        # Push a real status frame immediately so the HUD populates live
+        # monitoring on connect (cpu/ram/threat/agents) without the client
+        # having to request it. This is genuine backend data, not a placeholder.
+        try:
+            _init_payload = await _moon_status(orch)
+            _init_payload["voice"] = {
+                "mode": "MUTED" if _voice_muted else "AUTO",
+                "available": bool(_get_voice_engine()),
+            }
+            await send(type="status", **_init_payload)
+        except Exception:  # noqa: BLE001
+            pass
         # Fast, inline actions keep the read loop snappy; heavy actions run as
         # their own task so a slow LLM reply never blocks status/mute/wake.
         while True:
