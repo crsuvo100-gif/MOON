@@ -43,6 +43,7 @@ _DEFAULT_SETTINGS = {
     "browser": "",            # auto-detected if blank (google-chrome/chromium/...)
     "aspect": "auto",         # auto | 16:9 | 21:9 | 32:9 | 16:10 | 4:3 | 1:1 | 9:16
     "avatar_mode": "fusion",  # fusion | neural  (central core visual)
+    "resolution": "hd",       # hd | compact  (UI density for large displays)
     "autostart": True,        # open HUD on MOON boot
     "idle_speed": 1.0,
 }
@@ -503,8 +504,8 @@ async def api_post_settings(request: Request):
         body = {}
     cur = _load_settings()
     cur.update({k: body[k] for k in ("host", "port", "display", "browser",
-                                     "aspect", "avatar_mode", "autostart",
-                                     "idle_speed") if k in body})
+                                     "aspect", "avatar_mode", "resolution",
+                                     "autostart", "idle_speed") if k in body})
     try:
         with open(SETTINGS_JSON, "w") as fh:
             json.dump(cur, fh, indent=2)

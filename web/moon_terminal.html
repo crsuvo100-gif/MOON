@@ -20,8 +20,12 @@ body{display:grid;place-items:center}
   radial-gradient(circle at 50% 43%,rgba(255,0,0,.10),transparent 30%),
   radial-gradient(circle at 50% 65%,rgba(255,0,0,.05),transparent 45%),
   linear-gradient(#060000,#010101);border:1px solid #350707;
-  box-shadow:0 0 45px rgba(255,0,0,.18),inset 0 0 70px rgba(255,0,0,.05)
+  box-shadow:0 0 45px rgba(255,0,0,.18),inset 0 0 70px rgba(255,0,0,.05);
+  /* HD base: scale UI density with the viewport so a 1080p+ display fills richly.
+     The .hd class bumps this further for a larger, more detailed look. */
+  font-size:clamp(13px,1.02vw,19px);
 }
+#app.hd{font-size:clamp(15px,1.3vw,24px)}
 #app.manual{width:100vw!important;height:100vh!important}
 /* DIM FIERY BACKDROP: attached holographic-sphere image, darkened + desaturated
    and screen-blended so it glows softly behind the red/black HUD without ever
@@ -419,6 +423,11 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
         <button class="ratio" data-m="fusion">🔥 FUSION CORE (sphere)</button>
         <button class="ratio" data-m="neural">🧠 NEURAL CORE (animated brain)</button>
       </div>
+      <div class="ovRow"><label>Display resolution</label>
+        <div class="ratioGrid" id="setRes" style="grid-template-columns:repeat(2,1fr)">
+          <button class="ratio" data-r="hd">HD — RICH (larger, detailed)</button>
+          <button class="ratio" data-r="compact">COMPACT — DENSE</button>
+        </div></div>
       <div class="ovRow"><label>Idle speed</label>
         <select id="setIdle">
           <option value="2">SLOW</option><option value="1">NORMAL</option>
@@ -802,6 +811,9 @@ async function loadSettingsUI(){
   // avatar selection
   _avatarMode = s.avatar_mode||_avatarMode;
   $$("#setAvatar .ratio").forEach(b=>b.classList.toggle("sel", b.dataset.m===_avatarMode));
+  // resolution selection
+  _resolution = s.resolution||_resolution;
+  $$("#setRes .ratio").forEach(b=>b.classList.toggle("sel", b.dataset.r===_resolution));
 }
 // aspect pick inside settings (mirrors the floating #aspect panel)
 $$("#setAspect .ratio").forEach(b=>b.onclick=()=>{
@@ -813,6 +825,11 @@ $$("#setAspect .ratio").forEach(b=>b.onclick=()=>{
 $$("#setAvatar .ratio").forEach(b=>b.onclick=()=>{
   $$("#setAvatar .ratio").forEach(x=>x.classList.remove("sel")); b.classList.add("sel");
   _avatarMode=b.dataset.m; applyAvatarMode(); localStorage.setItem("moon-ui-avatar",_avatarMode);
+});
+// resolution pick inside settings
+$$("#setRes .ratio").forEach(b=>b.onclick=()=>{
+  $$("#setRes .ratio").forEach(x=>x.classList.remove("sel")); b.classList.add("sel");
+  _resolution=b.dataset.r; applyResolution(); localStorage.setItem("moon-ui-resolution",_resolution);
 });
 
 function setAspect(r){
@@ -829,6 +846,11 @@ function applyAvatarMode(){
   if(_avatarMode==="neural"){ if(orb)orb.style.display="none"; if(fx)fx.style.display="none"; if(nf)nf.style.display="block"; }
   else { if(orb)orb.style.display=""; if(fx)fx.style.display=""; if(nf)nf.style.display="none"; }
 }
+function applyResolution(){
+  const app=el("app"); if(!app) return;
+  app.classList.toggle("hd", _resolution!=="compact");
+}
+let _resolution = (localStorage.getItem("moon-ui-resolution")||"hd");
 function collectSettings(){
   return {
     host: el("setHost").value.trim()||"127.0.0.1",
@@ -838,6 +860,7 @@ function collectSettings(){
     autostart: el("setAutostart").checked,
     aspect: ($$("#setAspect .ratio.sel")[0]||{}).dataset?.r || "auto",
     avatar_mode: ($$("#setAvatar .ratio.sel")[0]||{}).dataset?.m || _avatarMode,
+    resolution: ($$("#setRes .ratio.sel")[0]||{}).dataset?.r || _resolution,
     idle_speed: parseFloat(el("setIdle").value)||1,
   };
 }
@@ -855,18 +878,19 @@ async function saveSettings(){
 }
 function applySettingsNow(){
   const s=collectSettings();
-  setAspect(s.aspect); applyAvatarMode();
+  setAspect(s.aspect); applyAvatarMode(); applyResolution();
   const app=el("app"); if(app) app.style.setProperty("--idle-speed", s.idle_speed);
   const sweep=document.querySelector(".sweep"); if(sweep) sweep.style.animationDuration=(7/s.idle_speed)+"s";
   localStorage.setItem("moon-ui-idle-speed",String(s.idle_speed));
   localStorage.setItem("moon-ui-avatar",s.avatar_mode);
+  localStorage.setItem("moon-ui-resolution",s.resolution);
   el("setMsg").textContent="✓ applied";
 }
 function resetSettings(){
   fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({host:"127.0.0.1",port:8777,display:"",browser:"",autostart:true,aspect:"auto",avatar_mode:"fusion",idle_speed:1})})
+    body:JSON.stringify({host:"127.0.0.1",port:8777,display:"",browser:"",autostart:true,aspect:"auto",avatar_mode:"fusion",resolution:"hd",idle_speed:1})})
     .catch(()=>{});
-  localStorage.removeItem("moon-ui-ratio"); localStorage.removeItem("moon-ui-idle-speed"); localStorage.removeItem("moon-ui-avatar");
+  localStorage.removeItem("moon-ui-ratio"); localStorage.removeItem("moon-ui-idle-speed"); localStorage.removeItem("moon-ui-avatar"); localStorage.removeItem("moon-ui-resolution");
   loadSettingsUI(); applySettingsNow(); el("setMsg").textContent="✓ reset to defaults";
 }
 el("setBtn").onclick=()=>toggleSettings(true);
@@ -878,7 +902,7 @@ if(_cfgNav) _cfgNav.onclick=()=>{ $$(".nav").forEach(x=>x.classList.remove("acti
 const term=el("terminal"), termBtn=el("termBtn");
 termBtn.onclick=()=>term.classList.toggle("open");
 el("aspectBtn").onclick=()=>el("aspect").classList.toggle("open");
-$$(".ratio").forEach(b=>b.onclick=()=>{
+$$("#aspect .ratio").forEach(b=>b.onclick=()=>{
   $$(".ratio").forEach(x=>x.classList.remove("sel")); b.classList.add("sel");
   const r=b.dataset.r;
   if(r==="auto") document.getElementById("app").classList.add("manual"); // auto = fill handled by #app default 100vw/100vh
@@ -1005,10 +1029,11 @@ spark("spSyn","#ff4d4d");spark("spFeed","#ff7a4d");spark("spMem","#ff4d4d");spar
 spark("spL1","#3cf");spark("spL2","#3cf");spark("spL3","#3cf");spark("spR1","#ff9a3a");spark("spR2","#ff9a3a");spark("spR3","#ff9a3a");
 
 window.addEventListener("resize",size); size(); requestAnimationFrame(loop);
-// Restore persisted interface settings on load (aspect + avatar mode)
+// Restore persisted interface settings on load (aspect + avatar mode + resolution)
 (function restoreSettings(){
   const ratio=localStorage.getItem("moon-ui-ratio"); if(ratio) setAspect(ratio);
   const av=localStorage.getItem("moon-ui-avatar"); if(av){ _avatarMode=av; applyAvatarMode(); }
+  const res=localStorage.getItem("moon-ui-resolution"); if(res){ _resolution=res; applyResolution(); }
   const spd=parseFloat(localStorage.getItem("moon-ui-idle-speed")||"1")||1;
   const app=el("app"); if(app) app.style.setProperty("--idle-speed", spd);
 })();

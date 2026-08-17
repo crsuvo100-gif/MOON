@@ -101,6 +101,7 @@ def _run_terminal() -> None:
     import shutil
     import subprocess
     import sys
+    import tempfile
     import threading
     import time
     import urllib.request
@@ -162,6 +163,23 @@ def _run_terminal() -> None:
     def _auto_open_ui():
         if not settings.get("autostart", True):
             return
+        # Idempotency guard: only ever open ONE MOON HUD window per host.
+        # A lockfile records the last-open PID/window so restarts/relaunches
+        # never stack duplicate Chrome windows.
+        lock = os.path.join(tempfile.gettempdir(), "moon_hud_open.lock")
+        try:
+            if os.path.exists(lock):
+                # a window was already opened recently for this host -> skip
+                try:
+                    with open(lock) as fh:
+                        data = fh.read().strip()
+                    # if the recorded pid is still alive, assume its window is up
+                    if data and os.path.exists(f"/proc/{data}"):
+                        return
+                except Exception:
+                    pass
+        except Exception:
+            pass
         for _ in range(30):                      # wait for backend (max ~30s)
             try:
                 with urllib.request.urlopen(URL, timeout=2):
@@ -177,15 +195,21 @@ def _run_terminal() -> None:
         if not chrome:
             return
         args = [chrome, "--no-sandbox", "--disable-gpu",
-                f"--app={URL}", "--window-size=1366,768", "--start-maximized",
+                f"--app={URL}", "--window-size=1920,1080", "--start-maximized",
                 "--disable-infobars", "--no-first-run", "--no-default-browser-check"]
         if wayland:
             args += ["--ozone-platform=wayland", f"--wayland-display={wayland}"]
         if disp:
             args += [f"--display={disp}"]
         try:
-            subprocess.Popen(args, env={**os.environ, "PYTHONPATH": ""},
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            proc = subprocess.Popen(args, env={**os.environ, "PYTHONPATH": ""},
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            # record this opener's pid so a second invocation won't duplicate
+            try:
+                with open(lock, "w") as fh:
+                    fh.write(str(proc.pid))
+            except Exception:
+                pass
         except Exception:
             pass
 
