@@ -132,16 +132,16 @@ def _run_terminal() -> None:
         if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
             return
         chrome = (os.environ.get("MOON_CHROME_BIN")
+                  or shutil_which("google-chrome")
+                  or shutil_which("google-chrome-stable")
                   or shutil_which("chromium")
-                  or shutil_which("chromium-browser")
-                  or shutil_which("google-chrome"))
+                  or shutil_which("chromium-browser"))
         if not chrome:
             return
         subprocess.Popen([
             chrome, "--no-sandbox", "--disable-gpu",
             f"--app={URL}", "--window-size=1366,768", "--start-maximized",
             "--disable-infobars", "--no-first-run", "--no-default-browser-check",
-            "--kiosk",
         ], env={**os.environ, "PYTHONPATH": ""}, stdout=subprocess.DEVNULL,
              stderr=subprocess.DEVNULL)
 
