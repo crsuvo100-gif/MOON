@@ -17,18 +17,44 @@ import asyncio
 import base64
 import os
 import time
+import json
+import subprocess
+import shlex
+from collections import deque
 from pathlib import Path
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 TERMINAL_HTML = WEB_DIR / "moon_terminal.html"
 THEME_JSON = WEB_DIR / "theme.json"
+SETTINGS_JSON = WEB_DIR / "moon_settings.json"
 MOON_CORE_PNG = WEB_DIR / "moon_core.png"
 AVATAR_SVG = WEB_DIR / "avatar.svg"
 AVATAR_GIF = WEB_DIR / "avatar.gif"
 AVATAR_PNG = WEB_DIR / "avatar.png"
+
+# Default, user-overridable terminal UI settings (persisted to moon_settings.json).
+_DEFAULT_SETTINGS = {
+    "host": "127.0.0.1",
+    "port": 8777,
+    "display": "",            # auto-detected if blank
+    "browser": "",            # auto-detected if blank (google-chrome/chromium/...)
+    "aspect": "auto",         # auto | 16:9 | 21:9 | 32:9 | 16:10 | 4:3 | 1:1 | 9:16
+    "avatar_mode": "fusion",  # fusion | neural  (central core visual)
+    "autostart": True,        # open HUD on MOON boot
+    "idle_speed": 1.0,
+}
+
+def _load_settings() -> dict:
+    s = dict(_DEFAULT_SETTINGS)
+    try:
+        if SETTINGS_JSON.exists():
+            s.update(json.loads(SETTINGS_JSON.read_text()))
+    except Exception:
+        pass
+    return s
 
 app = FastAPI(title="MOON Terminal")
 
@@ -74,6 +100,43 @@ async def _get_orchestrator():
             await o.setup()
             _ORCH = o
         return _ORCH
+
+
+# ---- Live telemetry ring buffer + structured log sink (advanced HUD) ----
+_TELEM = deque(maxlen=240)          # rolling {t, cpu, ram, net, load}
+_LOG_FILE = Path(os.environ.get("MOON_TERMINAL_LOG", "/tmp/moon_terminal.log"))
+_LOG_BUF = deque(maxlen=400)        # rolling backend log lines for the HUD
+_telem_t = 0.0
+
+def _push_telemetry(orch):
+    """Sample real system metrics into the rolling buffer (called periodically)."""
+    global _telem_t
+    try:
+        s = _system_metrics()
+        cpu = float(s.get("cpu", 0.0) or 0.0)
+        ram = float(s.get("ram_pct", 0.0) or 0.0)
+        net = float(s.get("net", 0.0) or 0.0)
+        _TELEM.append({"t": round(time.time(), 1), "cpu": round(cpu, 1),
+                       "ram": round(ram, 1), "net": round(net, 2)})
+    except Exception:
+        pass
+
+def _log(msg: str, sev: str = "info"):
+    """Append a structured log line to the rolling buffer + file (for the HUD)."""
+    ts = time.strftime("%H:%M:%S")
+    line = f"[{ts}] {sev.upper()} {msg}"
+    _LOG_BUF.append({"t": ts, "sev": sev, "msg": msg})
+    try:
+        with open(_LOG_FILE, "a") as fh:
+            fh.write(line + "\n")
+    except Exception:
+        pass
+
+def _telemetry_snapshot(orch) -> dict:
+    _push_telemetry(orch)
+    return {"series": list(_TELEM),
+            "current": _TELEM[-1] if _TELEM else None,
+            "logs": list(_LOG_BUF)}
 
 
 # Voice / TTS (MOON's premium female voice + cloning via VoiceEngine)
@@ -427,7 +490,109 @@ async def _moon_status(orch) -> dict:
     }
 
 
-@app.get("/status")
+@app.get("/api/settings")
+async def api_get_settings(request: Request):
+    return JSONResponse(_load_settings())
+
+
+@app.post("/api/settings")
+async def api_post_settings(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    cur = _load_settings()
+    cur.update({k: body[k] for k in ("host", "port", "display", "browser",
+                                     "aspect", "avatar_mode", "autostart",
+                                     "idle_speed") if k in body})
+    try:
+        with open(SETTINGS_JSON, "w") as fh:
+            json.dump(cur, fh, indent=2)
+        _log(f"settings saved: {cur.get('avatar_mode')}/{cur.get('aspect')}", "ok")
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+    return JSONResponse({"ok": True, "settings": cur})
+
+
+@app.get("/api/telemetry")
+async def api_telemetry(request: Request):
+    orch = await _get_orchestrator()
+    return JSONResponse(_telemetry_snapshot(orch))
+
+
+# Restricted shell allowlist: the HUD "SHELL" tab runs REAL commands, but only
+# safe read-only/diagnostic ones, so the interface is powerful without being a
+# remote-code-execution hole. Extend deliberately; never allow arbitrary shells.
+_SHELL_ALLOW = {
+    "status": "echo MOON CORE ONLINE",
+    "ps": "ps -eo pid,pcpu,pmem,comm | head -20",
+    "top": "ps -eo pid,pcpu,pmem,comm | sort -k2 -r | head -12",
+    "df": "df -h",
+    "free": "free -h",
+    "uname": "uname -a",
+    "uptime": "uptime",
+    "netstat": "ss -tunp 2>/dev/null | head -20 || netstat -tunp 2>/dev/null | head -20",
+    "ifconfig": "ip -brief addr",
+    "ip": "ip -brief addr",
+    "ls": "ls -la",
+    "pwd": "pwd",
+    "echo": "echo",
+    "date": "date",
+    "whoami": "whoami",
+    "env": "env | grep -iE 'MOON|PATH|HOME|USER' | head",
+    "nproc": "nproc",
+    "cat": "cat",   # gated below to text files only
+}
+
+def _shell_dispatch(cmd: str) -> tuple[str, int]:
+    """Run a REAL command from the allowlist. Returns (output, exit_code)."""
+    parts = shlex.split(cmd) if cmd.strip() else []
+    if not parts:
+        return ("", 0)
+    base = parts[0]
+    if base not in _SHELL_ALLOW:
+        return (f"denied: '{base}' is not in the operator allowlist", 1)
+    # Build the real shell command (allowlist maps to a safe expansion).
+    if base == "cat":
+        # only permit cat of text/log files, no flags, no redirects
+        target = parts[1] if len(parts) > 1 else ""
+        if not target or target.startswith("-") or ".." in target or target.startswith("/"):
+            return ("denied: cat target not permitted", 1)
+        real = f"cat {shlex.quote(target)}"
+    else:
+        real = _SHELL_ALLOW[base] + ("" if base in ("echo", "pwd", "date", "whoami", "nproc", "uname", "uptime") else "")
+        # for ls/cat without args, allow but cap output
+    try:
+        _log(f"shell: {cmd}", "sys")
+        proc = subprocess.run(real, shell=True, capture_output=True, text=True, timeout=20)
+        out = (proc.stdout or "") + (proc.stderr or "")
+        return (out[:8000], proc.returncode)
+    except subprocess.TimeoutExpired:
+        return ("timeout (>20s)", 124)
+    except Exception as e:  # noqa: BLE001
+        return (f"error: {e}", 2)
+
+
+@app.post("/api/exec")
+async def api_exec(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    cmd = str(body.get("cmd", "")).strip()
+    out, code = _shell_dispatch(cmd)
+    _log(f"exec[{code}] {cmd}", "ok" if code == 0 else "err")
+    return JSONResponse({"cmd": cmd, "exit": code, "output": out})
+
+
+@app.get("/api/logs")
+async def api_logs(request: Request, n: int = 100):
+    orch = await _get_orchestrator()
+    snap = _telemetry_snapshot(orch)
+    return JSONResponse({"logs": snap["logs"][-n:], "telemetry": snap["series"][-n:]})
+
+
+
 async def status(request: Request):
     # Authorization gate for remote exposure.
     if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):

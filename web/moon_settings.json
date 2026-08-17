@@ -1,0 +1,10 @@
+{
+  "host": "127.0.0.1",
+  "port": 8777,
+  "display": "",
+  "browser": "",
+  "aspect": "16:9",
+  "avatar_mode": "neural",
+  "autostart": true,
+  "idle_speed": 1.0
+}

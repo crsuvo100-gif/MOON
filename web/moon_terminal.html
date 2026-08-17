@@ -244,6 +244,28 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
 .toolGrid .t{background:#0c0000;border:1px solid #4b0b0b;padding:5px 7px;font-size:11px;color:#ffb3b3;cursor:pointer}
 .toolGrid .t:hover{background:#220404}
 .overlay.wide{width:min(72%,900px)}
+.setBtn{background:#1a0404;color:#ff7a7a;border:1px solid #a33;font-family:var(--ff-title);font-size:11px;letter-spacing:.6px;padding:6px 10px;cursor:pointer;border-radius:0}
+.setBtn:hover{background:#300;box-shadow:0 0 10px #f008}
+.panel.settings{padding:6px 8px;display:flex;align-items:center}
+.ratioGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0}
+@media(max-width:760px){.ratioGrid{grid-template-columns:repeat(2,1fr)}}
+.ratioGrid .ratio{background:#120000;border:1px solid #5d1010;color:#ff7a7a;padding:7px 6px;cursor:pointer;font-family:var(--ff-title);font-size:10px;letter-spacing:.4px}
+.ratioGrid .ratio:hover{background:#240404;box-shadow:0 0 8px #d008}
+.ratioGrid .ratio.sel{background:#3a0808;border-color:#ff2a2a;box-shadow:0 0 10px #f008}
+.setBody fieldset{border:1px solid #5d1010;margin:0 0 10px;padding:8px 10px;color:#ff9a9a;font-family:var(--ff-title);font-size:11px;letter-spacing:.5px}
+.setBody legend{padding:0 6px;color:#ff6a6a}
+.setBody .ovRow{display:flex;align-items:center;gap:10px;margin:5px 0}
+.setBody label{width:130px;color:#d8a8a8;font-size:12px}
+.setBody input[type=text],.setBody input[type=number],.setBody input:not([type]),.setBody select{flex:1;background:#0a0000;border:1px solid #5d1010;color:#ffd0d0;padding:5px 7px;font-family:'Courier New',monospace;font-size:12px}
+.setBody .setActions{gap:8px;margin-top:6px}
+.setMsg{color:#7dffa6;font-size:11px;margin-left:8px}
+/* toggle switch */
+.switch{position:relative;display:inline-block;width:38px;height:20px}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:#300;border:1px solid #a33;transition:.2s}
+.slider:before{content:"";position:absolute;height:14px;width:14px;left:2px;top:2px;background:#f88;transition:.2s}
+.switch input:checked + .slider{background:#1a5a2a;border-color:#3a8}
+.switch input:checked + .slider:before{transform:translateX(18px);background:#7dffa6}
 .funcGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;max-height:60vh;overflow:auto}
 @media(max-width:1000px){.funcGrid{grid-template-columns:repeat(2,1fr)}}
 .funcGrid .f{display:flex;flex-direction:column;gap:2px;background:#0c0000;border:1px solid #5d1010;padding:9px 8px;cursor:pointer;transition:.12s;text-align:left}
@@ -288,6 +310,7 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
   <div class="panel hcell metric">SYSTEM UPTIME<strong id="up">365:23:58:47</strong><em>DAYS HRS MINS SECS</em></div>
   <div class="panel hcell metric">NET LATENCY<strong id="lat">7.2ms</strong><em>LINK STABLE</em></div>
   <div class="panel hcell metric">THREAT LEVEL<strong id="threat">MINIMAL</strong><em>GLOBAL MONITOR</em></div>
+  <div class="panel hcell settings"><button id="setBtn" class="setBtn" title="Interface settings — display, aspect ratio, central avatar, manual setup">⚙ SETTINGS</button></div>
 </header>
 
 <section class="main">
@@ -327,7 +350,7 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
         <div class="coreBox"><span class="lab">FIRING RATE</span><span class="val" id="cfRate">1.28/s</span><canvas class="spark" id="spR2"></canvas></div>
         <div class="coreBox"><span class="lab">SIGNAL STRENGTH</span><span class="val" id="cfSig">MAX</span><canvas class="spark" id="spR3"></canvas></div>
       </div>
-      <div class="fusionCore"><div class="fusionOrb" id="fusionOrb" style="background-image:url('/moon_orb.jpg')"></div><canvas id="coreFx"></canvas></div>
+      <div class="fusionCore"><div class="fusionOrb" id="fusionOrb" style="background-image:url('/moon_orb.jpg')"></div><canvas id="coreFx"></canvas><canvas id="neuralFx" style="display:none"></canvas></div>
       <div class="idleTag">◌ MOON IDLE — NEURAL CORE STANDBY ◌</div>
       <div id="talkState">◌ LISTENING ◌</div>
       <div class="brainStatus">NEURAL CONVERGENCE IN PROGRESS &nbsp; <b id="conv">87.6%</b></div>
@@ -366,6 +389,50 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
 </div>
 
 <div id="aspect"><div class="aspectTitle">DISPLAY / ASPECT RATIO</div><button class="ratio sel" data-r="auto">AUTO — FIT DISPLAY</button><button class="ratio" data-r="16:9">16:9 — WIDESCREEN</button><button class="ratio" data-r="21:9">21:9 — ULTRAWIDE</button><button class="ratio" data-r="32:9">32:9 — SUPER ULTRAWIDE</button><button class="ratio" data-r="16:10">16:10 — WIDESCREEN</button><button class="ratio" data-r="4:3">4:3 — STANDARD</button><button class="ratio" data-r="1:1">1:1 — SQUARE</button><button class="ratio" data-r="9:16">9:16 — PORTRAIT</button><div class="idleCtl"><span>IDLE SPEED</span><button class="ratio ispd" data-s="2">SLOW</button><button class="ratio ispd sel" data-s="1">NORMAL</button><button class="ratio ispd" data-s="0.5">FAST</button><button class="ratio ispd" data-s="0.25">HYPER</button></div></div>
+
+<!-- ============ SETTINGS HUB (all interface changes live here) ============ -->
+<div id="settingsPanel" class="overlay hidden">
+  <div class="ovHead">MOON INTERFACE SETTINGS <button class="ovClose" onclick="toggleSettings(false)">✕</button></div>
+  <div class="ovBody setBody">
+    <fieldset><legend>MANUAL TERMINAL SETUP</legend>
+      <div class="ovRow"><label>Host</label><input id="setHost" placeholder="127.0.0.1"></div>
+      <div class="ovRow"><label>Port</label><input id="setPort" type="number" placeholder="8777"></div>
+      <div class="ovRow"><label>Display</label><input id="setDisplay" placeholder="auto (e.g. :0.0 / wayland)"></div>
+      <div class="ovRow"><label>Browser</label><input id="setBrowser" placeholder="auto (google-chrome/chromium/…)"></div>
+      <div class="ovRow"><label>Auto-open on MOON boot</label>
+        <label class="switch"><input type="checkbox" id="setAutostart"><span class="slider"></span></label></div>
+    </fieldset>
+    <fieldset><legend>DISPLAY / ASPECT RATIO (manual)</legend>
+      <div class="ratioGrid" id="setAspect">
+        <button class="ratio" data-r="auto">AUTO — FIT</button>
+        <button class="ratio" data-r="16:9">16:9</button>
+        <button class="ratio" data-r="21:9">21:9</button>
+        <button class="ratio" data-r="32:9">32:9</button>
+        <button class="ratio" data-r="16:10">16:10</button>
+        <button class="ratio" data-r="4:3">4:3</button>
+        <button class="ratio" data-r="1:1">1:1</button>
+        <button class="ratio" data-r="9:16">9:16</button>
+      </div>
+    </fieldset>
+    <fieldset><legend>CENTRAL BRAIN / NEURAL CORE AVATAR</legend>
+      <div class="ratioGrid" id="setAvatar">
+        <button class="ratio" data-m="fusion">🔥 FUSION CORE (sphere)</button>
+        <button class="ratio" data-m="neural">🧠 NEURAL CORE (animated brain)</button>
+      </div>
+      <div class="ovRow"><label>Idle speed</label>
+        <select id="setIdle">
+          <option value="2">SLOW</option><option value="1">NORMAL</option>
+          <option value="0.5">FAST</option><option value="0.25">HYPER</option>
+        </select></div>
+    </fieldset>
+    <div class="ovRow setActions">
+      <button class="ovBtn" onclick="saveSettings()">SAVE</button>
+      <button class="ovBtn" onclick="applySettingsNow()">APPLY NOW</button>
+      <button class="ovBtn" onclick="resetSettings()">RESET DEFAULTS</button>
+      <span id="setMsg" class="setMsg"></span>
+    </div>
+  </div>
+</div>
 
 <div id="voicePanel" class="overlay hidden">
   <div class="ovHead">MOON VOICE <button class="ovClose" onclick="toggleVoice(false)">✕</button></div>
@@ -611,7 +678,7 @@ function timeline(id,t,phase){const e=el(id);if(!e)return;const ctx=e.getContext
   ctx.fillStyle="rgba(255,80,80,.7)";ctx.font="8px monospace";
   [15,30,45,60,75].forEach(v=>ctx.fillText(v.toFixed(2)+"s",2,h*(v/80)));
 }
-function loop(t){brain(t);matrix(t);timeline("tlL",t,0);timeline("tlR",t,2);coreFx(t);requestAnimationFrame(loop)}
+function loop(t){brain(t);matrix(t);timeline("tlL",t,0);timeline("tlR",t,2);coreFx(t);neuralFx(t);requestAnimationFrame(loop)}
 /* MOON fusion-reactor core (matches attached target interface):
    glowing white->orange->red sphere in a faint geodesic lattice, three tilted
    cyan orbital rings with ticks, vertical energy conduits, and a starfield.
@@ -667,6 +734,35 @@ function coreFx(t){
   fxCtx.beginPath();fxCtx.arc(cx,cy,R*0.18*pulse,0,Math.PI*2);fxCtx.fillStyle="rgba(255,255,250,"+(0.9+e*0.1)+")";fxCtx.shadowBlur=20;fxCtx.shadowColor="#fff";fxCtx.fill();fxCtx.shadowBlur=0;
   coreEnergy*=0.965; // decay after MOON stops thinking
 }
+
+/* Animated neural-core "brain" avatar — used when Settings -> avatar_mode = neural.
+   Draws a pulsing neural lattice of nodes + synapses that energize on MOON events
+   (via coreEnergy), so the central visual reacts to her brain activity. */
+const nfCv=el("neuralFx"), nfCtx=nfCv?nfCv.getContext("2d"):null;
+let _nnodes=[];
+function nfResize(){ if(!nfCv)return; const d=devicePixelRatio||1,w=nfCv.clientWidth,h=nfCv.clientHeight;
+  if(nfCv.width!==(w*d)|0){nfCv.width=w*d;nfCv.height=h*d;} nfCtx.setTransform(d,0,0,d,0,0); }
+function neuralFx(t){
+  if(!nfCv||!nfCtx) return; const w=nfCv.clientWidth,h=nfCv.clientHeight,cx=w/2,cy=h/2;
+  nfCtx.clearRect(0,0,w,h);
+  if(_nnodes.length===0){ const N=26; for(let i=0;i<N;i++){const a=i/N*Math.PI*2 + Math.random()*.4;
+    const r=Math.min(w,h)*(0.18+Math.random()*0.26); _nnodes.push({a, r, sp:0.002+Math.random()*0.006, ph:Math.random()*7, sz:2+Math.random()*3}); } }
+  const e=Math.min(1,coreEnergy), pulse=1+0.04*Math.sin(t*0.005)+e*0.12;
+  // connections
+  const pts=_nnodes.map(n=>{ n.a+=n.sp*(1+e*1.2); const x=cx+Math.cos(n.a)*n.r*pulse, y=cy+Math.sin(n.a)*n.r*pulse; return {x,y,sz:n.sz}; });
+  nfCtx.lineWidth=0.8;
+  for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){ const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.hypot(dx,dy);
+    if(d<Math.min(w,h)*0.22){ nfCtx.beginPath(); nfCtx.moveTo(pts[i].x,pts[i].y); nfCtx.lineTo(pts[j].x,pts[j].y);
+      nfCtx.strokeStyle=`rgba(120,200,255,${(1-d/(Math.min(w,h)*0.22))*(0.22+e*0.25)})`; nfCtx.stroke(); } }
+  // nodes
+  pts.forEach((p,i)=>{ const hot=(i%7===0); nfCtx.beginPath(); nfCtx.arc(p.x,p.y,p.sz*(1+e*0.6),0,Math.PI*2);
+    nfCtx.fillStyle=hot?`rgba(255,${180-e*60|0},${120-e*40|0},${0.85+e*0.15})`:`rgba(90,170,255,${0.7+e*0.2})`;
+    nfCtx.shadowBlur=hot?12+e*16:5; nfCtx.shadowColor=hot?"#ff7a3a":"#3aa0ff"; nfCtx.fill(); });
+  // central brain glow
+  const g=nfCtx.createRadialGradient(cx,cy,0,cx,cy,Math.min(w,h)*0.16*pulse);
+  g.addColorStop(0,`rgba(180,230,255,${0.5+e*0.3})`); g.addColorStop(1,"rgba(40,80,160,0)");
+  nfCtx.shadowBlur=0; nfCtx.fillStyle=g; nfCtx.beginPath(); nfCtx.arc(cx,cy,Math.min(w,h)*0.16*pulse,0,Math.PI*2); nfCtx.fill();
+}
 // allow backend events to energize the core (interacts with Moon brain)
 window.MOON_UI.onCorePulse = (amt)=>{ coreEnergy=Math.min(1.5,(coreEnergy||0)+(amt||0.6));
   const e=Math.min(1,(coreEnergy||0)/1.5);
@@ -684,6 +780,99 @@ window.MOON_UI.onCorePulse = (amt)=>{ coreEnergy=Math.min(1.5,(coreEnergy||0)+(a
     x.shadowBlur=0;})();
 })();
 
+
+/* ===== SETTINGS HUB: every interface change lives here ===== */
+let _avatarMode = (localStorage.getItem("moon-ui-avatar")||"fusion");
+
+function toggleSettings(on){ const p=el("settingsPanel"); if(!p)return; p.classList.toggle("hidden", !on); if(on) loadSettingsUI(); }
+
+async function loadSettingsUI(){
+  let s={};
+  try{ const r=await fetch("/api/settings"); if(r.ok) s=await r.json(); }catch(_){}
+  // merge with localStorage fallbacks
+  const host=s.host||"127.0.0.1", port=s.port||8777, disp=s.display||"",
+        browser=s.browser||"", aspect=s.aspect||localStorage.getItem("moon-ui-ratio")||"auto",
+        idle=String(s.idle_speed||localStorage.getItem("moon-ui-idle-speed")||"1"),
+        autostart=s.autostart!==false;
+  el("setHost").value=host; el("setPort").value=port; el("setDisplay").value=disp;
+  el("setBrowser").value=browser; el("setAutostart").checked=autostart;
+  el("setIdle").value=idle;
+  // aspect selection
+  $$("#setAspect .ratio").forEach(b=>b.classList.toggle("sel", b.dataset.r===aspect));
+  // avatar selection
+  _avatarMode = s.avatar_mode||_avatarMode;
+  $$("#setAvatar .ratio").forEach(b=>b.classList.toggle("sel", b.dataset.m===_avatarMode));
+}
+// aspect pick inside settings (mirrors the floating #aspect panel)
+$$("#setAspect .ratio").forEach(b=>b.onclick=()=>{
+  $$("#setAspect .ratio").forEach(x=>x.classList.remove("sel")); b.classList.add("sel");
+  // apply immediately + sync the floating panel
+  setAspect(b.dataset.r);
+});
+// avatar pick inside settings
+$$("#setAvatar .ratio").forEach(b=>b.onclick=()=>{
+  $$("#setAvatar .ratio").forEach(x=>x.classList.remove("sel")); b.classList.add("sel");
+  _avatarMode=b.dataset.m; applyAvatarMode(); localStorage.setItem("moon-ui-avatar",_avatarMode);
+});
+
+function setAspect(r){
+  const app=el("app"); if(!app)return;
+  if(r==="auto"){ app.classList.remove("manual"); app.style.width="100vw"; app.style.height="100vh"; }
+  else { const [w,h]=r.split(":").map(Number); app.classList.remove("manual");
+         app.style.width=`min(100vw,${w/h*100}vh)`; app.style.height=`min(100vh,${h/w*100}vw)`; }
+  // sync floating #aspect buttons
+  $$("#aspect .ratio[data-r]").forEach(x=>x.classList.toggle("sel", x.dataset.r===r));
+  localStorage.setItem("moon-ui-ratio",r);
+}
+function applyAvatarMode(){
+  const orb=el("fusionOrb"), fx=el("coreFx"), nf=el("neuralFx");
+  if(_avatarMode==="neural"){ if(orb)orb.style.display="none"; if(fx)fx.style.display="none"; if(nf)nf.style.display="block"; }
+  else { if(orb)orb.style.display=""; if(fx)fx.style.display=""; if(nf)nf.style.display="none"; }
+}
+function collectSettings(){
+  return {
+    host: el("setHost").value.trim()||"127.0.0.1",
+    port: parseInt(el("setPort").value)||8777,
+    display: el("setDisplay").value.trim(),
+    browser: el("setBrowser").value.trim(),
+    autostart: el("setAutostart").checked,
+    aspect: ($$("#setAspect .ratio.sel")[0]||{}).dataset?.r || "auto",
+    avatar_mode: ($$("#setAvatar .ratio.sel")[0]||{}).dataset?.m || _avatarMode,
+    idle_speed: parseFloat(el("setIdle").value)||1,
+  };
+}
+async function saveSettings(){
+  const s=collectSettings();
+  try{
+    const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(s)});
+    if(r.ok){ el("setMsg").textContent="✓ saved to server"; applySettingsNow(); return; }
+  }catch(e){}
+  el("setMsg").textContent="⚠ server offline — kept locally";
+  // still apply locally
+  localStorage.setItem("moon-ui-ratio",s.aspect); localStorage.setItem("moon-ui-idle-speed",String(s.idle_speed));
+  localStorage.setItem("moon-ui-avatar",s.avatar_mode);
+  setAspect(s.aspect); applyAvatarMode();
+}
+function applySettingsNow(){
+  const s=collectSettings();
+  setAspect(s.aspect); applyAvatarMode();
+  const app=el("app"); if(app) app.style.setProperty("--idle-speed", s.idle_speed);
+  const sweep=document.querySelector(".sweep"); if(sweep) sweep.style.animationDuration=(7/s.idle_speed)+"s";
+  localStorage.setItem("moon-ui-idle-speed",String(s.idle_speed));
+  localStorage.setItem("moon-ui-avatar",s.avatar_mode);
+  el("setMsg").textContent="✓ applied";
+}
+function resetSettings(){
+  fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({host:"127.0.0.1",port:8777,display:"",browser:"",autostart:true,aspect:"auto",avatar_mode:"fusion",idle_speed:1})})
+    .catch(()=>{});
+  localStorage.removeItem("moon-ui-ratio"); localStorage.removeItem("moon-ui-idle-speed"); localStorage.removeItem("moon-ui-avatar");
+  loadSettingsUI(); applySettingsNow(); el("setMsg").textContent="✓ reset to defaults";
+}
+el("setBtn").onclick=()=>toggleSettings(true);
+// CONFIGURATION nav also opens settings
+const _cfgNav=[...document.querySelectorAll(".nav")].find(n=>/CONFIGURATION/.test(n.textContent));
+if(_cfgNav) _cfgNav.onclick=()=>{ $$(".nav").forEach(x=>x.classList.remove("active")); _cfgNav.classList.add("active"); toggleSettings(true); };
 
 /* ===== controls ===== */
 const term=el("terminal"), termBtn=el("termBtn");
@@ -816,6 +1005,13 @@ spark("spSyn","#ff4d4d");spark("spFeed","#ff7a4d");spark("spMem","#ff4d4d");spar
 spark("spL1","#3cf");spark("spL2","#3cf");spark("spL3","#3cf");spark("spR1","#ff9a3a");spark("spR2","#ff9a3a");spark("spR3","#ff9a3a");
 
 window.addEventListener("resize",size); size(); requestAnimationFrame(loop);
+// Restore persisted interface settings on load (aspect + avatar mode)
+(function restoreSettings(){
+  const ratio=localStorage.getItem("moon-ui-ratio"); if(ratio) setAspect(ratio);
+  const av=localStorage.getItem("moon-ui-avatar"); if(av){ _avatarMode=av; applyAvatarMode(); }
+  const spd=parseFloat(localStorage.getItem("moon-ui-idle-speed")||"1")||1;
+  const app=el("app"); if(app) app.style.setProperty("--idle-speed", spd);
+})();
 setInterval(()=>{const cl=el("clock");},1000);
 /* ===== idle / attract state: MOON breathes calmly + radar sweeps when not in use ===== */
 const _centerEl=el("center");
