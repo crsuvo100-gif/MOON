@@ -192,6 +192,24 @@ async def moon_brain_webp():
     return HTMLResponse("<svg/>", status_code=404)
 
 
+@app.get("/moon_fiery.jpg")
+async def moon_fiery_jpg():
+    # Dim fiery holographic-sphere backdrop behind the red/black HUD.
+    f = WEB_DIR / "assets" / "moon_fiery.jpg"
+    if f.exists():
+        return FileResponse(str(f), media_type="image/jpeg")
+    return HTMLResponse("<svg/>", status_code=404)
+
+
+@app.get("/moon_orb.jpg")
+async def moon_orb_jpg():
+    # The attached fiery holographic-sphere image, as MOON's dominant central core.
+    f = WEB_DIR / "assets" / "moon_orb.jpg"
+    if f.exists():
+        return FileResponse(str(f), media_type="image/jpeg")
+    return HTMLResponse("<svg/>", status_code=404)
+
+
 @app.get("/core_ai.png")
 async def core_ai_png():
     f = WEB_DIR / "core_ai.png"

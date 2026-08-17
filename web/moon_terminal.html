@@ -23,7 +23,14 @@ body{display:grid;place-items:center}
   box-shadow:0 0 45px rgba(255,0,0,.18),inset 0 0 70px rgba(255,0,0,.05)
 }
 #app.manual{width:100vw!important;height:100vh!important}
-.grid{position:absolute;inset:0;opacity:.16;background-image:linear-gradient(rgba(255,0,0,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(255,0,0,.12) 1px,transparent 1px);background-size:28px 28px;mask-image:radial-gradient(circle at 50% 50%,#000,transparent 82%);pointer-events:none;z-index:0}
+/* DIM FIERY BACKDROP: attached holographic-sphere image, darkened + desaturated
+   and screen-blended so it glows softly behind the red/black HUD without ever
+   recoloring the canonical palette. Edges vignette to black for HUD contrast. */
+.backdrop{position:absolute;inset:0;z-index:0;background:#030000 center/cover no-repeat;
+  opacity:.40;filter:saturate(.65) brightness(.66);mix-blend-mode:screen;pointer-events:none}
+.backdrop:after{content:"";position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 46%,transparent 0 28%,rgba(0,0,0,.5) 76%,#000 100%)}
+.grid{position:absolute;inset:0;opacity:.16;background-image:linear-gradient(rgba(255,0,0,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(255,0,0,.12) 1px,transparent 1px);background-size:28px 28px;mask-image:radial-gradient(circle at 50% 50%,#000,transparent 82%);pointer-events:none;z-index:1}
 .scan{position:absolute;inset:0;pointer-events:none;z-index:99;background:repeating-linear-gradient(0deg,rgba(255,0,0,.014) 0 1px,transparent 1px 4px)}
 /* WHOLE-HUD SCANLINE SWEEP: a thin bright bar travelling top->bottom across the entire interface */
 .sweep{position:absolute;left:0;right:0;top:0;height:14%;pointer-events:none;z-index:98;opacity:.35;
@@ -52,6 +59,15 @@ body{display:grid;place-items:center}
 /* MOON central fusion-reactor core (matches attached target interface) */
 .fusionCore{position:absolute;left:50%;top:44%;width:46%;height:46%;transform:translate(-50%,-50%);z-index:5;pointer-events:none}
 .fusionCore canvas{width:100%;height:100%;display:block}
+/* DOMINANT CORE: the attached fiery holographic-sphere image, screen-blended so
+   it glows as the living MOON core. Reacts to MOON's brain (coreEnergy) via
+   --core-e (set in JS) for a real pulse on every workflow event. Red HUD stays
+   canonical; the sphere is the emissive centerpiece behind the data panels. */
+.fusionOrb{position:absolute;left:50%;top:50%;width:118%;height:118%;transform:translate(-50%,-50%) scale(calc(1 + var(--core-e,0)*0.10));
+  background:#000 center/cover no-repeat;filter:saturate(1.05) brightness(calc(1 + var(--core-e,0)*0.55));
+  mix-blend-mode:screen;opacity:calc(.82 + var(--core-e,0)*0.18);border-radius:50%;
+  box-shadow:0 0 calc(60px + var(--core-e,0)*70px) rgba(255,120,40,calc(.5 + var(--core-e,0)*.4));
+  transition:filter .25s, transform .35s, opacity .35s, box-shadow .35s;pointer-events:none;z-index:-1}
 .coreTitle{position:absolute;left:50%;top:8.5%;transform:translateX(-50%);z-index:7;color:#ff6a6a;font-family:var(--ff-title);font-size:clamp(7px,.6vw,12px);letter-spacing:.3em;text-shadow:0 0 10px #f33;pointer-events:none;white-space:nowrap}
 .coreSide{position:absolute;top:13%;width:25%;height:74%;z-index:6;display:flex;flex-direction:column;gap:2.2%;font-family:var(--ff);pointer-events:none}
 .coreSideL{left:3%}.coreSideR{right:3%}
@@ -240,6 +256,7 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
 </head>
 <body>
 <div id="app">
+<div class="backdrop" style="background-image:url('/moon_fiery.jpg')"></div>
 <div id="boot">
   <div class="blogo">MOON</div>
   <div class="bsub">NEURAL CORE INTERFACE · QUANTUM MAINFRAME</div>
@@ -301,7 +318,7 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
         <div class="coreBox"><span class="lab">FIRING RATE</span><span class="val" id="cfRate">1.28/s</span><canvas class="spark" id="spR2"></canvas></div>
         <div class="coreBox"><span class="lab">SIGNAL STRENGTH</span><span class="val" id="cfSig">MAX</span><canvas class="spark" id="spR3"></canvas></div>
       </div>
-      <div class="fusionCore"><canvas id="coreFx"></canvas></div>
+      <div class="fusionCore"><div class="fusionOrb" id="fusionOrb" style="background-image:url('/moon_orb.jpg')"></div><canvas id="coreFx"></canvas></div>
       <div class="idleTag">◌ MOON IDLE — NEURAL CORE STANDBY ◌</div>
       <div id="talkState">◌ LISTENING ◌</div>
       <div class="brainStatus">NEURAL CONVERGENCE IN PROGRESS &nbsp; <b id="conv">87.6%</b></div>
@@ -641,6 +658,9 @@ function coreFx(t){
 }
 // allow backend events to energize the core (interacts with Moon brain)
 window.MOON_UI.onCorePulse = (amt)=>{ coreEnergy=Math.min(1.5,(coreEnergy||0)+(amt||0.6));
+  const e=Math.min(1,(coreEnergy||0)/1.5);
+  document.documentElement.style.setProperty("--core-e", e.toFixed(3));
+  const orb=document.getElementById("fusionOrb"); if(orb){orb.style.filter="brightness("+(1+Math.min(0.8,amt||0.6))+") saturate(1.2)";clearTimeout(orb._t);orb._t=setTimeout(()=>orb.style.filter="",700+(amt||0.6)*500);}
   const cv=document.querySelector(".fusionCore"); if(cv){cv.style.filter="brightness("+(1+Math.min(0.8,amt||0.6))+")";clearTimeout(cv._t);cv._t=setTimeout(()=>cv.style.filter="",700+(amt||0.6)*500);} };
 /* floating sparkle particles (futuristic polish) */
 (function(){

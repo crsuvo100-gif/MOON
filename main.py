@@ -96,14 +96,22 @@ async def _run_dashboard():
 
 
 def _run_terminal() -> None:
+    import os
     import subprocess
     import sys
+
+    # The project venv is 3.13, but a global PYTHONPATH may point at an
+    # incompatible (3.11) site-packages and shadow pydantic_core at import time.
+    # Drop PYTHONPATH for the child so MOON's own dependencies win. (Non-destructive:
+    # only affects this subprocess, never mutates the parent environment.)
+    env = dict(os.environ)
+    env.pop("PYTHONPATH", None)
 
     print("🌙 MOON Terminal starting at http://0.0.0.0:8777  (LAN: http://<this-host-ip>:8777)")
     subprocess.run([
         sys.executable, "-m", "uvicorn", "app.terminal_interface:app",
         "--host", "0.0.0.0", "--port", "8777", "--log-level", "info",
-    ])
+    ], env=env)
 
 
 def main() -> None:
