@@ -133,6 +133,7 @@ def _log(msg: str, sev: str = "info"):
     ts = time.strftime("%H:%M:%S")
     line = f"[{ts}] {sev.upper()} {msg}"
     _LOG_BUF.append({"t": ts, "sev": sev, "msg": msg})
+    _emit_event("log", msg, sev)
     # push to any live HUD log subscribers (send is an async coroutine -> schedule it)
     if _LOG_SUBSCRIBERS:
         for sub in list(_LOG_SUBSCRIBERS):
@@ -151,6 +152,26 @@ def _telemetry_snapshot(orch) -> dict:
     return {"series": list(_TELEM),
             "current": _TELEM[-1] if _TELEM else None,
             "logs": list(_LOG_BUF)}
+
+
+# Bounded ring buffer of real, recent system events (logs + workflow stages +
+# assistant activity). Feeds the HUD EVENTS timeline via /api/events. Pure
+# observability — never blocks the live paths that populate it.
+_EVENTS: "deque" = deque(maxlen=200)
+
+
+def _emit_event(kind: str, detail: str, sev: str = "info") -> None:
+    """Record one real event into the rolling buffer (used by /api/events)."""
+    try:
+        _EVENTS.append({
+            "t": time.strftime("%H:%M:%S"),
+            "ts": round(time.time(), 3),
+            "kind": kind,
+            "sev": sev,
+            "detail": str(detail)[:280],
+        })
+    except Exception:
+        pass
 
 
 # Voice / TTS (MOON's premium female voice + cloning via VoiceEngine)
@@ -720,6 +741,23 @@ async def api_tools(request: Request):
     })
 
 
+@app.get("/api/events")
+async def api_events(request: Request):
+    """Read-only, recent real-event feed (logs + workflow stages + chat + exec).
+
+    Additive observability endpoint (Phase 27): surfaces the same live activity
+    the HUD EVENTS timeline shows, sourced from the in-process _EVENTS ring
+    buffer (populated by _log + the WS send() path). Auth-gated like the rest.
+    """
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    return JSONResponse({
+        "count": len(_EVENTS),
+        "events": list(_EVENTS),
+    })
+
+
 def _broadcast_status(orch) -> dict:
     """Status payload for the HUD panels (real data)."""
     return _moon_status_sync(orch)
@@ -777,6 +815,15 @@ async def ws_endpoint(ws: WebSocket):
     _send_lock = asyncio.Lock()
 
     async def send(**msg):
+        # Capture real activity into the events ring buffer (for /api/events +
+        # the HUD EVENTS timeline). Pure observability; failures are swallowed.
+        _kind = msg.get("type")
+        if _kind == "workflow":
+            _emit_event("workflow", f"{msg.get('stage','?')}: {msg.get('detail','')}")
+        elif _kind in ("assistant_start", "assistant_done"):
+            _emit_event("chat", f"{_kind} (locked={msg.get('locked')})")
+        elif _kind == "exec_output":
+            _emit_event("exec", str(msg.get("output", ""))[:200])
         async with _send_lock:
             try:
                 await ws.send_json(msg)
