@@ -41,6 +41,18 @@ body{display:grid;place-items:center}
   background:linear-gradient(180deg,transparent,rgba(255,40,40,.10) 45%,rgba(255,90,90,.55) 50%,rgba(255,40,40,.10) 55%,transparent);
   box-shadow:0 0 22px rgba(255,40,40,.35);animation:hudSweep 7s linear infinite;mix-blend-mode:screen}
 @keyframes hudSweep{0%{transform:translateY(-20%);opacity:.15}6%{opacity:.7}50%{opacity:.85}94%{opacity:.7}100%{transform:translateY(780%);opacity:.15}}
+/* LAYER B: data-rain (ambient falling glyphs), burst layer, reactive edge glow */
+.datarain{position:absolute;inset:0;pointer-events:none;z-index:2;opacity:.22;mix-blend-mode:screen}
+.burstLayer{position:absolute;inset:0;pointer-events:none;z-index:97;overflow:hidden}
+.burstLayer i{position:absolute;width:4px;height:4px;border-radius:50%;background:#ff6a3a;box-shadow:0 0 8px #ff7a3a,0 0 14px #ff4a1a;animation:burstFly .9s ease-out forwards}
+@keyframes burstFly{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--bx,0),var(--by,0)) scale(.2);opacity:0}}
+.edgeGlow{position:absolute;inset:0;pointer-events:none;z-index:96;opacity:0;transition:opacity .25s;
+  box-shadow:inset 0 0 60px rgba(255,40,40,.0),inset 0 0 120px rgba(255,60,30,.0);
+  border:1px solid rgba(255,40,40,0)}
+.edgeGlow.on{opacity:1;box-shadow:inset 0 0 70px rgba(255,50,30,.55),inset 0 0 160px rgba(255,40,20,.3);border-color:rgba(255,60,40,.5)}
+/* moving scanline shimmer (subtle live scan) */
+.scan{animation:scanShift 8s linear infinite}
+@keyframes scanShift{0%{background-position:0 0}100%{background-position:0 4px}}
 /* idle-speed configurable via --idle-speed (1 = normal, <1 faster, >1 slower) set on #app */
 #center.idle .brainPanel{animation:corebreathe calc(6s / var(--idle-speed,1)) ease-in-out infinite}
 /* idle breathe handled by .brainPanel below */
@@ -302,6 +314,9 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
 <canvas class="fxparticles" id="fxParticles"></canvas>
 <div class="gridfloor"></div>
 <div class="sweep"></div>
+<canvas class="datarain" id="dataRain"></canvas>
+<div class="burstLayer" id="burstLayer"></div>
+<div class="edgeGlow" id="edgeGlow"></div>
 <div class="energy"></div><div class="appframe"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
 <div class="frame-tr"></div><div class="frame-bl"></div>
 
@@ -695,6 +710,7 @@ function size(){const d=devicePixelRatio||1;
     e.width=e.clientWidth*d; e.height=e.clientHeight*d; if(ctx)ctx.setTransform(d,0,0,d,0,0);
   });
   if(!pts.length)for(let i=0;i<280;i++)pts.push({a:Math.random()*Math.PI*2,r:.05+Math.random()*.95,s:.2+Math.random()});
+  drResize();
 }
 const sparks={};
 function spark(id,color){const e=el(id);if(!e)return;const ctx=e.getContext("2d");const buf=new Array(80).fill(0);let t=0;
@@ -720,7 +736,7 @@ function timeline(id,t,phase){const e=el(id);if(!e)return;const ctx=e.getContext
   ctx.fillStyle="rgba(255,80,80,.7)";ctx.font="8px monospace";
   [15,30,45,60,75].forEach(v=>ctx.fillText(v.toFixed(2)+"s",2,h*(v/80)));
 }
-function loop(t){brain(t);matrix(t);timeline("tlL",t,0);timeline("tlR",t,2);coreFx(t);neuralFx(t);requestAnimationFrame(loop)}
+function loop(t){brain(t);matrix(t);timeline("tlL",t,0);timeline("tlR",t,2);coreFx(t);neuralFx(t);dataRain(t);requestAnimationFrame(loop)}
 /* MOON fusion-reactor core (matches attached target interface):
    glowing white->orange->red sphere in a faint geodesic lattice, three tilted
    cyan orbital rings with ticks, vertical energy conduits, and a starfield.
@@ -807,12 +823,58 @@ function neuralFx(t){
   g.addColorStop(0,`rgba(180,230,255,${0.5+e*0.3})`); g.addColorStop(1,"rgba(40,80,160,0)");
   nfCtx.shadowBlur=0; nfCtx.fillStyle=g; nfCtx.beginPath(); nfCtx.arc(cx,cy,Math.min(w,h)*0.16*pulse,0,Math.PI*2); nfCtx.fill();
 }
+
+/* ===== LAYER B: data-rain + particle bursts + reactive edge glow ===== */
+const drCv=el("dataRain"), drCtx=drCv?drCv.getContext("2d"):null;
+let _drCols=[], _drActive=0.3;   // _drActive scales rain density with MOON activity
+function drResize(){ if(!drCv)return; const d=devicePixelRatio||1,w=drCv.clientWidth,h=drCv.clientHeight;
+  if(drCv.width!==(w*d)|0){drCv.width=w*d;drCv.height=h*d;} drCtx.setTransform(d,0,0,d,0,0); }
+const GLYPHS="01ｱｲｳｴｵｶｷｸｹｺﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ▣◈⏣⏺⬡✦ﾘﾂﾅﾆﾇﾈﾉ";
+function dataRain(t){
+  if(!drCv||!drCtx) return; const w=drCv.clientWidth,h=drCv.clientHeight;
+  drCtx.clearRect(0,0,w,h);
+  const fs=14, cols=Math.max(8,Math.floor(w/fs));
+  if(_drCols.length!==cols){ _drCols=[]; for(let i=0;i<cols;i++)_drCols.push({y:Math.random()*-h, sp:2+Math.random()*4}); }
+  drCtx.font=fs+"px 'Share Tech Mono',monospace";
+  for(let i=0;i<cols;i++){ const c=_drCols[i]; c.y+=c.sp*(0.4+_drActive); if(c.y>h){c.y=-20; c.sp=2+Math.random()*4;}
+    const x=i*fs+2; const f=(Math.sin((t*0.002)+(i*1.7))+1)/2;
+    const a=0.06+0.10*f+_drActive*0.12;
+    drCtx.fillStyle=`rgba(255,${70+Math.random()*60|0},${50+Math.random()*40|0},${a})`;
+    drCtx.fillText(GLYPHS[(Math.random()*GLYPHS.length)|0], x, c.y);
+    // bright leading glyph
+    drCtx.fillStyle=`rgba(255,${150+Math.random()*60|0},${120+Math.random()*40|0},${a*1.6})`;
+    drCtx.fillText(GLYPHS[(Math.random()*GLYPHS.length)|0], x, c.y-fs);
+  }
+}
+// Particle burst at the core on MOON events (reactive glow)
+function fireBurst(n){ const layer=el("burstLayer"); if(!layer) return;
+  const r=layer.getBoundingClientRect(); const cx=r.width/2, cy=r.height*0.46;
+  n=n||10;
+  for(let i=0;i<n;i++){ const b=document.createElement("i");
+    const ang=Math.random()*Math.PI*2, d=40+Math.random()*90;
+    b.style.left=cx+"px"; b.style.top=cy+"px";
+    b.style.setProperty("--bx",(Math.cos(ang)*d).toFixed(0)+"px");
+    b.style.setProperty("--by",(Math.sin(ang)*d).toFixed(0)+"px");
+    b.style.width=b.style.height=(3+Math.random()*4).toFixed(0)+"px";
+    layer.appendChild(b); setTimeout(()=>b.remove(),950);
+  }
+}
+// Reactive edge glow flash on events
+let _edgeT=null;
+function edgeFlash(amt){ const eg=el("edgeGlow"); if(!eg) return;
+  eg.classList.add("on"); clearTimeout(_edgeT); _edgeT=setTimeout(()=>eg.classList.remove("on"), 380+(amt||0.5)*400);
+}
+
 // allow backend events to energize the core (interacts with Moon brain)
 window.MOON_UI.onCorePulse = (amt)=>{ coreEnergy=Math.min(1.5,(coreEnergy||0)+(amt||0.6));
   const e=Math.min(1,(coreEnergy||0)/1.5);
   document.documentElement.style.setProperty("--core-e", e.toFixed(3));
-  const orb=document.getElementById("fusionOrb"); if(orb){orb.style.filter="brightness("+(1+Math.min(0.8,amt||0.6))+") saturate(1.2)";clearTimeout(orb._t);orb._t=setTimeout(()=>orb.style.filter="",700+(amt||0.6)*500);}
-  const cv=document.querySelector(".fusionCore"); if(cv){cv.style.filter="brightness("+(1+Math.min(0.8,amt||0.6))+")";clearTimeout(cv._t);cv._t=setTimeout(()=>cv.style.filter="",700+(amt||0.6)*500);} };
+  const a=Math.min(0.9,amt||0.6);
+  _drActive=Math.min(1,_drActive+0.25*(amt||0.6)); // rain intensifies on activity, decays
+  setTimeout(()=>{_drActive=Math.max(0.3,_drActive-0.25*(amt||0.6));},900);
+  edgeFlash(a); if(a>0.6) fireBurst(Math.round(a*14));
+  const orb=document.getElementById("fusionOrb"); if(orb){orb.style.filter="brightness("+(1+a)+") saturate(1.2)";clearTimeout(orb._t);orb._t=setTimeout(()=>orb.style.filter="",700+a*500);}
+  const cv=document.querySelector(".fusionCore"); if(cv){cv.style.filter="brightness("+(1+a)+")";clearTimeout(cv._t);cv._t=setTimeout(()=>cv.style.filter="",700+a*500);} };
 /* floating sparkle particles (futuristic polish) */
 (function(){
   const cv=el("fxParticles"); if(!cv)return; const x=cv.getContext("2d"); let W,H,pts=[];
