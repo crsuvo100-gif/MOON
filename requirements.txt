@@ -1,72 +1,29 @@
 # ---------------------------------------------------------------------------
-# Production dependency list for the Standalone AI Agent (local / self-hosted).
-# Versions are lower-bounds; the project is tested on the versions noted.
+# MOON — CORE dependencies (required for the terminal HUD + agent runtime).
+# These are resolved/installed first by install.sh and MUST succeed.
 # ---------------------------------------------------------------------------
-# --- Web framework / API ----------------------------------------------------
+# Web framework / API
 fastapi>=0.141
 uvicorn[standard]>=0.52
 pydantic>=2.13
 pydantic-settings>=2.15
 
-# --- Async runtime ----------------------------------------------------------
+# Async runtime
 anyio>=4.3
 httpx>=0.27
 
-# --- Model providers (OpenAI-compatible; points at your LOCAL model) -------
-openai>=2.53          # used only as an OpenAI-compatible client -> local endpoint
-
-# --- Embeddings / vector store (optional; pure-python fallback included) ----
-numpy>=1.26
-# chromadb>=0.5         # optional; enable for persistent vector search
-# sentence-transformers>=2.6  # optional; enable for real local embeddings
-
-# --- Telegram channel (optional; MOON as a Telegram bot) --------------------
-# pip install python-telegram-bot  (token/chat_id stay in .env, never committed)
-python-telegram-bot>=20.0
-
-# --- Hugging Face (optional; enables HF InferenceClient: chat + text-to-image) -
-# Controlled by MOON's huggingface fallback / huggingface tool. The code degrades
-# gracefully if absent. Install with: pip install "huggingface_hub[cli]"
-huggingface_hub>=0.22
-
-# --- Tooling integrations (all optional; graceful fallbacks in code) ---------
-requests>=2.31           # used by web_search + api_requests tools
-# beautifulsoup4>=4.12   # optional; HTML parsing for browser/web tools
-# playwright>=1.43       # optional; real browser automation
-# pillow>=10.3           # optional; image processing
-# pytesseract>=0.3       # optional; OCR (also needs tesseract binary)
-# pypdf>=4.2             # optional; PDF reading
-# PyYAML>=6.0            # optional; YAML config parsing
-
-# --- Utilities --------------------------------------------------------------
-python-dotenv>=1.0
-rich>=13.7             # pretty CLI/log output
-tenacity>=8.2          # retry / error-recovery policies
-
-# --- UI ---------------------------------------------------------------------
-# MOON's terminal UI/frame is served at the root / by app.terminal_interface on
-# port 8777, backed by a WebSocket (/ws) to the Orchestrator. The front-end is
-# being rebuilt from scratch (HTML/CSS/TypeScript + Canvas2D) with no Python UI
-# dependency. (The old Textual TUI, 2D orb, moon_brain.html, and
-# moon_terminal.html were removed; textual/flask are no longer needed for the
-# terminal UI.)
-
-# --- Voice engine (MOON's female voice + cloning; all optional, graceful fallback) -
-# XTTS-v2 = local, high-quality, cloneable female voice (needs a capable host).
-# openai = cloud 'nova'/'shimmer' alluring female voices (needs OPENAI_API_KEY).
-# vosk + pyaudio = offline speech-to-text (to HEAR and clone any user's voice).
-# espeak-ng + sox are system packages (apt install espeak-ng sox) for the
-# always-available CPU fallback voice.
-TTS>=0.22
+# Model providers (OpenAI-compatible client -> points at your LOCAL model)
 openai>=2.53
-vosk>=0.3
-pyaudio>=0.2
 
-# --- Testing / quality ------------------------------------------------------
+# Numerics / utilities
+numpy>=1.26
+python-dotenv>=1.0
+rich>=13.7
+tenacity>=8.2
+
+# Testing / quality
 pytest>=8.0
 pytest-asyncio>=0.23
-pytest-cov>=5.0
-ruff>=0.16
-mypy>=1.9
-flask
-flask-socketio
+
+# NOTE: the old Textual TUI / flask orb were removed; the terminal UI is
+# pure HTML/CSS/Canvas2D served by app.terminal_interface — no Python UI dep.

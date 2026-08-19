@@ -1,0 +1,39 @@
+# ---------------------------------------------------------------------------
+# MOON — OPTIONAL dependencies (best-effort; the installer installs these
+# separately and does NOT fail if any are unavailable for your Python/platform).
+# MOON degrades gracefully when these are absent.
+# ---------------------------------------------------------------------------
+# Embeddings / vector store (optional; pure-python fallback included)
+# chromadb>=0.5
+# sentence-transformers>=2.6
+
+# Telegram channel (optional; MOON as a Telegram bot)
+python-telegram-bot>=20.0
+
+# Hugging Face (optional; HF InferenceClient: chat + text-to-image)
+huggingface_hub>=0.22
+
+# Tooling integrations (all optional)
+requests>=2.31
+beautifulsoup4>=4.12
+playwright>=1.43
+pillow>=10.3
+pytesseract>=0.3
+pypdf>=4.2
+PyYAML>=6.0
+
+# Voice engine (MOON's female voice + cloning; all optional)
+# XTTS-v2 = local, high-quality, cloneable female voice (needs a capable host).
+# openai = cloud 'nova'/'shimmer' alluring female voices (needs OPENAI_API_KEY).
+# vosk + pyaudio = offline speech-to-text (to HEAR and clone any user's voice).
+# TTS is pinned loosely because newer releases drop Python support; the
+# installer tolerates a miss. Use a version your Python supports, e.g.:
+TTS>=0.21
+openai>=2.53
+vosk>=0.3
+pyaudio>=0.2
+
+# Quality extras
+pytest-cov>=5.0
+ruff>=0.16
+mypy>=1.9
