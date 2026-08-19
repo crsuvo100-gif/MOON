@@ -1240,6 +1240,16 @@ setIdle(true); _idleTimer=setTimeout(()=>setIdle(true), 9000);
 const _origOnMsg = window.MOON_UI.onMessage;
 if(typeof _origOnMsg==="function"){ window.MOON_UI.onMessage=(d)=>{ wakeFromIdle(); triggerGlitch(); blip(); return _origOnMsg(d); }; }
 
+/* ===== deep-link: open operator workspace via URL hash (#workspace/#agents/#tools/#events/#shell) ===== */
+(function(){
+  const h=(location.hash||"").replace("#","").toLowerCase();
+  if(["workspace","agents","tools","events","shell"].includes(h)){
+    const tab = h==="workspace" ? "agents" : h;
+    // wait for WS status so the grids have data, then open
+    setTimeout(()=>openWorkspace(tab), 1800);
+  }
+})();
+
 /* ===== BOOT-UP SEQUENCE (plays once, on first WS connect) ===== */
 const BOOT_STEPS=[
   "QUANTUM LINK HANDSHAKE",
