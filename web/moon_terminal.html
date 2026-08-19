@@ -260,6 +260,32 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
 .toolGrid .t{background:#0c0000;border:1px solid #4b0b0b;padding:5px 7px;font-size:11px;color:#ffb3b3;cursor:pointer}
 .toolGrid .t:hover{background:#220404}
 .overlay.wide{width:min(72%,900px)}
+/* LAYER C: operator workspace */
+#workspace{position:absolute;left:.7%;right:.7%;top:9.2%;bottom:5.6%;z-index:50;background:rgba(6,0,0,.94);border:1px solid #d21b1b;box-shadow:0 0 40px rgba(255,0,0,.25);display:flex;flex-direction:column}
+#workspace.hidden{display:none}
+.wsTabs{display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid #4b0b0b;background:#120202}
+.wsTab{background:#0a0000;border:1px solid #5d1010;color:#ff9a9a;padding:6px 14px;cursor:pointer;font-family:var(--ff-title);font-size:11px;letter-spacing:.06em}
+.wsTab.sel{background:#3a0808;color:#fff;box-shadow:0 0 14px rgba(255,0,0,.3);border-color:#ff2d2d}
+.wsClose{margin-left:auto;color:#ff6a6a;cursor:pointer;padding:4px 10px;font-size:14px}
+.wsClose:hover{color:#fff}
+.wsBody{flex:1;position:relative;overflow:hidden}
+.wsView{position:absolute;inset:0;padding:12px;overflow:auto;display:none}
+.wsView.sel{display:block}
+.wsH{color:#ff5a5a;font-family:var(--ff-title);letter-spacing:.08em;margin:0 0 10px;border-bottom:1px solid #4b0b0b;padding-bottom:6px}
+.wsCount{float:right;color:#ffb0b0;font-size:.8em}
+.wsGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.wsGrid .cell{border:1px solid #5d1010;background:#0c0000;padding:8px;font-family:'Courier New',monospace;font-size:11px;color:#ffb0b0;position:relative;overflow:hidden}
+.wsGrid .cell .nm{color:#fff;font-weight:700}
+.wsGrid .cell .st{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#5cff88;box-shadow:0 0 8px #5cff88}
+.wsGrid .cell.act .st{background:#ffae3a;box-shadow:0 0 8px #ffae3a}
+.wsEvents{font-family:'Courier New',monospace;font-size:11px;color:#c98;line-height:1.7}
+.wsEvents .ev{border-left:2px solid #5d1010;padding:2px 8px;margin-bottom:3px}
+.wsEvents .ev .t{color:#ff8a8a}
+.wsEvents .ev.work{color:#ffd0a0;border-color:#ff7a3a}
+.wsEvents .ev.err{border-color:#ff3a3a;color:#ff9a9a}
+.wsCli{font-family:'Courier New',monospace;font-size:11px;color:#c9a;line-height:1.5;height:100%;overflow:auto;background:#050000;padding:8px;border:1px solid #4b0b0b}
+.wsCli .line.you{color:#fff}.wsCli .line.ok{color:#5cff88}.wsCli .line.warn{color:#ffb64a}
+.wsHint{color:#ff8a8a;font-family:var(--ff-title);font-size:13px;text-align:center;margin-top:20px;opacity:.7}
 .setBtn{background:#1a0404;color:#ff7a7a;border:1px solid #a33;font-family:var(--ff-title);font-size:11px;letter-spacing:.6px;padding:6px 10px;cursor:pointer;border-radius:0}
 .setBtn:hover{background:#300;box-shadow:0 0 10px #f008}
 .panel.settings{padding:6px 8px;display:flex;align-items:center}
@@ -330,6 +356,7 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
   <div class="panel hcell metric">NET LATENCY<strong id="lat">7.2ms</strong><em>LINK STABLE</em></div>
   <div class="panel hcell metric">THREAT LEVEL<strong id="threat">MINIMAL</strong><em>GLOBAL MONITOR</em></div>
   <div class="panel hcell settings"><button id="setBtn" class="setBtn" title="Interface settings — display, aspect ratio, central avatar, manual setup">⚙ SETTINGS</button></div>
+  <div class="panel hcell settings"><button id="wsBtn" class="setBtn" title="Operator workspace — agents, tools, events, shell">⬡ WORKSPACE</button></div>
 </header>
 
 <section class="main">
@@ -389,6 +416,25 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
     <div class="panel rightD"><h3>THREAT ASSESSMENT GRID</h3><div class="threat"><div class="map"></div><div class="stats" style="position:static;width:auto">GLOBAL THREAT <b id="gThreat">MINIMAL</b><br>LEVEL <b id="gLevel">2.1%</b><br>ACTIVE <b id="gActive">17</b><br>NEUTRALIZED <b id="gNeut">9,846</b><br>MONITORED <b id="gMon">148</b></div></div></div>
   </div>
 </section>
+
+<!-- ===== LAYER C: OPERATOR WORKSPACE (tabbed: CORE / AGENTS / TOOLS / EVENTS / SHELL) ===== -->
+<div id="workspace" class="hidden">
+  <div class="wsTabs">
+    <button class="wsTab sel" data-ws="core">◉ CORE</button>
+    <button class="wsTab" data-ws="agents">⬡ AGENTS</button>
+    <button class="wsTab" data-ws="tools">⚙ TOOLS</button>
+    <button class="wsTab" data-ws="events">⟁ EVENTS</button>
+    <button class="wsTab" data-ws="shell">▦ SHELL</button>
+    <span class="wsClose" id="wsClose">✕</span>
+  </div>
+  <div class="wsBody">
+    <div class="wsView" data-ws="core"><div class="wsHint">CORE view = the main MOON Neural Core Interface. Close this panel to return.</div></div>
+    <div class="wsView" data-ws="agents"><h4 class="wsH">NEURAL AGENT GRID <span id="wsAgentCount" class="wsCount">0</span></h4><div id="wsAgents" class="wsGrid"></div></div>
+    <div class="wsView" data-ws="tools"><h4 class="wsH">TOOL STATUS MATRIX <span id="wsToolCount" class="wsCount">0</span></h4><div id="wsTools" class="wsGrid"></div></div>
+    <div class="wsView" data-ws="events"><h4 class="wsH">EVENT TIMELINE</h4><div id="wsEvents" class="wsEvents"></div></div>
+    <div class="wsView" data-ws="shell"><h4 class="wsH">OPERATOR SHELL</h4><div id="wsCliOut" class="wsCli"></div></div>
+  </div>
+</div>
 
 <section class="bottom">
   <div class="panel bcell"><h4>SYNAPTIC ACTIVITY SPECTRUM</h4><div class="spark"><canvas id="spSyn"></canvas></div></div>
@@ -519,6 +565,7 @@ window.MOON_UI = {
 function num(v, d=1){ return (v==null||isNaN(v))?null:Number(v).toFixed(d); }
 function applyStatus(s){
   s = s || {};
+  _lastStatus = s;  // captured for the operator workspace (Layer C)
   const sys = s.system || {};
   const mem = s.memory || {};
   const agents = Array.isArray(s.agents) ? s.agents : (typeof s.agents==="number" ? s.agents : 0);
@@ -634,12 +681,46 @@ function command(cmd){
 
 // Console mode: chat (default) or shell (real operator commands)
 let consoleMode="chat";
+let _lastStatus=null;      // latest status payload (Layer C workspace)
+let _events=[];            // event timeline (Layer C)
 function setConsoleMode(mode){ consoleMode=mode;
   const cmd=el("command"); if(cmd) cmd.placeholder = mode==="shell"
     ? "MOON shell — type an allowlisted command (ps, df, status, ls…)"
     : "Enter command or ask MOON…";
   addLog("[CONSOLE] mode = "+(mode==="shell"?"SHELL (real exec)":"AI CHAT (MOON brain)"));
 }
+
+/* ===== LAYER C: OPERATOR WORKSPACE ===== */
+const wsEl=el("workspace");
+function openWorkspace(tab){ if(!wsEl) return; wsEl.classList.remove("hidden"); selectWsTab(tab||"core"); if(tab==="agents"||tab==="tools") renderWorkspace(); }
+function closeWorkspace(){ if(wsEl) wsEl.classList.add("hidden"); }
+function selectWsTab(tab){
+  $$("#workspace .wsTab").forEach(b=>b.classList.toggle("sel", b.dataset.ws===tab));
+  $$("#workspace .wsView").forEach(v=>v.classList.toggle("sel", v.dataset.ws===tab));
+  if(tab==="agents"||tab==="tools") renderWorkspace();
+}
+$$("#workspace .wsTab").forEach(b=>b.onclick=()=>selectWsTab(b.dataset.ws));
+if(el("wsClose")) el("wsClose").onclick=closeWorkspace;
+function renderWorkspace(){
+  // AGENTS grid
+  const ags = (_lastStatus && (Array.isArray(_lastStatus.agent_list)?_lastStatus.agent_list:[])) || [];
+  const agBox=el("wsAgents"); if(agBox){ el("wsAgentCount").textContent=ags.length;
+    agBox.innerHTML = ags.map(n=>`<div class="cell act"><span class="st"></span><div class="nm">${String(n).replace(/[<>&]/g,"")}</div><div>NEURAL CORE</div></div>`).join("") || `<div class="wsHint">No agents reported.</div>`; }
+  // TOOLS matrix
+  const tls = (_lastStatus && Array.isArray(_lastStatus.tools)?_lastStatus.tools:[]) || [];
+  const tBox=el("wsTools"); if(tBox){ el("wsToolCount").textContent=tls.length;
+    tBox.innerHTML = tls.map(n=>`<div class="cell"><span class="st"></span><div class="nm">${String(n).replace(/[<>&]/g,"")}</div><div>READY</div></div>`).join("") || `<div class="wsHint">No tools registered.</div>`; }
+}
+function pushEvent(kind, text){
+  _events.unshift({t:new Date().toLocaleTimeString(), kind, text});
+  if(_events.length>200) _events.pop();
+  const box=el("wsEvents"); if(box && !wsEl.classList.contains("hidden")){
+    box.innerHTML = _events.slice(0,80).map(e=>`<div class="ev ${e.kind}"><span class="t">${e.t}</span> ${e.text.replace(/[<>&]/g,"")}</div>`).join("");
+  }
+}
+// mirror exec output + logs + workflow into the workspace (live)
+const _wsCliOut=el("wsCliOut");
+function wsCli(line, cls){ if(_wsCliOut && !wsEl.classList.contains("hidden")){ const d=document.createElement("div"); d.className="line "+(cls||""); d.textContent=line; _wsCliOut.appendChild(d); _wsCliOut.scrollTop=_wsCliOut.scrollHeight; } }
 
 /* ===== WebSocket to Moon's real backend (/ws) ===== */
 let ws=null, _muted=false;
@@ -658,7 +739,7 @@ function handle(m){
     case "ready": case "status": applyStatus(m.status||m); addLog("[SYSTEM] status received."); if((m.status||m).load!=null) window.MOON_UI.onCorePulse && window.MOON_UI.onCorePulse((m.status||m).load/180); if(m.type==="ready" && typeof window.MOON_UI.onReady==="function") window.MOON_UI.onReady(m); break;
     case "assistant_start": setState("SPEAKING"); addLog("[MOON] thinking…"); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.9); if(typeof fireBurst==="function") fireBurst(14);
       _moonSpeaking=true; if(_recog){ try{ _recog.stop(); }catch(_){} } if(_talkState) setTalkState("◌ MOON IS SPEAKING ◌", false); break;
-    case "workflow": setState((m.stage||"").toUpperCase(), {stage:m.stage}); addLog("[FLOW] "+(m.stage||"")+": "+(m.detail||"")); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.7); break;
+    case "workflow": setState((m.stage||"").toUpperCase(), {stage:m.stage}); addLog("[FLOW] "+(m.stage||"")+": "+(m.detail||"")); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.7); pushEvent("work","FLOW "+((m.stage||"")+": "+(m.detail||"")).replace(/[<>]/g,"")); break;
     case "assistant_chunk":
       addLog("[MOON] "+(m.content||""));
       if(lastAction==="list_tools"){ toolBuf += (m.content||""); }
@@ -675,12 +756,15 @@ function handle(m){
         const body=document.createElement("div"); body.className="line";
         body.style.whiteSpace="pre-wrap"; body.style.color="#c9a"; body.textContent=(m.output&&m.output.trim())?m.output:"(no output)";
         out.appendChild(body); out.scrollTop=out.scrollHeight;
+        wsCli((m.cmd||"")+"  →  exit "+(m.exit??0), (m.exit===0?"ok":"warn"));
+        wsCli((m.output&&m.output.trim())?m.output:"(no output)","");
       })();
       window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.4);
       break;
     case "log":
-      // live backend log event -> System Logs panel
+      // live backend log event -> System Logs panel + workspace timeline
       if(typeof addLog==="function") addLog("["+String(m.sev||"info").toUpperCase()+"] "+(m.msg||""));
+      pushEvent((String(m.sev||"info").toLowerCase()==="error"?"err":""), "["+String(m.sev||"info").toUpperCase()+"] "+(m.msg||""));
       break;
     case "assistant_done":
       setState("IDLE"); addLog("[MOON] done in "+(m.elapsed||0)+"s"+(m.locked?" [locked]":""));
@@ -998,6 +1082,7 @@ function resetSettings(){
   loadSettingsUI(); applySettingsNow(); el("setMsg").textContent="✓ reset to defaults";
 }
 el("setBtn").onclick=()=>toggleSettings(true);
+el("wsBtn").onclick=()=>openWorkspace("agents");
 // CONFIGURATION nav also opens settings
 const _cfgNav=[...document.querySelectorAll(".nav")].find(n=>/CONFIGURATION/.test(n.textContent));
 if(_cfgNav) _cfgNav.onclick=()=>{ $$(".nav").forEach(x=>x.classList.remove("active")); _cfgNav.classList.add("active"); toggleSettings(true); };
