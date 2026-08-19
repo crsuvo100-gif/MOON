@@ -145,10 +145,13 @@ def install_voice_stack():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-env", action="store_true")
+    ap.add_argument("--no-venv", action="store_true",
+                    help="skip venv creation + dependency install (assume .venv exists; "
+                         "used when install.sh has already prepared the environment)")
     ap.add_argument("--no-voice", action="store_true", help="skip voice stack install")
     ap.add_argument("--no-models", action="store_true", help="skip Ollama model pull")
     args = ap.parse_args()
-    if not args.no_env:
+    if not args.no_env and not args.no_venv:
         _run([sys.executable, "-m", "venv", ".venv"])  # _run already drops PYTHONPATH
         py = ROOT / ".venv" / "bin" / "python"
         _run([str(py), "-m", _PKG, "install", "--upgrade", _PKG])

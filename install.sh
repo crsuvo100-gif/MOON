@@ -83,6 +83,22 @@ if [[ -f "$OPT" ]]; then
   fi
 fi
 
+# --- 2b. Delegate the Python-stage bootstrap to install_moon.py (single source
+#         of truth for .env creation, Ollama model pull, voice stack, smoke
+#         import). It reuses the venv we just built (--no-venv) so dependency
+#         install is never duplicated. This is additive: install_moon.py remains
+#         fully runnable on its own; install.sh just orchestrates it.
+if [[ -x "$VENVPY" ]]; then
+  log "Delegating .env / models / voice / smoke-import to install_moon.py ..."
+  if "$VENVPY" install_moon.py --no-venv 2>&1 | tail -8; then
+    ok "Python-stage bootstrap complete (via install_moon.py)"
+  else
+    warn "install_moon.py reported issues (MOON may still run; review output above)."
+  fi
+else
+  warn "venv python missing; skipping install_moon.py delegation."
+fi
+
 # --- 3. Browser detection -------------------------------------------------
 CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
 if [[ -n "$CHROME" ]]; then ok "browser found: $CHROME"; else warn "no Chrome/Chromium found — install one for the HUD (e.g. apt install chromium)"; fi
