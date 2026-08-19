@@ -844,7 +844,7 @@ class Orchestrator:
             messages = [ChatMessage(role="user", content=messages)]
 
         async def _try(llm):
-            if llm is None:
+            if llm is None or getattr(llm, "_disabled", False):
                 return None
             try:
                 r = await llm.complete(

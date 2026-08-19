@@ -130,7 +130,20 @@ class LLMService:
                 reasoning=reasoning,
             )
         except Exception as exc:  # noqa: BLE001
-            logger.warning("LLM complete failed: %s", exc)
+            # Classify the failure so a rate-limited / unauthorized cloud key
+            # fails CLEANLY and is never retried in a tight loop (Phase 23/25):
+            # 401/403 = auth/quota hard-fail -> circuit-break this service.
+            # 429 = rate-limited -> same treatment (retrying only wastes quota).
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            if status in (401, 403, 429):
+                self._disabled = True
+                logger.info(
+                    "LLM %s@%s unavailable (HTTP %s) — disabling this backend; "
+                    "local-first path continues.",
+                    self._model, self._base, status,
+                )
+            else:
+                logger.warning("LLM complete failed: %s", exc)
             return CompletionResult(content=None, has_tool_calls=False, tool_calls=[])
 
 
