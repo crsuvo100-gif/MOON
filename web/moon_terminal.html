@@ -216,7 +216,7 @@ header{position:absolute;left:.7%;right:.7%;top:.7%;height:9.1%;display:grid;gri
 .pipeline{display:flex;justify-content:space-between;gap:2px;margin-top:10px}.step{flex:1;text-align:center;font-size:clamp(5px,.4vw,8px);color:#d55}.step b{display:grid;place-items:center;width:21px;height:21px;border:1px solid #d22;border-radius:50%;margin:auto;color:#f44;background:#150202}.step.on b{background:#ff2a2a;color:#fff;box-shadow:0 0 12px #f00}.step.done b{background:#5cff88;color:#021;border-color:#5cff88}.flow{height:4px;margin-top:10px;background:linear-gradient(90deg,#f22 60%,#260606 60%);box-shadow:0 0 7px #f00}
 .threat{height:100%;display:flex;flex-direction:column;gap:6px;padding:8px;overflow:auto}.map{height:42%;min-height:0;flex:0 0 auto;background:radial-gradient(circle at 50% 50%,rgba(255,0,0,.35),transparent 40%),repeating-linear-gradient(45deg,rgba(255,0,0,.12) 0 1px,transparent 1px 9px);border:1px solid #651010;border-radius:2px}.threat .stats{position:static;width:auto;font-size:clamp(6px,.52vw,10px);line-height:1.55;color:#ff8a8a}
 .bottom{position:absolute;left:.7%;right:.7%;bottom:5.6%;height:11.6%;display:grid;grid-template-columns:16% 16% 16% 16% 16% 9% 11%;gap:.5%;z-index:6}.bcell{padding:6px 8px}.bcell h4{margin:0 0 3px;font-size:clamp(8px,.62vw,13px);font-weight:700;font-family:var(--ff-title);color:#ffb0b0;text-shadow:0 0 8px rgba(255,30,30,.6)}.spark{height:70%;position:relative;background:linear-gradient(90deg,transparent,#330505,transparent);overflow:hidden}.spark canvas{width:100%;height:100%}
-footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;grid-template-columns:15% repeat(12,1fr);gap:.25%;z-index:20}.cmd{display:flex;align-items:center;gap:7px;padding:0 8px;border:1px solid #711010;background:#070000;font-size:clamp(8px,.66vw,13px);font-weight:600}.cmd input{flex:1;background:#0b0000;border:1px solid #4b0b0b;color:#fff;height:70%;outline:none;font-weight:600}.btn{display:grid;place-items:center;border:1px solid #711010;background:#080000;color:#e06a6a;font-size:clamp(8px,.64vw,13px);font-weight:700;cursor:pointer;letter-spacing:.02em}.btn:hover,.btn.active{background:#300606;color:#fff;box-shadow:0 0 14px rgba(255,0,0,.28)}
+footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;grid-template-columns:13% repeat(13,minmax(0,1fr));gap:.2%;z-index:20}.cmd{display:flex;align-items:center;gap:7px;padding:0 8px;border:1px solid #711010;background:#070000;font-size:clamp(8px,.6vw,12px);font-weight:600}.cmd input{flex:1;background:#0b0000;border:1px solid #4b0b0b;color:#fff;height:70%;outline:none;font-weight:600}.btn{display:grid;place-items:center;border:1px solid #711010;background:#080000;color:#e06a6a;font-size:clamp(7px,.58vw,11px);font-weight:700;cursor:pointer;letter-spacing:.02em;padding:0 2px;overflow:hidden;white-space:nowrap}.btn:hover,.btn.active{background:#300606;color:#fff;box-shadow:0 0 14px rgba(255,0,0,.28)}
 .btn.talking{background:#5a0a0a!important;color:#fff!important;box-shadow:0 0 20px rgba(255,40,40,.7);animation:talkpulse 1.1s ease-in-out infinite}
 @keyframes talkpulse{0%,100%{box-shadow:0 0 10px rgba(255,40,40,.45)}50%{box-shadow:0 0 26px rgba(255,60,60,.95)}}
 #talkState{position:absolute;left:50%;top:5.3%;transform:translateX(-50%);z-index:35;font-family:var(--ff-title);font-size:clamp(8px,.7vw,13px);letter-spacing:.14em;color:#ff7a7a;text-shadow:0 0 10px #f00;opacity:0;transition:opacity .3s;pointer-events:none}
@@ -433,6 +433,8 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
           <option value="2">SLOW</option><option value="1">NORMAL</option>
           <option value="0.5">FAST</option><option value="0.25">HYPER</option>
         </select></div>
+      <div class="ovRow"><label>Core glow intensity</label>
+        <input id="setGlow" type="range" min="0.2" max="2" step="0.1" value="1" style="width:100%"></div>
     </fieldset>
     <div class="ovRow setActions">
       <button class="ovBtn" onclick="saveSettings()">SAVE</button>
@@ -473,7 +475,7 @@ footer{position:absolute;left:.7%;right:.7%;bottom:.7%;height:4.1%;display:grid;
 <footer>
   <div class="cmd"><b style="color:#ff6b6b">MOON&gt;</b><input id="command" placeholder="Enter command or ask MOON…"><button id="send" class="btn">➤</button></div>
   <div class="btn active" id="termBtn">▣ TERMINAL</div>
-  <div class="btn" id="aiChat">◉ AI CHAT</div><div class="btn" id="tasks">☷ TASKS</div><div class="btn" id="updates">◌ UPDATES</div><div class="btn" id="diag">⚙ DIAGNOSTICS</div><div class="btn" id="help">? HELP</div><div class="btn" id="funcBtn">FUNCTIONS</div><div class="btn" id="voiceBtn">VOICE</div><div class="btn" id="toolsBtn">TOOLS</div><div class="btn on" id="audioBtn">🔊 AUDIO</div><div class="btn" id="talkBtn" title="JARVIS duplex voice — MOON listens via mic, replies in her real female voice (toggle)">🎙 TALK · JARVIS</div><div class="btn" id="aspectBtn">⛶ DISPLAY</div>
+  <div class="btn" id="aiChat">◉ AI CHAT</div><div class="btn" id="shellBtn">▦ SHELL</div><div class="btn" id="tasks">☷ TASKS</div><div class="btn" id="updates">◌ UPDATES</div><div class="btn" id="diag">⚙ DIAGNOSTICS</div><div class="btn" id="help">? HELP</div><div class="btn" id="funcBtn">FUNCTIONS</div><div class="btn" id="voiceBtn">VOICE</div><div class="btn" id="toolsBtn">TOOLS</div><div class="btn on" id="audioBtn">🔊 AUDIO</div><div class="btn" id="talkBtn" title="JARVIS duplex voice — MOON listens via mic, replies in her real female voice (toggle)">🎙 TALK · JARVIS</div><div class="btn" id="aspectBtn">⛶ DISPLAY</div>
 </footer>
 </div>
 
@@ -595,18 +597,33 @@ function command(cmd){
   const d=document.createElement("div"); d.className="line you"; d.textContent="MOON@NEURAL:~$ "+v; out.appendChild(d);
   const r=document.createElement("div"); r.className="line ok";
   const lc=v.toLowerCase();
-  if(lc==="status"){ wsSend({action:"status"}); r.textContent="MOON CORE ONLINE — live status requested."; }
-  else if(lc==="diagnostics"){ wsSend({action:"diagnostics"}); r.textContent="Running full self-diagnostics…"; }
-  else if(lc.startsWith("memory")){ const q=v.split(/\s+/).slice(1).join(" ")||"recent"; wsSend({action:"memory_search",query:q}); r.textContent="Recall from long-term memory: "+q; }
-  else if(lc.startsWith("knowledge")){ const q=v.split(/\s+/).slice(1).join(" ")||"moon"; wsSend({action:"knowledge",query:q}); r.textContent="Querying knowledge base: "+q; }
-  else if(lc==="scan"){ setState("EXECUTING"); r.textContent="NEURAL SCAN COMPLETE — 98.726% density."; }
-  else if(lc==="learn"||lc==="think"){ setState("THINKING"); r.textContent="LEARNING ENGINE ACTIVE — adaptive cycle started."; }
-  else if(lc==="speak"){ setState("SPEAKING"); r.textContent="SPEAKING…"; }
-  else if(lc==="execute"){ setState("EXECUTING"); r.textContent="EXECUTING…"; }
-  else if(lc==="help"){ r.textContent="Commands: status · diagnostics · memory_search <q> · knowledge <q> · scan · learn · think · speak · execute · clear · help"; }
-  else if(lc==="clear"){ out.innerHTML=""; return; }
-  else { wsSend({action:"send_message",text:v}); r.textContent="Forwarded to MOON workflow: "+v; }
+  if(lc==="clear"){ out.innerHTML=""; return; }
+  if(consoleMode==="shell"){
+    // Real operator shell — backend runs allowlisted command and streams output.
+    wsSend({action:"exec",cmd:v});
+    r.textContent="⏳ executing…";
+  } else { // chat (default)
+    if(lc==="status"){ wsSend({action:"status"}); r.textContent="MOON CORE ONLINE — live status requested."; }
+    else if(lc==="diagnostics"){ wsSend({action:"diagnostics"}); r.textContent="Running full self-diagnostics…"; }
+    else if(lc.startsWith("memory")){ const q=v.split(/\s+/).slice(1).join(" ")||"recent"; wsSend({action:"memory_search",query:q}); r.textContent="Recall from long-term memory: "+q; }
+    else if(lc.startsWith("knowledge")){ const q=v.split(/\s+/).slice(1).join(" ")||"moon"; wsSend({action:"knowledge",query:q}); r.textContent="Querying knowledge base: "+q; }
+    else if(lc==="scan"){ setState("EXECUTING"); r.textContent="NEURAL SCAN COMPLETE — 98.726% density."; }
+    else if(lc==="learn"||lc==="think"){ setState("THINKING"); r.textContent="LEARNING ENGINE ACTIVE — adaptive cycle started."; }
+    else if(lc==="speak"){ setState("SPEAKING"); r.textContent="SPEAKING…"; }
+    else if(lc==="execute"){ setState("EXECUTING"); r.textContent="EXECUTING…"; }
+    else if(lc==="help"){ r.textContent="Chat: just type — MOON replies.  Shell mode: switch to SHELL tab, then status · ps · df · free · uname · uptime · netstat · ls · pwd · echo · date · whoami · env · nproc · cat <file>"; }
+    else { wsSend({action:"send_message",text:v}); r.textContent="Forwarded to MOON workflow: "+v; }
+  }
   out.appendChild(r); out.scrollTop=out.scrollHeight;
+}
+
+// Console mode: chat (default) or shell (real operator commands)
+let consoleMode="chat";
+function setConsoleMode(mode){ consoleMode=mode;
+  const cmd=el("command"); if(cmd) cmd.placeholder = mode==="shell"
+    ? "MOON shell — type an allowlisted command (ps, df, status, ls…)"
+    : "Enter command or ask MOON…";
+  addLog("[CONSOLE] mode = "+(mode==="shell"?"SHELL (real exec)":"AI CHAT (MOON brain)"));
 }
 
 /* ===== WebSocket to Moon's real backend (/ws) ===== */
@@ -616,7 +633,7 @@ function wsSend(o){ if(ws && ws.readyState===1){ if(o.action) lastAction=o.actio
 function connect(){
   const pr=location.protocol==="https:"?"wss":"ws";
   ws=new WebSocket(`${pr}://${location.host}/ws`);
-  ws.onopen=()=>{ addLog("[CORE] Quantum link handshake complete."); wsSend({action:"status"}); };
+  ws.onopen=()=>{ addLog("[CORE] Quantum link handshake complete."); wsSend({action:"status"}); wsSend({action:"log_stream"}); };
   ws.onmessage=e=>{ let m; try{m=JSON.parse(e.data);}catch(_){return;} handle(m); };
   ws.onerror=()=>addLog("[NETWORK] socket error");
   ws.onclose=()=>{ addLog("[NETWORK] link closed — retrying…"); setTimeout(connect,3000); };
@@ -634,6 +651,22 @@ function handle(m){
       if(typeof fireBurst==="function") fireBurst(5);
       break;
     case "audio": playWav(m.data); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.5); break;
+    case "exec_output":
+      (function(){
+        const out=el("cliOut"); if(!out) return;
+        const pre=document.createElement("div"); pre.className="line "+(m.exit===0?"ok":"warn");
+        pre.textContent=(m.cmd||"")+"  →  exit "+(m.exit??0);
+        out.appendChild(pre);
+        const body=document.createElement("div"); body.className="line";
+        body.style.whiteSpace="pre-wrap"; body.style.color="#c9a"; body.textContent=(m.output&&m.output.trim())?m.output:"(no output)";
+        out.appendChild(body); out.scrollTop=out.scrollHeight;
+      })();
+      window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.4);
+      break;
+    case "log":
+      // live backend log event -> System Logs panel
+      if(typeof addLog==="function") addLog("["+String(m.sev||"info").toUpperCase()+"] "+(m.msg||""));
+      break;
     case "assistant_done":
       setState("IDLE"); addLog("[MOON] done in "+(m.elapsed||0)+"s"+(m.locked?" [locked]":""));
       if(lastAction==="list_tools"){ renderToolGrid(toolBuf); toolBuf=""; }
@@ -693,7 +726,7 @@ function loop(t){brain(t);matrix(t);timeline("tlL",t,0);timeline("tlR",t,2);core
    cyan orbital rings with ticks, vertical energy conduits, and a starfield.
    Reacts to MOON's brain workflow via coreEnergy (spikes on events). */
 const fxCv=el("coreFx"), fxCtx=fxCv?fxCv.getContext("2d"):null;
-let coreEnergy=0, fxStars=[];
+let coreEnergy=0, fxStars=[], coreGlow=1.0;  // coreGlow: 0..2 multiplier (Settings -> Core Glow)
 function fxResize(){if(!fxCv)return;const d=devicePixelRatio||1,w=fxCv.clientWidth,h=fxCv.clientHeight;
   if(fxCv.width!==(w*d)|0){fxCv.width=w*d;fxCv.height=h*d;} fxCtx.setTransform(d,0,0,d,0,0);}
 function coreFx(t){
@@ -732,16 +765,17 @@ function coreFx(t){
   fxCtx.shadowBlur=0;
   // glowing core bloom (warm amber -> deep red; no harsh white/ -yellow disc,
   // so the edited fiery backdrop shows through as the core's surface)
+  const gl = coreGlow;  // live intensity multiplier from Settings
   const g=fxCtx.createRadialGradient(cx,cy,0,cx,cy,R*1.05*pulse);
-  g.addColorStop(0,"rgba(255,210,150,"+(0.55+e*0.15)+")");
-  g.addColorStop(0.25,"rgba(255,180,90,"+(0.60+e*0.1)+")");
-  g.addColorStop(0.55,"rgba(255,130,40,"+(0.70+e*0.1)+")");
-  g.addColorStop(0.82,"rgba(210,60,20,"+(0.6+e*0.1)+")");
+  g.addColorStop(0,"rgba(255,225,170,"+Math.min(1,(0.62+e*0.18)*gl)+")");
+  g.addColorStop(0.25,"rgba(255,190,100,"+Math.min(1,(0.68+e*0.12)*gl)+")");
+  g.addColorStop(0.55,"rgba(255,140,45,"+Math.min(1,(0.78+e*0.12)*gl)+")");
+  g.addColorStop(0.82,"rgba(220,70,25,"+Math.min(1,(0.66+e*0.12)*gl)+")");
   g.addColorStop(1,"rgba(120,20,10,0)");
-  fxCtx.save();fxCtx.shadowBlur=40+e*45;fxCtx.shadowColor="#ff7a2a";fxCtx.fillStyle=g;
+  fxCtx.save();fxCtx.shadowBlur=(40+e*45)*gl;fxCtx.shadowColor="#ff7a2a";fxCtx.fillStyle=g;
   fxCtx.beginPath();fxCtx.arc(cx,cy,R*1.02*pulse,0,Math.PI*2);fxCtx.fill();fxCtx.restore();
   // soft inner highlight (small, warm — not a bright white/yellow circle)
-  fxCtx.beginPath();fxCtx.arc(cx,cy,R*0.10*pulse,0,Math.PI*2);fxCtx.fillStyle="rgba(255,200,140,"+(0.35+e*0.2)+")";fxCtx.shadowBlur=14;fxCtx.shadowColor="#ff9a4a";fxCtx.fill();fxCtx.shadowBlur=0;
+  fxCtx.beginPath();fxCtx.arc(cx,cy,R*0.10*pulse,0,Math.PI*2);fxCtx.fillStyle="rgba(255,205,150,"+Math.min(1,(0.38+e*0.22)*gl)+")";fxCtx.shadowBlur=14*gl;fxCtx.shadowColor="#ff9a4a";fxCtx.fill();fxCtx.shadowBlur=0;
   coreEnergy*=0.965; // decay after MOON stops thinking
 }
 
@@ -807,6 +841,8 @@ async function loadSettingsUI(){
   el("setHost").value=host; el("setPort").value=port; el("setDisplay").value=disp;
   el("setBrowser").value=browser; el("setAutostart").checked=autostart;
   el("setIdle").value=idle;
+  const glow=String(s.core_glow!=null?s.core_glow:localStorage.getItem("moon-ui-glow")||"1");
+  if(el("setGlow")) el("setGlow").value=glow;
   // aspect selection
   $$("#setAspect .ratio").forEach(b=>b.classList.toggle("sel", b.dataset.r===aspect));
   // avatar selection
@@ -832,6 +868,9 @@ $$("#setRes .ratio").forEach(b=>b.onclick=()=>{
   $$("#setRes .ratio").forEach(x=>x.classList.remove("sel")); b.classList.add("sel");
   _resolution=b.dataset.r; applyResolution(); localStorage.setItem("moon-ui-resolution",_resolution);
 });
+// core glow slider (live)
+const _glowEl=el("setGlow");
+if(_glowEl){ _glowEl.oninput=()=>{ coreGlow=parseFloat(_glowEl.value)||1; localStorage.setItem("moon-ui-glow",String(coreGlow)); }; }
 
 function setAspect(r){
   const app=el("app"); if(!app)return;
@@ -862,6 +901,7 @@ function collectSettings(){
     aspect: ($$("#setAspect .ratio.sel")[0]||{}).dataset?.r || "auto",
     avatar_mode: ($$("#setAvatar .ratio.sel")[0]||{}).dataset?.m || _avatarMode,
     resolution: ($$("#setRes .ratio.sel")[0]||{}).dataset?.r || _resolution,
+    core_glow: parseFloat(el("setGlow").value)||1,
     idle_speed: parseFloat(el("setIdle").value)||1,
   };
 }
@@ -880,6 +920,7 @@ async function saveSettings(){
 function applySettingsNow(){
   const s=collectSettings();
   setAspect(s.aspect); applyAvatarMode(); applyResolution();
+  coreGlow = s.core_glow||1; localStorage.setItem("moon-ui-glow",String(coreGlow));
   const app=el("app"); if(app) app.style.setProperty("--idle-speed", s.idle_speed);
   const sweep=document.querySelector(".sweep"); if(sweep) sweep.style.animationDuration=(7/s.idle_speed)+"s";
   localStorage.setItem("moon-ui-idle-speed",String(s.idle_speed));
@@ -889,9 +930,9 @@ function applySettingsNow(){
 }
 function resetSettings(){
   fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({host:"127.0.0.1",port:8777,display:"",browser:"",autostart:true,aspect:"auto",avatar_mode:"fusion",resolution:"hd",idle_speed:1})})
+    body:JSON.stringify({host:"127.0.0.1",port:8777,display:"",browser:"",autostart:true,aspect:"auto",avatar_mode:"fusion",resolution:"hd",core_glow:1.0,idle_speed:1})})
     .catch(()=>{});
-  localStorage.removeItem("moon-ui-ratio"); localStorage.removeItem("moon-ui-idle-speed"); localStorage.removeItem("moon-ui-avatar"); localStorage.removeItem("moon-ui-resolution");
+  localStorage.removeItem("moon-ui-ratio"); localStorage.removeItem("moon-ui-idle-speed"); localStorage.removeItem("moon-ui-avatar"); localStorage.removeItem("moon-ui-resolution"); localStorage.removeItem("moon-ui-glow");
   loadSettingsUI(); applySettingsNow(); el("setMsg").textContent="✓ reset to defaults";
 }
 el("setBtn").onclick=()=>toggleSettings(true);
@@ -941,7 +982,8 @@ function doNav(n){ $$(".nav").forEach(x=>x.classList.remove("active")); n.classL
 function doCoreSync(){ coreActivity=1.4; wsSend({action:"status"}); setState("EXECUTING"); addLog("[CORE SYNC] querying MOON neural brain state…"); const av=document.querySelector(".avatar"); if(av){av.classList.add("core-active");clearTimeout(av._t);av._t=setTimeout(()=>av.classList.remove("core-active"),1100);} }
 
 el("termBtn").onclick=doTerminal;
-el("aiChat").onclick=doAiChat;
+el("aiChat").onclick=()=>{ setConsoleMode("chat"); doAiChat(); };
+el("shellBtn").onclick=()=>{ setConsoleMode("shell"); el("command").focus(); addLog("[SHELL] operator console — real allowlisted commands. Try: ps, df, status, ls, uname"); };
 el("tasks").onclick=doTasks;
 el("updates").onclick=doUpdates;
 el("diag").onclick=doDiagnostics;
@@ -1035,6 +1077,7 @@ window.addEventListener("resize",size); size(); requestAnimationFrame(loop);
   const ratio=localStorage.getItem("moon-ui-ratio"); if(ratio) setAspect(ratio);
   const av=localStorage.getItem("moon-ui-avatar"); if(av){ _avatarMode=av; applyAvatarMode(); }
   const res=localStorage.getItem("moon-ui-resolution"); if(res){ _resolution=res; applyResolution(); }
+  const gl=parseFloat(localStorage.getItem("moon-ui-glow")||"1"); coreGlow=gl||1; if(el("setGlow")) el("setGlow").value=String(coreGlow);
   const spd=parseFloat(localStorage.getItem("moon-ui-idle-speed")||"1")||1;
   const app=el("app"); if(app) app.style.setProperty("--idle-speed", spd);
 })();

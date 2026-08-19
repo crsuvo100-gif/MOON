@@ -44,6 +44,7 @@ _DEFAULT_SETTINGS = {
     "aspect": "auto",         # auto | 16:9 | 21:9 | 32:9 | 16:10 | 4:3 | 1:1 | 9:16
     "avatar_mode": "fusion",  # fusion | neural  (central core visual)
     "resolution": "hd",       # hd | compact  (UI density for large displays)
+    "core_glow": 1.0,         # 0.2..2.0 (central core glow intensity)
     "autostart": True,        # open HUD on MOON boot
     "idle_speed": 1.0,
 }
@@ -122,11 +123,23 @@ def _push_telemetry(orch):
     except Exception:
         pass
 
+# Live log subscribers (set when a HUD client requests action:"log_stream").
+# Each entry is an asyncio coroutine `send(**msg)` from a ws_endpoint connection.
+_LOG_SUBSCRIBERS: list = []
+
+
 def _log(msg: str, sev: str = "info"):
     """Append a structured log line to the rolling buffer + file (for the HUD)."""
     ts = time.strftime("%H:%M:%S")
     line = f"[{ts}] {sev.upper()} {msg}"
     _LOG_BUF.append({"t": ts, "sev": sev, "msg": msg})
+    # push to any live HUD log subscribers (send is an async coroutine -> schedule it)
+    if _LOG_SUBSCRIBERS:
+        for sub in list(_LOG_SUBSCRIBERS):
+            try:
+                asyncio.ensure_future(sub(type="log", t=ts, sev=sev, msg=msg))
+            except Exception:
+                pass
     try:
         with open(_LOG_FILE, "a") as fh:
             fh.write(line + "\n")
@@ -504,7 +517,7 @@ async def api_post_settings(request: Request):
         body = {}
     cur = _load_settings()
     cur.update({k: body[k] for k in ("host", "port", "display", "browser",
-                                     "aspect", "avatar_mode", "resolution",
+                                     "aspect", "avatar_mode", "resolution", "core_glow",
                                      "autostart", "idle_speed") if k in body})
     try:
         with open(SETTINGS_JSON, "w") as fh:
@@ -721,6 +734,20 @@ async def ws_endpoint(ws: WebSocket):
                 await send(type="assistant_done",
                            elapsed=round(time.time() - t0, 2) if not orch._lock.locked else 0.0,
                            locked=orch._lock.locked)
+            elif action == "exec":
+                # Real shell command from the operator allowlist, streamed live.
+                cmd = str(data.get("cmd", "")).strip()
+                out, code = _shell_dispatch(cmd)
+                _log(f"exec[{code}] {cmd}", "ok" if code == 0 else "err")
+                await send(type="exec_output", cmd=cmd, exit=code, output=out)
+            elif action == "log_stream":
+                # Subscribe this connection to live backend log events.
+                if send not in _LOG_SUBSCRIBERS:
+                    _LOG_SUBSCRIBERS.append(send)
+                    # replay last few so the console isn't empty
+                    for ln in list(_LOG_BUF)[-30:]:
+                        await send(type="log", t=ln["t"], sev=ln["sev"], msg=ln["msg"])
+                    await send(type="notice", message="[LOG] live stream connected")
             elif action == "diagnostics":
                 await send(type="assistant_start")
                 await send(type="workflow", stage="tools", detail="running diagnostics")
