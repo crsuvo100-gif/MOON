@@ -48,6 +48,45 @@ def _ensure_default_peer() -> None:
         logger.warning("default peer registration skipped: %s", exc)
 
 
+def _ensure_ollama() -> None:
+    """Best-effort: make sure MOON's local model backend (Ollama) is reachable
+    before the terminal/API starts, so the Orchestrator's setup() has a model to
+    bind to (Phase 26 startup readiness).
+
+    Additive + non-destructive: if Ollama is already up it is a no-op; if it
+    cannot be started we still launch MOON (it degrades to the cloud fallbacks /
+    reports the backend as unavailable rather than crashing). Mirrors the
+    long-standing logic in scripts/moon_launcher.py.
+    """
+    import os
+    import platform
+    import shutil
+    import subprocess
+    import urllib.request
+
+    host = os.environ.get("OLLAMA_HOST", "127.0.0.1:11434")
+    try:
+        with urllib.request.urlopen(f"http://{host}/api/tags", timeout=3) as r:
+            if r.status == 200:
+                return
+    except Exception:
+        pass
+    print(f"🌙 Ollama not reachable at {host} -- attempting to start")
+    try:
+        if platform.system() == "Linux" and shutil.which("systemctl") is not None:
+            cmd = ["systemctl", "start", "ollama"]
+            if os.geteuid() != 0:
+                cmd = ["sudo", *cmd]
+            subprocess.run(cmd, check=False)
+        else:
+            exe = shutil.which("ollama")
+            if exe:
+                subprocess.Popen([exe, "serve"],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("ollama autostart skipped: %s", exc)
+
+
 async def _prefetch_models():
     import json
 
@@ -105,6 +144,11 @@ def _run_terminal() -> None:
     import threading
     import time
     import urllib.request
+
+    # Phase 26 startup readiness: make sure the local model backend is up before
+    # the API starts, so the Orchestrator has a model to bind to. Best-effort and
+    # non-destructive -- safe when Ollama is already running or unavailable.
+    _ensure_ollama()
 
     # The project venv is 3.13, but a global PYTHONPATH may point at an
     # incompatible (3.11) site-packages and shadow pydantic_core at import time.
