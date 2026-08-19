@@ -655,6 +655,71 @@ async def api_health(request: Request):
         return JSONResponse({"status": "FAILED", "error": str(exc)}, status_code=503)
 
 
+@app.get("/api/agents")
+async def api_agents(request: Request):
+    """Read-only roster of MOON's agent brains (real data from the Orchestrator).
+
+    Additive: reuses _moon_status (no new data source). Useful for the HUD and
+    any external monitor that wants the live agent list.
+    """
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    orch = await _get_orchestrator()
+    st = await _moon_status(orch)
+    agents = st.get("agents", 0)
+    agent_list = st.get("agent_list", []) or []
+    # Enrich with each agent's allowed-tool scope when available.
+    scoped = []
+    try:
+        ags = getattr(orch, "_agents", {}) or {}
+        for name in agent_list:
+            card = ags.get(name) if isinstance(ags, dict) else None
+            allowed = getattr(card, "allowed_tools", None)
+            scoped.append({
+                "name": name,
+                "allowed_tools": allowed if allowed is not None else [],
+            })
+    except Exception:
+        scoped = [{"name": n, "allowed_tools": []} for n in agent_list]
+    return JSONResponse({
+        "count": agents,
+        "agents": scoped,
+        "locked": st.get("locked", True),
+    })
+
+
+@app.get("/api/tools")
+async def api_tools(request: Request):
+    """Read-only roster of MOON's registered tools (real data from the Orchestrator).
+
+    Additive: reuses _moon_status (no new data source).
+    """
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    orch = await _get_orchestrator()
+    st = await _moon_status(orch)
+    tools = st.get("tools", []) or []
+    # Surface each tool's callable status from the registry when available.
+    detailed = []
+    try:
+        reg = getattr(getattr(orch, "_tools", None), "_registry", None)
+        caps = getattr(reg, "tool_caps", None)
+        for name in tools:
+            entry = {"name": name}
+            if caps is not None:
+                entry["description"] = (caps.get(name) or {}).get("description", "")
+            detailed.append(entry)
+    except Exception:
+        detailed = [{"name": n} for n in tools]
+    return JSONResponse({
+        "count": len(tools),
+        "tools": detailed,
+        "locked": st.get("locked", True),
+    })
+
+
 def _broadcast_status(orch) -> dict:
     """Status payload for the HUD panels (real data)."""
     return _moon_status_sync(orch)
