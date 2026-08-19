@@ -15,10 +15,10 @@ run:
 	$(PY) main.py run "$(TASK)" --agent $(AGENT)
 
 serve:
-	$(PY) main.py start
+	python3 scripts/moon_launcher.py terminal
 
 terminal:
-	$(PY) main.py start
+	python3 scripts/moon_launcher.py terminal
 
 # Install MOON's model backend (Ollama) as a service. Uses sudo when not root.
 install:
