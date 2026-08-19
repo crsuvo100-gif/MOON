@@ -607,6 +607,7 @@ async def api_logs(request: Request, n: int = 100):
 
 
 
+@app.get("/status")
 async def status(request: Request):
     # Authorization gate for remote exposure.
     if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
@@ -614,6 +615,44 @@ async def status(request: Request):
         return Response("Unauthorized", status_code=401)
     orch = await _get_orchestrator()
     return await _moon_status(orch)
+
+
+@app.get("/api/health")
+async def api_health(request: Request):
+    """Project-wide health endpoint (Phase 27).
+
+    Reuses the existing real diagnostic pipeline (_moon_status + _run_diagnostics)
+    and rolls the per-subsystem OK/FAIL/WARN verdicts into a single overall status:
+      HEALTHY   - no FAIL and no WARN
+      DEGRADED  - at least one WARN (non-critical, still operational)
+      FAILED    - at least one FAIL (a required subsystem is down)
+    """
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        orch = await _get_orchestrator()
+        diag = await _run_diagnostics(orch)
+        checks = diag.get("checks", [])
+        states = [c[1] for c in checks]
+        if any(s == "FAIL" for s in states):
+            overall = "FAILED"
+        elif any(s == "WARN" for s in states):
+            overall = "DEGRADED"
+        else:
+            overall = "HEALTHY"
+        return JSONResponse({
+            "status": overall,
+            "summary": diag.get("summary", ""),
+            "checks": [
+                {"subsystem": c[0], "state": c[1], "detail": c[2]} for c in checks
+            ],
+            "model": getattr(getattr(orch, "_settings", None), "model_name", "?"),
+            "locked": getattr(getattr(orch, "_lock", None), "locked", True),
+            "timestamp": time.time(),
+        })
+    except Exception as exc:  # noqa: BLE001
+        return JSONResponse({"status": "FAILED", "error": str(exc)}, status_code=503)
 
 
 def _broadcast_status(orch) -> dict:
