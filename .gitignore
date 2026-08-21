@@ -48,6 +48,21 @@ htmlcov/
 .DS_Store
 *.swp
 
+# Runtime data (generated at runtime; source/code is committed, not state)
+data/**/*.db
+data/agents/agent_registry/*.json
+data/agents/staging/
+data/memory/
+data/knowledge/
+data/skills/
+data/evaluations/
+data/logs/
+app/memory/episodes.json
+app/memory/long_term.json
+app/memory/short_term.json
+web/moon_settings.json
+tmp/
+
 # Auto-generated on-demand tools (built at runtime)
 plugins/generated/
 Telegram/

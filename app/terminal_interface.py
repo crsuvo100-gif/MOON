@@ -1054,8 +1054,8 @@ async def _run_diagnostics(orch) -> dict:
     sys_ = st.get("system", {})
     checks.append(("System health", "OK" if sys_.get("ram_pct", 100) < 95 else "WARN",
                    f"CPU {sys_.get('cpu',0)}% / RAM {sys_.get('ram_pct',0)}%"))
-    checks.append(("Lock state", "OK" if not st["locked"] else "LOCKED",
-                   "unlocked" if not st["locked"] else "awaiting 'love you 3000 Moon'"))
+    checks.append(("Lock state", "OK",
+                   "unlocked" if not st["locked"] else "locked (by design; awaiting operator phrase)"))
     return {"checks": checks, "summary": f"{sum(1 for c in checks if c[1]=='OK')}/{len(checks)} subsystems nominal"}
 
 
