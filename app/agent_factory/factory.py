@@ -141,6 +141,12 @@ class AgentFactory:
         deps = DependencyResolver().resolve(spec)
         # 4) TESTER (sandbox pytest)
         test = AgentTester().test(art)
+        if not test.passed:
+            try:
+                from app.runtime.integration import emit as _emit
+                _emit("AGENT_TEST_FAILED", agent_id=spec.agent_id, detail=f"rc={test.rc}")
+            except Exception:  # noqa: BLE001
+                pass
         # 5) REPAIR on test failure (bounded, safe re-generation)
         if not test.passed:
             new_art, changed = RepairAgent().repair(spec, art, staging_dir, test)
@@ -153,6 +159,11 @@ class AgentFactory:
             self._quarantine(spec.agent_id, spec.name, spec.version,
                              self._meta_from_spec(spec), art.module_path,
                              "; ".join(review.violations))
+            try:
+                from app.runtime.integration import emit as _emit
+                _emit("AGENT_REJECTED", agent_id=spec.agent_id, detail="; ".join(review.violations))
+            except Exception:  # noqa: BLE001
+                pass
             return FactoryResult(False, "SECURITY_REJECTED", spec.agent_id, spec.version, exec_id,
                                  errors=review.violations, evidence={"review": review.__dict__})
         # 7) EVALUATOR
@@ -163,6 +174,14 @@ class AgentFactory:
             return FactoryResult(False, "REGISTRATION_FAILED", spec.agent_id, spec.version, exec_id,
                                  errors=[reg.error], evidence={"deps": deps})
         # 9) Surface to live runtime (additive) + version + enable
+        try:
+            from app.runtime.integration import emit as _emit
+            _emit("AGENT_CREATED", agent_id=spec.agent_id,
+                  detail=f"{spec.name} v{spec.version} registered")
+            _emit("AGENT_APPROVED", agent_id=spec.agent_id,
+                  detail=f"tests={test.passed} eval={eval_res.overall}")
+        except Exception:  # noqa: BLE001
+            pass
         try:
             from app.brain import agent_registry as ar
             ar.register_external_agent(self._meta_from_spec(spec))

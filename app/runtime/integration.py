@@ -116,7 +116,8 @@ def evaluation_summary() -> dict[str, Any]:
 def emit(event: str, *, execution_id: str = "", agent_id: str = "", detail: str = "") -> None:
     """Publish a lifecycle event on the bus (spec 41)."""
     try:
-        _bus.publish(event, execution_id=execution_id, agent_id=agent_id, detail=detail)
+        _bus_instance = _bus()  # _bus is the bus() factory -> EventBus instance
+        _bus_instance.publish(event, execution_id=execution_id, agent_id=agent_id, detail=detail)
     except Exception:  # noqa: BLE001
         pass
 

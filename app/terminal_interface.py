@@ -1721,6 +1721,53 @@ async def ws_endpoint(ws: WebSocket):
             pass
 
 
+@app.websocket("/ws/agent/{agent_id}")
+async def ws_agent(ws: WebSocket, agent_id: str):
+    """Per-agent live channel (spec 35: /ws/agent/{id}).
+
+    Streams every internal event whose ``agent_id`` matches the requested
+    agent (factory-created, builtin, or spec40). Reuses the existing EventBus;
+    does not create a parallel bus. Non-destructive.
+    """
+    if TERMINAL_TOKEN and not _token_ok(ws):
+        await ws.close(code=1008, reason="unauthorized")
+        return
+    await ws.accept()
+    from typing import Any
+    from app.runtime.event_bus import bus as _bus_fn
+    _bus = _bus_fn()
+    q: list[Any] = []
+
+    def _on_event(ev):
+        if getattr(ev, "agent_id", "") == agent_id:
+            q.append(ev)
+
+    _bus.subscribe(_on_event)
+    try:
+        await ws.send_json({"type": "ready", "channel": "agent", "agent_id": agent_id})
+        sent = 0
+        while True:
+            if len(q) > sent:
+                for ev in q[sent:]:
+                    await ws.send_json({"type": "agent_event", "agent_id": agent_id,
+                                        "event": ev.type, "detail": ev.detail,
+                                        "execution_id": ev.execution_id})
+                sent = len(q)
+            await asyncio.sleep(0.5)
+    except WebSocketDisconnect:
+        return
+    except Exception:  # noqa: BLE001
+        try:
+            await ws.close()
+        except Exception:
+            pass
+    finally:
+        try:
+            _bus._subscribers.remove(_on_event)
+        except Exception:  # noqa: BLE001
+            pass
+
+
 @app.websocket("/ws/events")
 async def ws_events(ws: WebSocket):
     """Live event stream (spec 35: /ws/events).

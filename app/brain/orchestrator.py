@@ -646,6 +646,7 @@ class Orchestrator:
         try:
             from app.runtime.integration import analyze_task, route_agent, emit
             from app.agents.registry import get_registry
+            emit("TASK_CREATED", execution_id=task.id, agent_id=task.agent_name, detail=task.prompt[:120])
             _spec = analyze_task(task.prompt)
             task._goal_spec = _spec  # structured analysis (spec 10)
             known = list(self._agents.keys())
@@ -662,6 +663,8 @@ class Orchestrator:
                     pass
             if refined and refined in self._agents:
                 task.agent_name = refined  # capability-based refinement (spec 12)
+                emit("AGENT_SELECTED", execution_id=task.id, agent_id=refined,
+                     detail=f"selected {refined} by capability")
             try:
                 setattr(task, "_selected_agents",
                         [c.id for c in get_registry().select(capability=task.prompt)][:5])
@@ -712,7 +715,20 @@ class Orchestrator:
                 logger.info("fast-path fell back to full loop: %s", exc)
         try:
             final_text, tokens = await self._run_cognition_loop(task, agent, on_event=on_event)
+            # --- spec 27/41: verification events (additive; degrades cleanly) ---
+            try:
+                from app.runtime.integration import emit as _emit
+                _emit("VERIFICATION_STARTED", execution_id=task.id, agent_id=agent.name)
+            except Exception:  # noqa: BLE001
+                pass
             validation = await self._validator.validate(task.prompt, final_text)
+            try:
+                from app.runtime.integration import emit as _emit
+                _emit("VERIFICATION_PASSED" if validation.valid else "VERIFICATION_FAILED",
+                      execution_id=task.id, agent_id=agent.name,
+                      detail="; ".join(validation.issues) if validation.issues else "ok")
+            except Exception:  # noqa: BLE001
+                pass
             if not validation.valid:
                 logger.warning("Output invalid: %s", validation.issues)
                 # Self-improvement: remember the failure mode as a lesson.
@@ -763,6 +779,12 @@ class Orchestrator:
                     goal=task.prompt, outcome=final_text[:1000], lesson=lesson, success=reflection.satisfactory,
                 )
                 self._memory.save_episodes()
+                try:
+                    from app.runtime.integration import emit as _emit
+                    _emit("MEMORY_UPDATED", execution_id=task.id, agent_id=agent.name,
+                          detail="episodic stored")
+                except Exception:  # noqa: BLE001
+                    pass
                 if self._consolidator is not None:
                     await self._consolidator.consolidate(
                         prompt=task.prompt, response=final_text,
@@ -866,12 +888,26 @@ class Orchestrator:
             if resp.has_tool_calls:
                 for call in resp.tool_calls:
                     args = self._parse_args(call.get("arguments", "{}"))
+                    try:
+                        from app.runtime.integration import emit as _emit
+                        _emit("TOOL_SELECTED", execution_id=task.id, agent_id=agent.name,
+                              detail=call.get("name", "tool"))
+                        _emit("TOOL_STARTED", execution_id=task.id, agent_id=agent.name,
+                              detail=call.get("name", "tool"))
+                    except Exception:  # noqa: BLE001
+                        pass
                     if on_event:
                         try:
                             await on_event({"stage": "tool_call", "detail": call.get("name", "tool")})
                         except Exception:  # noqa: BLE001
                             pass
                     result = await self._tools.run(call["name"], args, agent=agent)
+                    try:
+                        from app.runtime.integration import emit as _emit
+                        _emit("TOOL_COMPLETED", execution_id=task.id, agent_id=agent.name,
+                              detail=call.get("name", "tool"))
+                    except Exception:  # noqa: BLE001
+                        pass
                     messages.append(ChatMessage(role="tool", content=json.dumps(result.to_dict(), default=str)))
                     self._history.append(Message.tool_result(str(result.output), tool=call["name"]))
                     out = str(result.output)

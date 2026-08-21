@@ -52,6 +52,11 @@ class AgentLifecycle:
         rec = self.store.get(agent_id)
         if not rec:
             return FactoryResult(False, "NOT_FOUND", agent_id, errors=[f"no such agent {agent_id}"])
+        try:
+            from app.runtime.integration import emit as _emit
+            _emit("ROLLBACK_STARTED", agent_id=agent_id, detail=f"rollback requested for {agent_id}")
+        except Exception:  # noqa: BLE001
+            pass
         versions = self.store.list_versions(agent_id)
         if len(versions) < 2:
             return FactoryResult(False, "NO_PREVIOUS_VERSION", agent_id, rec.version,
@@ -68,6 +73,12 @@ class AgentLifecycle:
         self.store.audit(AuditEvent(AuditAction.ROLLBACK.value, agent_id,
                                     f"-> {previous['version']}"))
         self._sync_runtime(agent_id, enable=True)
+        try:
+            from app.runtime.integration import emit as _emit
+            _emit("ROLLBACK_COMPLETED", agent_id=agent_id,
+                  detail=f"restored -> {previous['version']}")
+        except Exception:  # noqa: BLE001
+            pass
         return FactoryResult(
             True, "ROLLED_BACK", agent_id, rec.version,
             result=f"agent {agent_id} rolled back to version {previous['version']}",
