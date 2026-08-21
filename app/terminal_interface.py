@@ -758,6 +758,79 @@ async def api_events(request: Request):
     })
 
 
+@app.get("/api/factory")
+async def api_factory(request: Request):
+    """Agent Factory status + agent roster (spec 35/36)."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        from app.agent_factory.factory import AgentFactory
+        f = AgentFactory()
+        return JSONResponse({"status": f.status(), "agents": f.list_agents()})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/factory/agents")
+async def api_factory_agents(request: Request):
+    """List generated (factory) agents (spec 35: GET /agents, factory subset).
+
+    Distinct path from the built-in GET /api/agents (which returns the 39
+    static AgentCards) so neither route is clobbered (non-destructive).
+    """
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        from app.agent_factory.factory import AgentFactory
+        return JSONResponse({"agents": AgentFactory().list_agents()})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/agents/{agent_id}/run")
+async def api_agent_run(agent_id: str, request: Request):
+    """Run a generated agent (spec 35: POST /agents/{id}/run)."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        from app.agent_factory.store import AgentStore
+        s = AgentStore()
+        rec = s.get(agent_id)
+        if not rec:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        body = await request.json()
+        task = (body or {}).get("task", "")
+        import importlib.util, sys
+        spec = importlib.util.spec_from_file_location("gen_run_api", rec.module_path)
+        if spec is None or spec.loader is None:
+            return JSONResponse({"error": "agent module unloadable"}, status_code=500)
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules["gen_run_api"] = mod
+        spec.loader.exec_module(mod)
+        result = mod.create_agent().run(task or "run")
+        s.record_execution(result.get("execution_id", ""), agent_id, "SUCCESS", result=str(result))
+        return JSONResponse(result)
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/agents/{agent_id}/rollback")
+async def api_agent_rollback(agent_id: str, request: Request):
+    """Roll back a generated agent to its previous version (spec 35/45)."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        from app.agent_factory.lifecycle import AgentLifecycle
+        res = AgentLifecycle().rollback(agent_id)
+        return JSONResponse(res.to_dict())
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 def _broadcast_status(orch) -> dict:
     """Status payload for the HUD panels (real data)."""
     return _moon_status_sync(orch)
@@ -1141,6 +1214,53 @@ async def ws_endpoint(ws: WebSocket):
                         out = out if isinstance(out, str) else str(out)
                 except Exception as e:  # noqa: BLE001
                     out = f"[connect] error: {e}"
+                for chunk in _stream_text(out):
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
+            elif action == "factory":
+                # NEW: Agent Factory terminal interface (additive). Exposes the
+                # autonomous agent-generation subsystem (spec sections 13-15, 36).
+                await send(type="assistant_start")
+                await send(type="workflow", stage="tools", detail="agent factory")
+                try:
+                    from app.agent_factory.factory import AgentFactory
+                    from app.agent_factory.lifecycle import AgentLifecycle
+                    payload = (data.get("query") or data.get("text") or data.get("command") or "").strip()
+                    parts = payload.split(None, 1)
+                    cmd = parts[0].lower() if parts else "status"
+                    arg = parts[1].strip() if len(parts) > 1 else ""
+                    f = AgentFactory(); lc = AgentLifecycle()
+                    if cmd == "create":
+                        if not arg:
+                            out = "[factory] usage: factory create \"<capability>\""
+                        else:
+                            res = f.create(arg)
+                            out = (f"[factory] {res.status} agent_id={res.agent_id} v{res.agent_version}\n"
+                                   f"{res.result}")
+                    elif cmd == "status":
+                        st = f.status()
+                        out = (f"[factory] total={st['total_agents']} by_stage={st['by_stage']}")
+                    elif cmd in ("list", "ls"):
+                        ags = f.list_agents()
+                        out = "[factory] agents:\n" + "\n".join(
+                            f"  - {a['name']} [{a['status']}] tools={a['required_tools']}" for a in ags
+                        ) if ags else "[factory] no generated agents yet"
+                    elif cmd == "enable" and arg:
+                        out = f"[factory] {lc.enable(arg).status} {arg}"
+                    elif cmd == "disable" and arg:
+                        out = f"[factory] {lc.disable(arg).status} {arg}"
+                    elif cmd in ("rollback", "roll_back") and arg:
+                        out = f"[factory] {lc.rollback(arg).status} -> {arg}"
+                    elif cmd == "inspect" and arg:
+                        rec = f.store.get(arg)
+                        out = f"[factory] {arg}: {rec.status} v{rec.version} stage={rec.stage}" if rec else f"[factory] no such agent {arg}"
+                    else:
+                        out = ("[factory] usage:\n"
+                               "  factory create \"<capability>\"\n"
+                               "  factory status | list | inspect <id>\n"
+                               "  factory enable <id> | disable <id> | rollback <id>")
+                except Exception as e:  # noqa: BLE001
+                    out = f"[factory] error: {e}"
                 for chunk in _stream_text(out):
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)

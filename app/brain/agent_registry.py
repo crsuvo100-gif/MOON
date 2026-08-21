@@ -57,7 +57,11 @@ AGENT_DEFS: dict = {
 
 
 def build_agents(tool_names: list) -> dict:
-    """Construct AgentCards, resolving tool scopes against the live tool names."""
+    """Construct AgentCards, resolving tool scopes against the live tool names.
+
+    Additive: Agent Factory-generated agents registered via register_external_agent
+    are merged in here without altering the 39 built-in AGENT_DEFS.
+    """
     agents: dict = {}
     for name, (role, _persona, scope) in AGENT_DEFS.items():
         if scope in ("all", None):
@@ -77,7 +81,36 @@ def build_agents(tool_names: list) -> dict:
         else:
             allowed = tool_names
         agents[name] = AgentCard(name, role, allowed_tools=allowed)
+    # Merge factory-generated agents (additive; built-ins untouched).
+    for name, (role, tools) in EXTRA_AGENT_DEFS.items():
+        agents[name] = AgentCard(name, role, allowed_tools=[t for t in tools if t in tool_names])
     return agents
+
+
+# Agent Factory hook: agent definitions generated at runtime by the
+# app.agent_factory subsystem. Populated via register_external_agent() so the
+# orchestrator can build AgentCards for them on the next setup() without any
+# change to the 39 static AGENT_DEFS above.
+EXTRA_AGENT_DEFS: dict[str, tuple[str, list[str]]] = {}
+
+
+def get_existing_agent_names() -> list[str]:
+    """All agent names the runtime currently knows about (built-in + factory)."""
+    return list(AGENT_DEFS.keys()) + list(EXTRA_AGENT_DEFS.keys())
+
+
+def register_external_agent(meta) -> None:
+    """Register a factory-generated agent so build_agents() exposes it.
+
+    Non-destructive: only appends to EXTRA_AGENT_DEFS; never mutates AGENT_DEFS.
+    """
+    tools = list(meta.required_tools) if hasattr(meta, "required_tools") else []
+    EXTRA_AGENT_DEFS[meta.name] = (meta.description or meta.name, tools)
+
+
+def unregister_external_agent(name: str) -> bool:
+    """Remove a factory-generated agent from the live runtime set."""
+    return EXTRA_AGENT_DEFS.pop(name, None) is not None
 
 
 def persona_for(name: str) -> str:
