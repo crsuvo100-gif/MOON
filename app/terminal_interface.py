@@ -1378,6 +1378,16 @@ async def ws_endpoint(ws: WebSocket):
                         elif cmd == "inspect" and arg:
                             rec = st.get(arg) or f.store.get(arg)
                             out = f"INSPECT {arg}: {rec.status if rec else 'not found'} v{getattr(rec,'version','?')}"
+                        elif cmd == "test" and arg:
+                            rec = st.get(arg) or f.store.get(arg)
+                            if not rec or not rec.module_path:
+                                out = f"TEST {arg}: no module to test"
+                            else:
+                                try:
+                                    r = f.run(arg, arg)
+                                    out = f"TEST {arg}: success={r.get('success')} status={r.get('status')}"
+                                except Exception as e:  # noqa: BLE001
+                                    out = f"TEST {arg}: ERROR {e}"
                         elif cmd in ("enable", "disable", "rollback") and arg:
                             from app.agent_factory.lifecycle import AgentLifecycle
                             lc = AgentLifecycle()
@@ -1387,19 +1397,43 @@ async def ws_endpoint(ws: WebSocket):
                             out = "usage: agents [list|create <cap>|inspect <id>|enable <id>|disable <id>|rollback <id>]"
                     elif action == "tools":
                         if cmd in ("list", "ls", ""):
-                            out = "TOOLS: use 'capabilities list' for tool registry (43 tools registered)."
+                            try:
+                                # Prefer the LIVE orchestrator registry (real tool count).
+                                orch = await _get_orchestrator()
+                                reg = getattr(getattr(orch, "_tools", None), "_registry", None)
+                                names = reg.tool_names if reg is not None else []
+                                if not names:
+                                    from app.tools.registry import ToolRegistry
+                                    names = ToolRegistry().tool_names
+                                out = f"TOOLS ({len(names)} registered): " + (", ".join(names[:30]) or "none")
+                            except Exception as e:  # noqa: BLE001
+                                out = f"TOOLS: registry unavailable ({e})."
                         elif cmd == "discover" and arg:
-                            out = f"TOOLS discover '{arg}': use 'capabilities search {arg}' (registry + github)."
+                            try:
+                                from app.capability.manager import CapabilityManager
+                                mgr = CapabilityManager()
+                                needs = mgr.discover(arg)
+                                out = f"TOOLS discover '{arg}' -> capabilities: {', '.join(needs) or 'none'}"
+                            except Exception as e:  # noqa: BLE001
+                                out = f"TOOLS discover error: {e}"
                         else:
                             out = "usage: tools [list|discover <capability>]"
                     elif action == "skills":
                         ids = ss.list_ids()
                         out = (f"SKILLS ({len(ids)} registered)\n" + "\n".join(f"  - {i}" for i in ids[:40])) if ids else "no skills"
                     elif action == "tasks":
-                        rows = st.recent_audit(5)  # tasks recorded via store.add_task
-                        out = "TASKS: see /api/events for live task flow."
+                        evs = st.recent_audit(8)
+                        out = ("TASKS (recent agent/task events)\n" + "\n".join(
+                            f"  - {e['timestamp']} {e['action']} {e['detail']}" for e in evs)) if evs else "no task events"
                     elif action == "executions":
-                        out = "EXECUTIONS: see /api/agents/{id}/run results and /api/events."
+                        try:
+                            from app.execution import ExecutionManager
+                            em = ExecutionManager()
+                            jobs = em.all()
+                            out = ("EXECUTIONS (persisted jobs)\n" + "\n".join(
+                                f"  - {j.execution_id} [{j.state.value}] agent={j.agent_id}" for j in jobs[-12:])) if jobs else "no executions recorded"
+                        except Exception as e:  # noqa: BLE001
+                            out = f"EXECUTIONS: unavailable ({e})"
                     elif action == "audit":
                         evs = st.recent_audit(15)
                         out = ("AUDIT TRAIL (recent)\n" + "\n".join(

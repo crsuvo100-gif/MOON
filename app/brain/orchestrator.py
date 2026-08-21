@@ -445,7 +445,18 @@ class Orchestrator:
         policy) when it can satisfy a discovered need, then fall back to the
         existing catalog / LLM-plugin / GitHub-feed paths so no prior behavior
         is lost.
+
+        Autonomy gating (spec 46/47): high-risk auto-actions (installing tools,
+        generating plugins) require autonomy level >= 3. When disallowed, we
+        degrade to capability detection only (no install).
         """
+        # Autonomy gate (spec 46): installing/creating tools is a high-risk action.
+        _auto_allowed = True
+        try:
+            from app.runtime.integration import gate_action
+            _auto_allowed, _why = gate_action("install_tool", high_risk=True)
+        except Exception:  # noqa: BLE001
+            _auto_allowed = True
         from app.tools.tool_acquisition import acquire_by_catalog, generate_plugin
 
         prompt = (task.prompt or "").lower()
@@ -455,6 +466,9 @@ class Orchestrator:
             mgr = CapabilityManager()
             for need in mgr.discover(task.prompt or ""):
                 if mgr.status(need) in ("missing", "unknown", "failed"):
+                    if not _auto_allowed:
+                        logger.info("autonomy gate: skipping auto-acquire of '%s'", need)
+                        continue
                     res = await mgr.acquire(need)
                     logger.info("capability_manager %s -> %s (%s)", need, res.status, res.source)
                     if res.status == "acquired":
@@ -506,7 +520,9 @@ class Orchestrator:
                     obj = json.loads(m.group(0))
                     if obj.get("need"):
                         cap = obj["need"]
-                        if not acquire_by_catalog(cap, self._tools._registry):
+                        if not _auto_allowed:
+                            logger.info("autonomy gate: skipping plugin generation for '%s'", cap)
+                        elif not acquire_by_catalog(cap, self._tools._registry):
                             generate_plugin(obj.get("name", "custom"), obj.get("purpose", ""), obj.get("code", ""), self._tools._registry)
         except Exception as exc:  # noqa: BLE001
             logger.info("LLM tool-plan skipped: %s", exc)
@@ -626,6 +642,19 @@ class Orchestrator:
         task.mark_running()
         self._history.clear()
         self._route_intent(task)
+        # --- spec 10/12/41 augmentation (additive; degrades cleanly) ---
+        try:
+            from app.runtime.integration import analyze_task, route_agent, emit
+            _spec = analyze_task(task.prompt)
+            task._goal_spec = _spec  # structured analysis (spec 10)
+            known = list(self._agents.keys())
+            refined = route_agent(_spec, known, task.agent_name)
+            if refined and refined in self._agents:
+                task.agent_name = refined  # capability-based refinement (spec 12)
+            emit("TASK_STARTED", execution_id=task.id, agent_id=task.agent_name,
+                 detail=task.prompt[:120])
+        except Exception:  # noqa: BLE001
+            pass
         if on_event:
             try:
                 await on_event({"stage": "routing", "detail": f"intent -> {task.agent_name}"})
@@ -749,6 +778,22 @@ class Orchestrator:
                     logger.warning("agent brain remember failed: %s", exc)
 
             clean = self._formatter.format(final_text)
+            # --- spec 28/41/12 augmentation (additive; degrades cleanly) ---
+            try:
+                from app.runtime.integration import (
+                    record_evaluation, record_outcome, emit, evaluation_summary)
+                card = record_evaluation(
+                    correctness=1.0 if reflection.satisfactory else 0.5,
+                    verification=1.0 if validation.valid else 0.0,
+                    agent_id=agent.name,
+                    metadata={"task": task.prompt[:120]})
+                record_outcome(agent.name, bool(reflection.satisfactory))
+                emit("AGENT_COMPLETED", execution_id=task.id, agent_id=agent.name,
+                     detail=f"score={card.get('overall')}")
+                task._evaluation = card
+                task._eval_summary = evaluation_summary()
+            except Exception:  # noqa: BLE001
+                pass
             task.complete(clean, data={"tokens_used": tokens, "issues": validation.issues, "agent": agent.name}, tokens_used=tokens)
             await self._memory.remember(clean, long_term=False)
         except Exception as exc:
@@ -771,6 +816,18 @@ class Orchestrator:
         total_tokens = 0
         final_text = ""
         tool_outputs: list[str] = []
+        # --- spec 30 augmentation: ModelRouter recommends a model for this step ---
+        try:
+            from app.runtime.integration import choose_model, emit
+            _coding = any(k in (task.prompt or "").lower() for k in ("code", "python", "function", "debug", "script"))
+            _reasoning = any(k in (task.prompt or "").lower() for k in ("why", "reason", "prove", "analyze", "design"))
+            _model_rec = choose_model(complexity="high" if (_coding or _reasoning) else "low",
+                                      coding=_coding, reasoning=_reasoning)
+            task._model_recommendation = _model_rec
+            emit("MODEL_SELECTED", execution_id=task.id, agent_id=agent.name,
+                 detail=str(_model_rec.get("model")))
+        except Exception:  # noqa: BLE001
+            pass
         if on_event:
             try:
                 await on_event({"stage": "thinking", "detail": f"recalled {len(retrieved)} memories; building context"})
