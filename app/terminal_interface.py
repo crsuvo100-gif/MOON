@@ -1419,3 +1419,35 @@ async def ws_endpoint(ws: WebSocket):
             await ws.close()
         except Exception:
             pass
+
+
+@app.websocket("/ws/events")
+async def ws_events(ws: WebSocket):
+    """Live event stream (spec 35: /ws/events).
+
+    Streams MOON's internal event bus (the same _EVENTS ring buffer that powers
+    /api/events and the HUD EVENTS timeline) to any subscriber. Additive: reuses
+    the existing event mechanism; does not create a parallel bus.
+    """
+    if TERMINAL_TOKEN and not _token_ok(ws):
+        await ws.close(code=1008, reason="unauthorized")
+        return
+    await ws.accept()
+    try:
+        await ws.send_json({"type": "ready", "channel": "events"})
+        sent = 0
+        while True:
+            # push any new events since last send (real activity only)
+            buf = list(_EVENTS)
+            if len(buf) > sent:
+                for ev in buf[sent:]:
+                    await ws.send_json({"type": "event", **ev})
+                sent = len(buf)
+            await asyncio.sleep(0.5)
+    except WebSocketDisconnect:
+        return
+    except Exception:  # noqa: BLE001
+        try:
+            await ws.close()
+        except Exception:
+            pass
