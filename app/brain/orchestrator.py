@@ -110,6 +110,7 @@ class Orchestrator:
         self._agent_model_overrides: dict[str, str | None] = {}
         self._consolidator = None
         self._lock = SessionLock(locked=True, state_file=lock_state_file)
+        self._exec_mgr = None  # lazy ExecutionManager (spec 31); created on first task
 
     async def setup(self) -> None:
         from app.config.model_config import build_embedding_config, build_model_config
@@ -681,6 +682,8 @@ class Orchestrator:
                 pass
         agent = self._agents.get(task.agent_name, self._agents["planning"])
         agent_brain = self._agent_brains.get(agent.name)
+        # spec 31: record a RUNNING execution job for this task.id
+        self._exec_transition(task.id, "RUNNING", agent_id=agent.name, task=task.prompt)
 
         try:
             await self._auto_acquire_for_task(task, agent)
@@ -700,6 +703,9 @@ class Orchestrator:
                 merged = await self._run_parallel(self._split_subtasks(task.prompt), agent.name)
                 task.complete(merged, data={"agent": agent.name, "parallel": True})
                 task.mark_done()
+                # spec 31: finalize execution state for the parallel path
+                self._exec_transition(task.id, "SUCCESS", agent_id=agent.name,
+                                      task=task.prompt, result={"status": "done", "parallel": True})
                 return task
             except Exception as exc:  # noqa: BLE001
                 logger.info("parallel fan-out fell back to standard loop: %s", exc)
@@ -708,8 +714,19 @@ class Orchestrator:
         if self._settings.enable_fast_path and self._is_simple_query(task.prompt) and task.agent_name != "auto":
             try:
                 text, tokens = await self._fast_answer(task, agent)
+                # spec 6/17: if the prompt explicitly requested a known tool,
+                # execute it so the answer is grounded in a REAL result.
+                try:
+                    invoked = await self._try_explicit_tool(task, text, agent)
+                    if invoked is not None:
+                        text, _ = invoked
+                except Exception:  # noqa: BLE001
+                    pass
                 task.complete(text, data={"agent": agent.name, "fast_path": True, "tokens": tokens})
                 task.mark_done()
+                # spec 31: finalize execution state for the fast path
+                self._exec_transition(task.id, "SUCCESS", agent_id=agent.name,
+                                      task=task.prompt, result={"status": "done", "fast_path": True})
                 return task
             except Exception as exc:  # noqa: BLE001
                 logger.info("fast-path fell back to full loop: %s", exc)
@@ -834,9 +851,32 @@ class Orchestrator:
                 pass
             task.complete(clean, data={"tokens_used": tokens, "issues": validation.issues, "agent": agent.name}, tokens_used=tokens)
             await self._memory.remember(clean, long_term=False)
+            # spec 31: mark the execution job SUCCESS
+            self._exec_transition(task.id, "SUCCESS", agent_id=agent.name, task=task.prompt,
+                                  result={"status": "done", "agent": agent.name})
         except Exception as exc:
             logger.exception("Task %s failed", task.id)
             task.fail(str(exc))
+            # spec 31: mark the execution job FAILED
+            self._exec_transition(task.id, "FAILED", agent_id=agent.name, task=task.prompt,
+                                  result={"error": str(exc)})
+            # spec 25/26/29: classify failure + emit a PROPOSAL-ONLY improvement
+            # (never auto-applied; requires autonomy level 5 + explicit authorization).
+            try:
+                from app.learning import FailureClassifier
+                from app.improvement import SelfImprovement
+                from app.runtime.integration import emit
+                kind = FailureClassifier.classify(str(exc))
+                alt = FailureClassifier.safe_alternative(kind)
+                emit("IMPROVEMENT_PROPOSED", agent_id=agent.name,
+                     detail=f"failure={kind}; suggestion={alt}")
+                SelfImprovement().submit(
+                    observation=f"task {task.id} failed: {str(exc)[:200]}",
+                    problem=kind, target_file="app/brain/orchestrator.py",
+                    patch_text="",  # no auto-patch; human/operator supplies the fix
+                )
+            except Exception:  # noqa: BLE001
+                pass
         return task
 
     async def _run_cognition_loop(self, task: Task, agent: AgentCard, on_event=None) -> tuple[str, int]:
@@ -929,6 +969,19 @@ class Orchestrator:
                     final_text = (r2.content or "") if r2 is not None else ""
                 except Exception as exc:  # noqa: BLE001
                     logger.info("empty-answer rescue skipped: %s", exc)
+            # --- spec 6/17 tool-intent fallback (additive; degrades cleanly) ---
+            # Small local models often do not emit OpenAI-style tool_calls. When
+            # the prompt explicitly requests a known tool, parse the intent and
+            # execute the tool directly so the agent still produces a REAL result
+            # (spec 6: "every tool invocation must pass ... AUDIT LOG" and return
+            # a real result, not a description of how to call it).
+            if not resp.has_tool_calls:
+                try:
+                    invoked = await self._try_explicit_tool(task, final_text, agent)
+                    if invoked is not None:
+                        final_text, _out = invoked
+                except Exception as exc:  # noqa: BLE001
+                    logger.info("explicit tool fallback skipped: %s", exc)
             self._history.append(Message.assistant(final_text or ""))
             break
         else:
@@ -1044,3 +1097,107 @@ class Orchestrator:
             return json.loads(raw)
         except (json.JSONDecodeError, TypeError):
             return {}
+
+    # --- spec 31 execution subsystem (additive; degrades cleanly) -------
+    def _exec_manager(self):
+        """Lazily create the persistent ExecutionManager (spec 31)."""
+        if self._exec_mgr is None:
+            try:
+                from app.execution import ExecutionManager
+                self._exec_mgr = ExecutionManager()
+            except Exception:  # noqa: BLE001
+                self._exec_mgr = None
+        return self._exec_mgr
+
+    def _exec_transition(self, exec_id: str, to: str, *, agent_id: str = "", task: str = "",
+                         result: dict | None = None) -> None:
+        em = self._exec_manager()
+        if em is None:
+            return
+        try:
+            from app.execution import ExecState
+            if em.get(exec_id) is None:
+                em.create(exec_id, agent_id=agent_id, task=task)
+            target = ExecState(to)
+            # Honor the validated state machine (spec 31): RUNNING must pass
+            # through VERIFYING before SUCCESS.
+            if target is ExecState.SUCCESS and em.get(exec_id).state is ExecState.RUNNING:
+                em.transition(exec_id, ExecState.VERIFYING)
+            em.transition(exec_id, target, result=result)
+        except Exception:  # noqa: BLE001
+            pass
+
+    # --- spec 6/17 explicit tool-intent fallback (additive) ----------------
+    async def _try_explicit_tool(self, task, final_text: str, agent):
+        """If the prompt explicitly asks for a known tool and the model did not
+        call it, invoke the tool deterministically and fold the real result into
+        the response. Returns (new_text, tool_output) or None when not applicable.
+        """
+        prompt = (task.prompt or "").lower()
+        registry = getattr(self._tools, "_registry", None)
+        if registry is None:
+            return None
+        tool_names = getattr(registry, "tool_names", [])
+        # Map common request phrases to a registered tool.
+        aliases = {
+            "python_executor": ["python_executor", "run code", "execute code", "run python", "execute python", "compute"],
+            "file_manager": ["file_manager", "write a file", "read the file", "list files", "create file"],
+            "web_search": ["web_search", "search the web", "search for"],
+            "terminal": ["terminal", "run command", "shell command"],
+            "git_tool": ["git_tool", "git "],
+        }
+        chosen = None
+        for tname in tool_names:
+            for kw in aliases.get(tname, []):
+                if kw in prompt:
+                    chosen = tname
+                    break
+            if chosen:
+                break
+        if chosen is None:
+            return None
+        # Build minimal args from the prompt (best-effort, safe).
+        args: dict = {}
+        try:
+            if chosen == "python_executor":
+                import re
+                # Only auto-run when the user explicitly provides a code snippet
+                # (clear intent to execute). Do NOT guess arithmetic from prose —
+                # a brittle regex would produce wrong results. The model answers
+                # such prompts correctly from knowledge; we only step in when a
+                # real snippet is present.
+                m = re.search(r"print\(([^)]*)\)", task.prompt)
+                if not m:
+                    m = re.search(r"exec\(([^)]*)\)", task.prompt)
+                if not m and "```" in task.prompt:
+                    m = re.search(r"```(?:python)?\s*(.*?)```", task.prompt, re.S)
+                if not m:
+                    return None
+                # Pass the FULL snippet (group 0) so the executor prints/runs it
+                # and produces real output. Stripping to the inner expression
+                # would evaluate silently and yield an empty result.
+                code = m.group(0).strip()
+                args = {"code": code}
+            elif chosen == "file_manager":
+                args = {"action": "list", "path": "."}
+            else:
+                args = {}
+        except Exception:  # noqa: BLE001
+            args = {}
+        try:
+            from app.runtime.integration import emit as _emit
+            _emit("TOOL_SELECTED", execution_id=task.id, agent_id=agent.name, detail=chosen)
+            _emit("TOOL_STARTED", execution_id=task.id, agent_id=agent.name, detail=chosen)
+        except Exception:  # noqa: BLE001
+            pass
+        result = await self._tools.run(chosen, args, agent=agent)
+        out = str(result.output)
+        try:
+            from app.runtime.integration import emit as _emit
+            _emit("TOOL_COMPLETED", execution_id=task.id, agent_id=agent.name, detail=chosen)
+        except Exception:  # noqa: BLE001
+            pass
+        if out:
+            self._last_tool_outputs = [out]
+            return (f"{final_text.strip()}\n\n[tool:{chosen}] -> {out}", out)
+        return None
