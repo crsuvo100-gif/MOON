@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import sqlite3
 import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -114,6 +115,53 @@ class AgentStore:
                     execution_id TEXT,
                     detail TEXT
                 );
+                CREATE TABLE IF NOT EXISTS agent_dependencies (
+                    agent_id TEXT, dependency TEXT
+                );
+                CREATE TABLE IF NOT EXISTS agent_tests (
+                    agent_id TEXT, test_path TEXT, status TEXT, output TEXT
+                );
+                CREATE TABLE IF NOT EXISTS agent_evaluations (
+                    agent_id TEXT, version TEXT, overall REAL, correctness REAL,
+                    reliability REAL, verification REAL, recovery REAL,
+                    efficiency REAL, resource_usage REAL, created_at TEXT
+                );
+                CREATE TABLE IF NOT EXISTS tools (
+                    name TEXT PRIMARY KEY, version TEXT, source TEXT, executable TEXT,
+                    capabilities TEXT, input_schema TEXT, output_schema TEXT,
+                    permissions TEXT, risk_level TEXT, dependencies TEXT,
+                    verification_method TEXT
+                );
+                CREATE TABLE IF NOT EXISTS tool_versions (
+                    name TEXT, version TEXT, created_at TEXT
+                );
+                CREATE TABLE IF NOT EXISTS skills (
+                    skill_id TEXT PRIMARY KEY, description TEXT, prerequisites TEXT,
+                    required_tools TEXT, procedure TEXT, examples TEXT,
+                    failure_modes TEXT, verification TEXT, success_criteria TEXT,
+                    version TEXT, performance_score REAL
+                );
+                CREATE TABLE IF NOT EXISTS knowledge (
+                    doc_id TEXT PRIMARY KEY, title TEXT, source TEXT, timestamp TEXT,
+                    confidence REAL, verification_state TEXT, review_date TEXT
+                );
+                CREATE TABLE IF NOT EXISTS memories (
+                    key TEXT PRIMARY KEY, kind TEXT, value TEXT, created_at TEXT
+                );
+                CREATE TABLE IF NOT EXISTS tasks (
+                    task_id TEXT PRIMARY KEY, goal TEXT, risk TEXT,
+                    required_capabilities TEXT, created_at TEXT, status TEXT
+                );
+                CREATE TABLE IF NOT EXISTS executions (
+                    execution_id TEXT PRIMARY KEY, agent_id TEXT, task_id TEXT,
+                    state TEXT, started_at TEXT, finished_at TEXT, result TEXT
+                );
+                CREATE TABLE IF NOT EXISTS improvement_proposals (
+                    proposal_id TEXT PRIMARY KEY, observation TEXT, problem TEXT,
+                    target_file TEXT, patch_text TEXT, sandbox_passed INTEGER,
+                    regression_passed INTEGER, security_passed INTEGER, score REAL,
+                    status TEXT, created_at TEXT, notes TEXT
+                );
                 """
             )
 
@@ -185,6 +233,61 @@ class AgentStore:
         with self._lock, self._conn() as c:
             return [dict(r) for r in c.execute(
                 "SELECT * FROM audit_events ORDER BY id DESC LIMIT ?", (limit,)).fetchall()]
+
+    def add_improvement_proposal(self, p) -> None:
+        with self._lock, self._conn() as c:
+            c.execute(
+                """INSERT OR REPLACE INTO improvement_proposals
+                   (proposal_id,observation,problem,target_file,patch_text,
+                    sandbox_passed,regression_passed,security_passed,score,status,created_at,notes)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (p.proposal_id, p.observation, p.problem, p.target_file, p.patch_text,
+                 1 if p.sandbox_passed else 0, 1 if p.regression_passed else 0,
+                 1 if p.security_passed else 0, p.score, p.status, p.created_at, p.notes),
+            )
+
+    def add_task(self, task_id: str, goal: str, risk: str, caps: list[str], status: str = "created") -> None:
+        with self._lock, self._conn() as c:
+            c.execute("INSERT OR REPLACE INTO tasks VALUES (?,?,?,?,?,?)",
+                      (task_id, goal, risk, ",".join(caps),
+                       time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), status))
+
+    def add_execution(self, execution_id: str, agent_id: str, task_id: str, state: str,
+                      result: str = "") -> None:
+        with self._lock, self._conn() as c:
+            c.execute("INSERT OR REPLACE INTO executions VALUES (?,?,?,?,?,?,?)",
+                      (execution_id, agent_id, task_id, state,
+                       time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "", result))
+
+    def add_skill(self, skill_id: str, description: str = "", performance: float = 0.0) -> None:
+        with self._lock, self._conn() as c:
+            c.execute("INSERT OR REPLACE INTO skills (skill_id,description,version,performance_score) VALUES (?,?,?,?)",
+                      (skill_id, description, "1.0.0", performance))
+
+    def register_tool(self, name: str, **kw) -> None:
+        with self._lock, self._conn() as c:
+            c.execute(
+                """INSERT OR REPLACE INTO tools
+                   (name,version,source,executable,capabilities,input_schema,output_schema,
+                    permissions,risk_level,dependencies,verification_method)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                (name, kw.get("version", "1.0.0"), kw.get("source", ""),
+                 kw.get("executable", ""), kw.get("capabilities", ""),
+                 kw.get("input_schema", ""), kw.get("output_schema", ""),
+                 kw.get("permissions", ""), kw.get("risk_level", "low"),
+                 kw.get("dependencies", ""), kw.get("verification_method", "")),
+            )
+
+    def record_evaluation(self, agent_id: str, version: str, sc) -> None:
+        with self._lock, self._conn() as c:
+            c.execute(
+                """INSERT INTO agent_evaluations
+                   (agent_id,version,overall,correctness,reliability,verification,recovery,efficiency,resource_usage,created_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                (agent_id, version, sc.overall, sc.correctness, sc.reliability,
+                 sc.verification, sc.recovery, sc.efficiency, sc.resource_usage,
+                 time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())),
+            )
 
     def close(self) -> None:
         pass

@@ -109,6 +109,17 @@ class AgentFactoryRecord:
     previous_version: str = ""
     notes: str = ""
 
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "agent_id": self.agent_id, "name": self.name, "version": self.version,
+            "status": self.status, "stage": self.stage, "risk_level": self.risk_level,
+            "description": self.description, "permissions": self.permissions,
+            "required_tools": self.required_tools, "capabilities": self.capabilities,
+            "module_path": self.module_path, "created_at": self.created_at,
+            "updated_at": self.updated_at, "current_version": self.current_version,
+            "previous_version": self.previous_version, "notes": self.notes,
+        }
+
 
 @dataclass
 class AuditEvent:

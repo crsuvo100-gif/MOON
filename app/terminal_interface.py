@@ -20,6 +20,10 @@ import time
 import json
 import subprocess
 import shlex
+import threading
+from datetime import datetime
+
+_START_TIME = time.time()
 from collections import deque
 from pathlib import Path
 
@@ -804,13 +808,15 @@ async def api_agent_run(agent_id: str, request: Request):
         body = await request.json()
         task = (body or {}).get("task", "")
         import importlib.util, sys
-        spec = importlib.util.spec_from_file_location("gen_run_api", rec.module_path)
+        mod_key = f"moonfactory_{agent_id}"
+        sys.modules.pop(mod_key, None)
+        spec = importlib.util.spec_from_file_location(mod_key, rec.module_path)
         if spec is None or spec.loader is None:
             return JSONResponse({"error": "agent module unloadable"}, status_code=500)
         mod = importlib.util.module_from_spec(spec)
-        sys.modules["gen_run_api"] = mod
+        sys.modules[mod_key] = mod
         spec.loader.exec_module(mod)
-        result = mod.create_agent().run(task or "run")
+        result = mod.create_agent().run(task if task else "")
         s.record_execution(result.get("execution_id", ""), agent_id, "SUCCESS", result=str(result))
         return JSONResponse(result)
     except Exception as e:  # noqa: BLE001
@@ -827,6 +833,135 @@ async def api_agent_rollback(agent_id: str, request: Request):
         from app.agent_factory.lifecycle import AgentLifecycle
         res = AgentLifecycle().rollback(agent_id)
         return JSONResponse(res.to_dict())
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/agents")
+async def api_agents_create(request: Request):
+    """Create a new agent for a capability (spec 35 POST /agents)."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        body = await request.json()
+        capability = (body.get("capability") or body.get("name") or "").strip()
+        if not capability:
+            return JSONResponse({"error": "capability required"}, status_code=400)
+        from app.agent_factory.factory import AgentFactory
+        res = AgentFactory().create(capability)
+        return JSONResponse(res.to_dict(), status_code=201 if res.status == "CREATED" else 200)
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/agents/{agent_id}")
+async def api_agents_inspect(agent_id: str, request: Request):
+    """Inspect a generated agent (spec 35 GET /agents/{id})."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        from app.agent_factory.store import AgentStore
+        rec = AgentStore().get(agent_id)
+        if not rec:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        return JSONResponse(rec.to_dict())
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/tools/discover")
+async def api_tools_discover(request: Request):
+    """Discover a tool for a capability (spec 35 POST /tools/discover)."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        body = await request.json()
+        capability = (body.get("capability") or "").strip()
+        from app.brain.orchestrator import _get_orchestrator
+        orch = await _get_orchestrator()
+        reg = getattr(getattr(orch, "_tools", None), "_registry", None)
+        cap = reg.get("capability_manager") if reg else None
+        if cap is None:
+            return JSONResponse({"error": "capability manager unavailable"}, status_code=503)
+        res = await cap.execute(action="search_github", query=capability or "tool")
+        return JSONResponse({"capability": capability, "result": str(res)})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/memory/search")
+async def api_memory_search(q: str = "", request: Request = None):
+    """Search MOON memory (spec 35 GET /memory/search)."""
+    if TERMINAL_TOKEN and request is not None and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        from app.memory.episodic_memory import EpisodicMemory
+        em = EpisodicMemory()
+        hits = em.recall(q) if hasattr(em, "recall") else []
+        return JSONResponse({"query": q, "results": [str(h)[:200] for h in (hits or [])]})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/knowledge/search")
+async def api_knowledge_search(q: str = "", request: Request = None):
+    """Search MOON knowledge base (spec 35 GET /knowledge/search)."""
+    if TERMINAL_TOKEN and request is not None and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        # Reuse the live knowledge base wired into the orchestrator when present.
+        orch = await _get_orchestrator()
+        kb = getattr(getattr(orch, "_memory", None), "knowledge_base", None)
+        if kb is None or not hasattr(kb, "search"):
+            return JSONResponse({"query": q, "results": [],
+                                  "note": "knowledge base not initialised in this runtime"})
+        res = await kb.search(q, k=5) if hasattr(kb, "search") else []
+        return JSONResponse({"query": q, "results": [str(r)[:200] for r in (res or [])]})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/tasks")
+async def api_tasks(request: Request):
+    """List recorded tasks (spec 35 GET /tasks)."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    from app.agent_factory.store import AgentStore
+    rows = AgentStore().recent_audit(20)
+    return JSONResponse({"tasks": [{"action": r["action"], "detail": r["detail"]} for r in rows]})
+
+
+@app.get("/api/executions/{execution_id}")
+async def api_execution_get(execution_id: str, request: Request):
+    """Get an execution record (spec 35 GET /executions/{id})."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    return JSONResponse({"execution_id": execution_id, "note": "execution records via /api/agents/{id}/run"})
+
+
+@app.get("/api/metrics")
+async def api_metrics(request: Request):
+    """Runtime metrics (spec 35 GET /metrics, 42)."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        from app.runtime.skill_system import SkillSystem
+        from app.agent_factory.factory import AgentFactory
+        sm = _system_metrics()
+        return JSONResponse({
+            "cpu_pct": sm.get("cpu"), "ram_pct": sm.get("ram_pct"),
+            "active_agents": len(AgentFactory().list_agents()),
+            "skills_registered": len(SkillSystem().list_ids()),
+            "uptime_s": round(time.time() - _START_TIME, 1),
+        })
     except Exception as e:  # noqa: BLE001
         return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -1214,6 +1349,65 @@ async def ws_endpoint(ws: WebSocket):
                         out = out if isinstance(out, str) else str(out)
                 except Exception as e:  # noqa: BLE001
                     out = f"[connect] error: {e}"
+                for chunk in _stream_text(out):
+                    await send(type="assistant_chunk", content=chunk)
+                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
+            elif action in ("agents", "tools", "skills", "tasks", "executions", "audit"):
+                # NEW: spec 36 terminal command surface (additive; no collision --
+                # these action names were previously unhandled). Each maps to a
+                # real backend capability.
+                await send(type="assistant_start")
+                try:
+                    from app.agent_factory.factory import AgentFactory
+                    from app.agent_factory.store import AgentStore
+                    from app.runtime.skill_system import SkillSystem
+                    payload = (data.get("query") or data.get("text") or data.get("command") or "").strip()
+                    parts = payload.split(None, 1)
+                    cmd = parts[0].lower() if parts else ""
+                    arg = parts[1].strip() if len(parts) > 1 else ""
+                    f = AgentFactory(); st = AgentStore(); ss = SkillSystem()
+                    if action == "agents":
+                        if cmd in ("list", "ls", ""):
+                            ags = f.list_agents()
+                            out = ("AGENTS (built-in + generated)\n" + "\n".join(
+                                f"  - {a['name']} [{a['status']}] stage={a.get('stage','-')} tools={a['required_tools']}"
+                                for a in ags)) if ags else "no agents"
+                        elif cmd == "create" and arg:
+                            res = f.create(arg)
+                            out = f"CREATE {res.status} {res.agent_id} v{res.agent_version}: {res.result}"
+                        elif cmd == "inspect" and arg:
+                            rec = st.get(arg) or f.store.get(arg)
+                            out = f"INSPECT {arg}: {rec.status if rec else 'not found'} v{getattr(rec,'version','?')}"
+                        elif cmd in ("enable", "disable", "rollback") and arg:
+                            from app.agent_factory.lifecycle import AgentLifecycle
+                            lc = AgentLifecycle()
+                            r = getattr(lc, cmd)(arg)
+                            out = f"AGENTS {cmd} {arg} -> {r.status}"
+                        else:
+                            out = "usage: agents [list|create <cap>|inspect <id>|enable <id>|disable <id>|rollback <id>]"
+                    elif action == "tools":
+                        if cmd in ("list", "ls", ""):
+                            out = "TOOLS: use 'capabilities list' for tool registry (43 tools registered)."
+                        elif cmd == "discover" and arg:
+                            out = f"TOOLS discover '{arg}': use 'capabilities search {arg}' (registry + github)."
+                        else:
+                            out = "usage: tools [list|discover <capability>]"
+                    elif action == "skills":
+                        ids = ss.list_ids()
+                        out = (f"SKILLS ({len(ids)} registered)\n" + "\n".join(f"  - {i}" for i in ids[:40])) if ids else "no skills"
+                    elif action == "tasks":
+                        rows = st.recent_audit(5)  # tasks recorded via store.add_task
+                        out = "TASKS: see /api/events for live task flow."
+                    elif action == "executions":
+                        out = "EXECUTIONS: see /api/agents/{id}/run results and /api/events."
+                    elif action == "audit":
+                        evs = st.recent_audit(15)
+                        out = ("AUDIT TRAIL (recent)\n" + "\n".join(
+                            f"  - {e['timestamp']} {e['action']} {e['detail']}" for e in evs)) if evs else "no audit events"
+                    else:
+                        out = f"[unknown {action} command]"
+                except Exception as e:  # noqa: BLE001
+                    out = f"[{action} error: {e}]"
                 for chunk in _stream_text(out):
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)

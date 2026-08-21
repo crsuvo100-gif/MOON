@@ -129,12 +129,26 @@ class Agent(BaseAgent):
 {_capability_impl(cap, meta.name)}
     def run(self, task: str, context: str = "") -> dict[str, Any]:
         # Structured result (spec 7): never free-form text only.
+        # Input validation (spec 27): empty input is not "done".
         execution_id = ""
         try:
             import uuid
             execution_id = uuid.uuid4().hex[:12]
         except Exception:
             pass
+        if not task or not str(task).strip():
+            return {{
+                "success": False,
+                "status": "FAILED",
+                "result": None,
+                "evidence": {{}},
+                "errors": ["empty or missing task input"],
+                "warnings": [],
+                "metrics": {{"input_chars": 0}},
+                "agent_id": self.name,
+                "agent_version": self.version,
+                "execution_id": execution_id,
+            }}
         used_tool = ""
         out = ""
         if self.required_tools:

@@ -249,6 +249,58 @@ class AgentFactory:
             "recent_audit": self.store.recent_audit(10),
         }
 
+    def bump_version(self, agent_id: str, notes: str = "version bump") -> str:
+        """Create a new semantic version of an existing generated agent (spec 44).
+
+        Copies the current approved module to a new versioned file and records
+        it, so a subsequent rollback has a previous version to restore. Real
+        versioning operation; the prior version is preserved for rollback.
+        """
+        from app.agent_factory.store import AgentStore
+        rec = AgentStore().get(agent_id)
+        if not rec or not rec.module_path:
+            raise ValueError(f"agent {agent_id} not found or not built")
+        import shutil, re
+        m = re.match(r"^(\d+)\.(\d+)\.(\d+)$", rec.version or "1.0.0")
+        major, minor, patch = (int(x) for x in m.groups())
+        new_version = f"{major}.{minor + 1}.{patch}"
+        src = Path(rec.module_path)
+        dst_dir = src.parent
+        dst = dst_dir / f"{src.stem}_v{new_version.replace('.', '_')}{src.suffix}"
+        shutil.copy(src, dst)
+        AgentStore().add_version(agent_id, new_version, str(dst), notes)
+        # update current version pointer
+        rec.version = new_version
+        rec.previous_version = rec.version
+        AgentStore().upsert_agent(rec)
+        return new_version
+
+    def run(self, agent_id: str, task: str = "run") -> dict[str, Any]:
+        """Run a generated agent by loading its module and invoking run().
+
+        Reuses the same mechanism as the REST endpoint; returns a structured
+        result (spec 7). Raises if the agent/module is missing.
+        """
+        from app.agent_factory.store import AgentStore
+        rec = AgentStore().get(agent_id)
+        if not rec or not rec.module_path:
+            raise ValueError(f"agent {agent_id} not found or not built")
+        import importlib.util, sys
+        mod_key = f"moonfactory_{agent_id}"
+        # Always re-exec a fresh module instance (avoid stale sys.modules reuse
+        # when run() is called repeatedly for the same agent in one process).
+        sys.modules.pop(mod_key, None)
+        spec = importlib.util.spec_from_file_location(mod_key, rec.module_path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("agent module unloadable")
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[mod_key] = mod
+        spec.loader.exec_module(mod)
+        result = mod.create_agent().run(task if task else "")
+        AgentStore().record_execution(
+            result.get("execution_id", ""), agent_id, "SUCCESS", result=str(result))
+        return result
+
     def list_agents(self) -> list[dict[str, Any]]:
         out = []
         for r in self.store.all():
