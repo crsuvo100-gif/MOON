@@ -793,6 +793,55 @@ async def api_factory_agents(request: Request):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
+@app.get("/api/registry/agents")
+async def api_registry_agents(request: Request):
+    """Structured Agent Registry (spec 8/12): all agents with full metadata.
+
+    Returns the unified roster (builtin + factory + spec40) so a client can do
+    capability-based selection. Non-destructive superset of /api/factory/agents.
+    """
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        from app.agents.registry import get_registry
+        reg = get_registry()
+        cap = request.query_params.get("capability", "")
+        agents = [m.to_dict() for m in reg.select(capability=cap or None)] if cap else \
+                 [m.to_dict() for m in reg.all()]
+        return JSONResponse({"total": len(agents), "agents": agents})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/factory/components")
+async def api_factory_components(request: Request):
+    """Agent Factory internal pipeline components (spec Agent Factory design)."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        components = {
+            "capability_analyzer": "Analyze a capability request; REUSE vs NEEDS_NEW",
+            "architect": "Design the new agent's spec (id/name/caps/tools/risk)",
+            "builder": "Generate implementation + tests (deterministic)",
+            "dependency_resolver": "Resolve required tools against live registry",
+            "tester": "Run generated agent's pytest (sandbox / venv fallback)",
+            "reviewer": "Static security review (forbidden patterns + risk gate)",
+            "evaluator": "Score agent (spec 28 weighted formula)",
+            "repair": "Safe re-generation on test failure (no core rewrite)",
+            "registrar": "Register into structured registry + factory store",
+            "rollback": "Revert to previous version (spec 45)",
+            "lifecycle": "Enable/disable/quarantine/rollback lifecycle",
+            "store": "SQLite persistence + audit + versions (spec 39)",
+        }
+        return JSONResponse({"components": components, "pipeline":
+            "capability_analyzer -> architect -> builder -> dependency_resolver "
+            "-> tester -> reviewer -> evaluator -> registrar (repair on failure)"})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 @app.post("/api/agents/{agent_id}/run")
 async def api_agent_run(agent_id: str, request: Request):
     """Run a generated agent (spec 35: POST /agents/{id}/run)."""
@@ -1376,8 +1425,20 @@ async def ws_endpoint(ws: WebSocket):
                             res = f.create(arg)
                             out = f"CREATE {res.status} {res.agent_id} v{res.agent_version}: {res.result}"
                         elif cmd == "inspect" and arg:
-                            rec = st.get(arg) or f.store.get(arg)
-                            out = f"INSPECT {arg}: {rec.status if rec else 'not found'} v{getattr(rec,'version','?')}"
+                            from app.agents.registry import get_registry
+                            m = get_registry().get(arg)
+                            if not m:
+                                rec = st.get(arg) or f.store.get(arg)
+                                out = f"INSPECT {arg}: {rec.status if rec else 'not found'} v{getattr(rec,'version','?')}"
+                            else:
+                                out = (f"INSPECT {m.id} (spec 8 metadata)\n"
+                                       f"  name: {m.name}\n  version: {m.version}\n"
+                                       f"  capabilities: {', '.join(m.capabilities)}\n"
+                                       f"  required_tools: {', '.join(m.required_tools)}\n"
+                                       f"  permissions: {', '.join(m.permissions)}\n"
+                                       f"  risk_level: {m.risk_level}\n"
+                                       f"  dependencies: {', '.join(m.dependencies) or '-'}\n"
+                                       f"  status: {m.status} | source: {m.source}" + (f" | group: {m.role_group}" if m.role_group else ""))
                         elif cmd == "test" and arg:
                             rec = st.get(arg) or f.store.get(arg)
                             if not rec or not rec.module_path:
@@ -1467,7 +1528,18 @@ async def ws_endpoint(ws: WebSocket):
                                    f"{res.result}")
                     elif cmd == "status":
                         st = f.status()
-                        out = (f"[factory] total={st['total_agents']} by_stage={st['by_stage']}")
+                        # Spec Agent Factory internal components (12 agents).
+                        components = ["capability_analyzer", "architect", "builder",
+                                      "dependency_resolver", "tester", "evaluator",
+                                      "repair", "reviewer", "registrar", "rollback",
+                                      "lifecycle", "store"]
+                        out = (f"[factory] total={st['total_agents']} by_stage={st['by_stage']}\n"
+                               f"[factory] components: {', '.join(components)}")
+                    elif cmd == "components":
+                        out = ("[factory] Pipeline components (spec Agent Factory):\n"
+                               "  capability_analyzer -> architect -> builder -> dependency_resolver\n"
+                               "  -> tester -> reviewer -> evaluator -> registrar\n"
+                               "  (repair on failure) | rollback for version revert")
                     elif cmd in ("list", "ls"):
                         ags = f.list_agents()
                         out = "[factory] agents:\n" + "\n".join(

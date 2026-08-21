@@ -3,8 +3,10 @@
   "port": 8777,
   "display": "",
   "browser": "",
-  "aspect": "16:9",
+  "aspect": "auto",
   "avatar_mode": "neural",
+  "resolution": "hd",
+  "core_glow": 1,
   "autostart": true,
-  "idle_speed": 1.0
+  "idle_speed": 0.25
 }

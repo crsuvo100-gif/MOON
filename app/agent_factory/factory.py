@@ -95,100 +95,101 @@ class AgentFactory:
     # CREATE (full pipeline)
     # ------------------------------------------------------------------
     def create(self, capability: str, *, autonomy_level: int = 2) -> FactoryResult:
-        analysis = self.analyze(capability)
-        existing = self.search_existing(capability)
-        if existing:
+        # Spec-faithful orchestration using the Factory sub-components
+        # (capability_analyzer -> architect -> builder -> dependency_resolver ->
+        # tester -> reviewer -> evaluator -> registrar, with repair on failure).
+        # Keeps the REUSE check first (spec 13: SEARCH EXISTING -> REUSE).
+        analysis_need = self._analyzer().analyze(capability)
+        if analysis_need.decision == "REUSE" and analysis_need.existing_match:
             return FactoryResult(
                 success=True, status="REUSED_EXISTING",
-                agent_id=existing[0], agent_version="",
-                result=f"Existing agent(s) already cover this capability: {existing}",
-                evidence={"existing": existing},
+                agent_id=analysis_need.existing_match, agent_version="",
+                result=f"Existing agent already covers this capability: {analysis_need.existing_match}",
+                evidence={"existing": [analysis_need.existing_match]},
                 warnings=["No new agent generated; reusing existing capability."],
             )
+        return self._build_pipeline(capability, analysis_need, autonomy_level=autonomy_level)
 
-        agent_id = slugify(capability) or "agent"
-        name = agent_id
-        version = "1.0.0"
-        meta = AgentMetadata(
-            id=agent_id, name=name, version=version,
-            description=analysis["goal"],
-            capabilities=[analysis["capability"]],
-            required_tools=analysis["required_tools"],
-            permissions=["execute:tool:" + t for t in analysis["required_tools"]],
-            risk_level=analysis["risk_level"],
-            status="staging",
-        )
+    # -- Factory sub-component accessors (lazy, additive) -----------------
+    def _analyzer(self):
+        from app.agent_factory.capability_analyzer import CapabilityAnalyzer
+        return CapabilityAnalyzer()
+
+    def _build_pipeline(self, capability: str, need, *, autonomy_level: int = 2) -> FactoryResult:
+        from app.agent_factory.architect import AgentArchitect
+        from app.agent_factory.builder import AgentBuilder, DependencyResolver
+        from app.agent_factory.tester import AgentTester
+        from app.agent_factory.reviewer import SecurityReviewer, RepairAgent
+        from app.agent_factory.evaluator import PerformanceEvaluator
+        from app.agent_factory.registrar import AgentRegistrar
+
         exec_id = ""
         try:
             import uuid
             exec_id = uuid.uuid4().hex[:12]
         except Exception:
             pass
-
-        # 1) GENERATE into staging
-        staging_dir = stage_for("staging")
-        try:
-            ga = generate(meta, staging_dir / agent_id)
-            self.store.audit(AuditEvent(AuditAction.CREATE.value, agent_id,
-                                        f"generated {ga.module_path}", execution_id=exec_id))
-        except Exception as exc:  # noqa: BLE001
-            return FactoryResult(False, "GENERATION_FAILED", agent_id, version, exec_id,
-                                 errors=[f"generation error: {exc}"])
-
-        # 2) SANDBOX TEST (run pytest isolated)
-        test_res = self._run_tests(ga.test_path)
-        self.store.audit(AuditEvent(AuditAction.TEST.value, agent_id,
-                                    f"pytest rc={test_res['returncode']}", execution_id=exec_id))
-        if not test_res["ok"]:
-            self._quarantine(agent_id, name, version, meta, ga.module_path,
-                             f"tests failed: {test_res['stderr'][:200]}")
-            return FactoryResult(False, "TEST_FAILED", agent_id, version, exec_id,
-                                 errors=[test_res["stderr"][:500]],
-                                 evidence={"pytest": test_res})
-
-        # 3) SECURITY REVIEW (capability does not imply permission; gate high risk)
-        review = self._security_review(meta)
-        self.store.audit(AuditEvent(AuditAction.SECURITY_REVIEW.value, agent_id,
-                                    review["verdict"], execution_id=exec_id))
-        if not review["ok"]:
-            self._quarantine(agent_id, name, version, meta, ga.module_path, review["reason"])
-            return FactoryResult(False, "SECURITY_REJECTED", agent_id, version, exec_id,
-                                 errors=[review["reason"]], evidence=review)
-
-        # 4) REGISTER + VERSION + ENABLE
-        rec = AgentFactoryRecord(
-            agent_id=agent_id, name=name, version=version, status="active",
-            stage="approved", risk_level=meta.risk_level, description=meta.description,
-            permissions="|".join(meta.permissions), required_tools="|".join(meta.required_tools),
-            capabilities="|".join(meta.capabilities), module_path=ga.module_path,
-            created_at=_now(), updated_at=_now(), notes="auto-generated + verified",
-        )
-        self.store.upsert_agent(rec)
-        self.store.add_version(agent_id, version, ga.module_path, "initial generated version")
-        self.store.audit(AuditEvent(AuditAction.REGISTER.value, agent_id, "registered active",
-                                    execution_id=exec_id))
-        self.store.audit(AuditEvent(AuditAction.ENABLE.value, agent_id, "enabled",
-                                    execution_id=exec_id))
-
-        # 5) Surface to the live runtime (additive hook) so the agent becomes usable
+        # 1) ARCHITECT
+        spec = AgentArchitect().design(need)
+        staging_dir = stage_for("staging") / spec.agent_id
+        # 2) BUILDER (generate implementation + tests)
+        art = AgentBuilder().build(spec, staging_dir)
+        if not art.ok:
+            return FactoryResult(False, "BUILD_FAILED", spec.agent_id, spec.version, exec_id,
+                                 errors=[art.error or "build failed"])
+        # 3) DEPENDENCY RESOLVER
+        deps = DependencyResolver().resolve(spec)
+        # 4) TESTER (sandbox pytest)
+        test = AgentTester().test(art)
+        # 5) REPAIR on test failure (bounded, safe re-generation)
+        if not test.passed:
+            new_art, changed = RepairAgent().repair(spec, art, staging_dir, test)
+            if changed and new_art.ok:
+                art = new_art
+                test = AgentTester().test(art)
+        # 6) SECURITY REVIEW
+        review = SecurityReviewer().review(art, spec)
+        if not review.approved:
+            self._quarantine(spec.agent_id, spec.name, spec.version,
+                             self._meta_from_spec(spec), art.module_path,
+                             "; ".join(review.violations))
+            return FactoryResult(False, "SECURITY_REJECTED", spec.agent_id, spec.version, exec_id,
+                                 errors=review.violations, evidence={"review": review.__dict__})
+        # 7) EVALUATOR
+        eval_res = PerformanceEvaluator().evaluate(spec, test, security_ok=review.approved)
+        # 8) REGISTRAR (register into structured registry + factory store)
+        reg = AgentRegistrar().register(spec, art, test, review, eval_res)
+        if reg.status != "registered":
+            return FactoryResult(False, "REGISTRATION_FAILED", spec.agent_id, spec.version, exec_id,
+                                 errors=[reg.error], evidence={"deps": deps})
+        # 9) Surface to live runtime (additive) + version + enable
         try:
             from app.brain import agent_registry as ar
-            ar.register_external_agent(meta)
+            ar.register_external_agent(self._meta_from_spec(spec))
         except Exception as exc:  # noqa: BLE001
             logger.warning("runtime registration skipped: %s", exc)
-
+        self.store.add_version(spec.agent_id, spec.version, art.module_path, "initial generated version")
         return FactoryResult(
-            True, "CREATED", agent_id, version, exec_id,
-            result=f"Agent '{name}' created, tested, reviewed, registered and enabled.",
+            True, "CREATED", spec.agent_id, spec.version, exec_id,
+            result=f"Agent '{spec.name}' created via Agent Factory pipeline (analyze->architect->build->test->review->eval->register).",
             evidence={
-                "module_path": ga.module_path,
-                "test_path": ga.test_path,
-                "pytest": test_res,
-                "security": review,
-                "tools": meta.required_tools,
+                "module_path": art.module_path, "test_path": art.test_path,
+                "dependencies": deps, "security": {"approved": review.approved,
+                "violations": review.violations}, "evaluation": eval_res.__dict__,
             },
-            metrics={"tests_passed": test_res["ok"]},
+            metrics={"tests_passed": test.passed, "overall_eval": eval_res.overall},
         )
+
+    @staticmethod
+    def _meta_from_spec(spec):
+        from app.agent_factory.models import AgentMetadata, RiskLevel
+        return AgentMetadata(
+            id=spec.agent_id, name=spec.name, version=spec.version,
+            description=spec.description, capabilities=spec.capabilities,
+            required_tools=spec.required_tools, permissions=spec.permissions,
+            risk_level=RiskLevel(spec.risk_level), dependencies=spec.dependencies,
+        )
+
 
     # ------------------------------------------------------------------
     # internal helpers

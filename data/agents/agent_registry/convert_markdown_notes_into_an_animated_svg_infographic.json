@@ -1,0 +1,30 @@
+{
+  "id": "convert_markdown_notes_into_an_animated_svg_infographic",
+  "name": "convert_markdown_notes_into_an_animated_svg_infographic",
+  "version": "1.0.0",
+  "description": "Agent for: convert markdown notes into an animated svg infographic",
+  "capabilities": [
+    "convert markdown notes into an animated svg infographic",
+    "convert",
+    "markdown",
+    "notes",
+    "into",
+    "animated",
+    "svg",
+    "infographic"
+  ],
+  "required_tools": [],
+  "permissions": [
+    "READ"
+  ],
+  "risk_level": "low",
+  "input_schema": "text",
+  "output_schema": "text",
+  "dependencies": [],
+  "status": "active",
+  "source": "factory",
+  "success_criteria": "overall_eval=1.0",
+  "created_at": "",
+  "updated_at": "",
+  "module_path": "/home/meow/Projects/MOON/data/agents/staging/convert_markdown_notes_into_an_animated_svg_infographic/gen_convert_markdown_notes_into_an_animated_svg_infographic.py"
+}

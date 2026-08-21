@@ -1,0 +1,30 @@
+{
+  "id": "render_a_circuit_diagram_from_netlist_description",
+  "name": "render_a_circuit_diagram_from_netlist_description",
+  "version": "1.0.0",
+  "description": "Agent for: render a circuit diagram from netlist description",
+  "capabilities": [
+    "render a circuit diagram from netlist description",
+    "render",
+    "circuit",
+    "diagram",
+    "from",
+    "netlist",
+    "description"
+  ],
+  "required_tools": [],
+  "permissions": [
+    "READ"
+  ],
+  "risk_level": "low",
+  "input_schema": "text",
+  "output_schema": "text",
+  "dependencies": [],
+  "status": "active",
+  "source": "factory",
+  "role_group": "",
+  "success_criteria": "overall_eval=1.0",
+  "created_at": "",
+  "updated_at": "",
+  "module_path": "/home/meow/Projects/MOON/data/agents/staging/render_a_circuit_diagram_from_netlist_description/gen_render_a_circuit_diagram_from_netlist_description.py"
+}

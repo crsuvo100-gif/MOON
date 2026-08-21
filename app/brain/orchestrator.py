@@ -645,12 +645,28 @@ class Orchestrator:
         # --- spec 10/12/41 augmentation (additive; degrades cleanly) ---
         try:
             from app.runtime.integration import analyze_task, route_agent, emit
+            from app.agents.registry import get_registry
             _spec = analyze_task(task.prompt)
             task._goal_spec = _spec  # structured analysis (spec 10)
             known = list(self._agents.keys())
             refined = route_agent(_spec, known, task.agent_name)
+            # Registry-driven capability selection (spec 12 / MOON 40-agent spec):
+            # if the runtime router did not refine, ask the Agent Registry for a
+            # capability match so the structured roster actually drives routing.
+            if not refined or refined not in self._agents:
+                try:
+                    cands = get_registry().select(capability=task.prompt)
+                    if cands and cands[0].id in self._agents:
+                        refined = cands[0].id
+                except Exception:  # noqa: BLE001
+                    pass
             if refined and refined in self._agents:
                 task.agent_name = refined  # capability-based refinement (spec 12)
+            try:
+                setattr(task, "_selected_agents",
+                        [c.id for c in get_registry().select(capability=task.prompt)][:5])
+            except Exception:  # noqa: BLE001
+                pass
             emit("TASK_STARTED", execution_id=task.id, agent_id=task.agent_name,
                  detail=task.prompt[:120])
         except Exception:  # noqa: BLE001
