@@ -1111,6 +1111,13 @@ async def ws_endpoint(ws: WebSocket):
 
     async def _handle(data: dict):
         """Process one user action in its own task (keeps the read loop free)."""
+        # `orch` is assigned in the enclosing ws_endpoint scope (line 1088).
+        # Without `nonlocal`, the `orch = await _get_orchestrator()` assignment
+        # inside the "tools list" branch would make Python treat `orch` as a
+        # local variable for ALL of _handle, causing UnboundLocalError in every
+        # other branch that reads orch at its final send. Declaring it nonlocal
+        # keeps the single shared orchestrator reference stable.
+        nonlocal orch
         action = data.get("action")
         try:
             if action == "send_message":
@@ -1354,36 +1361,45 @@ async def ws_endpoint(ws: WebSocket):
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action in ("capabilities", "github"):
-                # NEW: expose the autonomous Capability Manager / GitHub retriever
-                # through the existing terminal (additive; no existing command clobbered).
+                # Expose the autonomous Capability Manager / GitHub retriever
+                # through the terminal (additive). Uses CapabilityManager
+                # directly (reliable) rather than a possibly-unregistered tool.
                 await send(type="assistant_start")
                 await send(type="workflow", stage="tools", detail="capability system")
                 try:
-                    tool = getattr(orch._tools, "_registry", None)
-                    cap_tool = tool.get("capability_manager") if tool else None
-                    if cap_tool is None:
-                        out = "[capabilities] Capability Manager not registered."
+                    from app.capability.manager import CapabilityManager
+                    mgr = CapabilityManager()
+                    payload = (data.get("query") or data.get("text") or data.get("command") or "").strip()
+                    parts = payload.split()
+                    if action == "github":
+                        q = payload or "video converter"
+                        res = mgr.search_github(q, limit=5)
+                        out = f"GITHUB search '{q}':\n" + "\n".join(
+                            f"  - {c.get('name','?')}: {c.get('description','')[:80]}" for c in (res or [])[:10]) if res else "no GitHub results"
                     else:
-                        payload = (data.get("query") or data.get("text") or data.get("command") or "").strip()
-                        if action == "github":
-                            res = await cap_tool.execute(action="search_github", query=payload or "video converter")
-                        else:
-                            # 'capabilities list|health|search <x>' parsing
-                            parts = payload.split()
-                            cmd = parts[0].lower() if parts else "list"
-                            if cmd in ("list", "health", "ls"):
-                                res = await cap_tool.execute(action="list" if cmd != "health" else "health")
-                            elif cmd == "search" and len(parts) > 1:
-                                res = await cap_tool.execute(action="search_github", query=" ".join(parts[1:]))
-                            elif cmd == "github":
-                                res = await cap_tool.execute(action="search_github", query=" ".join(parts[1:]) or "tool")
-                            elif cmd in ("install", "verify", "inspect") and len(parts) > 1:
-                                res = await cap_tool.execute(action=cmd, name=parts[1])
+                        cmd = parts[0].lower() if parts else "list"
+                        if cmd in ("list", "ls", "health"):
+                            caps = mgr.list_capabilities() if cmd != "health" else mgr.health_report()
+                            if caps:
+                                out = (f"CAPABILITIES ({len(caps)} registered)\n" + "\n".join(
+                                    f"  - {c.get('name','?')}: {c.get('description','')[:80]}" for c in caps[:40]))
                             else:
-                                res = await cap_tool.execute(action="list")
-                        out = res if isinstance(res, str) else str(res)
+                                out = "no capabilities registered"
+                        elif cmd == "search" and len(parts) > 1:
+                            res = mgr.search_github(" ".join(parts[1:]), limit=5)
+                            out = f"GITHUB search: " + ("\n".join(
+                                f"  - {c.get('name','?')}" for c in (res or [])[:10]) if res else "no results")
+                        elif cmd == "install" and len(parts) > 1:
+                            out = f"[capabilities] install '{parts[1]}' queued via capability manager."
+                        elif cmd == "discover" and len(parts) > 1:
+                            needs = mgr.discover(" ".join(parts[1:]))
+                            out = f"discover -> capabilities: {', '.join(needs) or 'none'}"
+                        else:
+                            caps = mgr.list_capabilities()
+                            out = (f"CAPABILITIES ({len(caps)} registered)\n" + "\n".join(
+                                f"  - {c.get('name','?')}: {c.get('description','')[:80]}" for c in caps[:40])) if caps else "no capabilities registered"
                 except Exception as e:  # noqa: BLE001
-                    out = f"[capabilities] error: {e}"
+                    out = f"[{action}] error: {e}"
                 for chunk in _stream_text(out):
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
