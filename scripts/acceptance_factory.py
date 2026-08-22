@@ -22,8 +22,16 @@ Exit 0 = acceptance passed; non-zero = failure (honest, no mocked success).
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
+
+# Make the project root importable so `app.*` works regardless of how the
+# script is invoked (PYTHONPATH unset, run from another dir, etc.).
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_ROOT = os.path.dirname(_HERE)
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
 
 from app.agent_factory.factory import AgentFactory
 from app.agent_factory.lifecycle import AgentLifecycle

@@ -72,4 +72,3 @@ skills/
 
 # Generated runtime backups (created by `python -m moon backup`)
 backups/
-panel3d.js
