@@ -338,10 +338,11 @@ def _cmd_doctor() -> int:
         warn=not env_path.is_file())
     add(".env.example present", env_example.is_file(), "template exists")
 
-    # 5. Required runtime directories
+    # 5. Required runtime directories (recreated on first run -> WARN if missing)
     for d in ("data", "data/agents", "data/memory", "data/knowledge", "app/logs"):
         p = Path(d)
-        add(f"dir:{d}", p.is_dir(), "exists" if p.is_dir() else "missing")
+        add(f"dir:{d}", p.is_dir(), "exists" if p.is_dir() else "missing (recreated on first run)",
+            warn=not p.is_dir())
 
     # 6. Databases
     for db in ("data/agents/agent_factory.db", "data/executions.db"):
@@ -423,6 +424,9 @@ def _cmd_install() -> int:
     """Delegate to the existing Python bootstrap installer (install_moon.py)."""
     import importlib.util
     spec = importlib.util.spec_from_file_location("install_moon", str(Path("install_moon.py").resolve()))
+    if spec is None or spec.loader is None:
+        print("install_moon.py not found in project root")
+        return 2
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     mod.main()
