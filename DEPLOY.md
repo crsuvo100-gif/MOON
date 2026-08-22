@@ -7,7 +7,7 @@ on any Debian/Ubuntu-like host with systemd in three commands.
 ## 1. One-time: install MOON's model backend (Ollama)
 
 ```bash
-git clone https://github.com/crsuvo100-gif/MOON.git
+git clone git@github.com:crsuvo100-gif/MOON.git
 cd MOON
 sudo make install          # installs Ollama as a systemd service
 ```
@@ -55,5 +55,15 @@ make models              # pre-pulls each agent's preferred local model
 - **Self-hosted by design:** all cognition stays on your machine; external
   connections (other AI agents, services, the web) are gated by
   `app/connector/permission.py` and require operator confirmation by default.
-- **Updating:** `git pull && git reset --hard origin/main` (the `moon` remote is
-  unrelated — never force-push to it).
+- **Updating:** `python -m moon update` (safe `git pull --ff-only` + reinstall), or
+  manually `git pull --ff-only && pip install -e .`. Never `git reset --hard`
+  and never force-push; the canonical remote is `origin` (SSH
+  `git@github.com:crsuvo100-gif/MOON.git`).
+
+> **Note on the GitHub login prompt:** MOON itself has NO password or login
+> screen. If you are asked for a `Username` / `Password` for `github.com`, that
+> is **Git/GitHub's own credential prompt**, triggered only when you clone via
+> the **HTTPS** URL (`https://github.com/...`). To avoid it entirely, clone with
+> the **SSH** URL above (uses your SSH key — no password). If you must use HTTPS,
+> supply a **GitHub Personal Access Token (PAT)** as the password (not your account
+> password); GitHub disabled password auth for git in 2021.
