@@ -39,7 +39,7 @@ telegram = ["python-telegram-bot>=20.0"]
 moon = "main:main"
 
 [tool.setuptools]
-packages = ["app", "plugins", "scripts"]
+packages = ["app", "plugins", "scripts", "moon"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

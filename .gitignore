@@ -69,3 +69,6 @@ Telegram/
 
 # Optional local skills corpus (not shipped; index_skills handles absence)
 skills/
+
+# Generated runtime backups (created by `python -m moon backup`)
+backups/
