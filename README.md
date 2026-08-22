@@ -34,6 +34,22 @@ cp .env.example .env
 make serve          # MOON Neural Command Center at http://127.0.0.1:8777
 ```
 
+> ### GitHub login prompt when cloning? (read this)
+> MOON has **no password or login screen**. If `git clone` asks for
+> `Username for 'https://github.com'` / `Password`, that is **Git/GitHub's own
+> credential prompt** — triggered by the repo's **visibility**, which only the
+> repo owner can change on GitHub. Nothing in MOON controls it. To clone from
+> GitHub with no (or minimal) friction, pick ONE:
+> 1. **Make the repo PUBLIC** (GitHub → repo Settings → Danger Zone → Change
+>    visibility → Public). Then `git clone https://github.com/crsuvo100-gif/MOON.git`
+>    works with **no credentials at all**. This is the only way to get a truly
+>    password-free install.
+> 2. **Use SSH** (recommended for private repos): `git clone
+>    git@github.com:crsuvo100-gif/MOON.git`. Add your SSH key to GitHub
+>    (Settings → SSH and GPG keys) — no password needed afterward.
+> 3. **Use HTTPS + a PAT**: username = your GitHub login (`meow`); password =
+>    a **Personal Access Token** (GitHub disabled account-password git auth in
+>    2021). Create one at GitHub → Settings → Developer settings → PATs.
 ## Configuration (`.env`)
 | Key | Default | Purpose |
 |-----|---------|---------|
