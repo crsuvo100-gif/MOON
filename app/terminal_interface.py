@@ -844,7 +844,7 @@ async def api_factory_components(request: Request):
 
 @app.post("/api/agents/{agent_id}/run")
 async def api_agent_run(agent_id: str, request: Request):
-    """Run a generated agent (spec 35: POST /agents/{id}/run)."""
+    """Run a generated agent OR a built-in agent (spec 35 + deep wiring)."""
     if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
         from fastapi import Response
         return Response("Unauthorized", status_code=401)
@@ -852,22 +852,34 @@ async def api_agent_run(agent_id: str, request: Request):
         from app.agent_factory.store import AgentStore
         s = AgentStore()
         rec = s.get(agent_id)
-        if not rec:
-            return JSONResponse({"error": "not found"}, status_code=404)
         body = await request.json()
         task = (body or {}).get("task", "")
-        import importlib.util, sys
-        mod_key = f"moonfactory_{agent_id}"
-        sys.modules.pop(mod_key, None)
-        spec = importlib.util.spec_from_file_location(mod_key, rec.module_path)
-        if spec is None or spec.loader is None:
-            return JSONResponse({"error": "agent module unloadable"}, status_code=500)
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules[mod_key] = mod
-        spec.loader.exec_module(mod)
-        result = mod.create_agent().run(task if task else "")
-        s.record_execution(result.get("execution_id", ""), agent_id, "SUCCESS", result=str(result))
-        return JSONResponse(result)
+        if rec:
+            # Generated/factory agent: load its module and run it.
+            import importlib.util, sys
+            mod_key = f"moonfactory_{agent_id}"
+            sys.modules.pop(mod_key, None)
+            spec = importlib.util.spec_from_file_location(mod_key, rec.module_path)
+            if spec is None or spec.loader is None:
+                return JSONResponse({"error": "agent module unloadable"}, status_code=500)
+            mod = importlib.util.module_from_spec(spec)
+            sys.modules[mod_key] = mod
+            spec.loader.exec_module(mod)
+            result = mod.create_agent().run(task if task else "")
+            s.record_execution(result.get("execution_id", ""), agent_id, "SUCCESS", result=str(result))
+            return JSONResponse(result)
+        # Fallback: built-in agent (e.g. "coding", "research"). Route through
+        # the real orchestrator so it uses MOON's brain + tools + memory.
+        orch = await _get_orchestrator()
+        if agent_id in getattr(orch, "_agents", {}):
+            from app.models.task import Task
+            t = Task.create(task or "hello", agent_name=agent_id)
+            t = await orch.run_task(t)
+            return JSONResponse({
+                "agent_id": agent_id, "builtin": True,
+                "result": t.result, "success": t.status == "success",
+            })
+        return JSONResponse({"error": "not found"}, status_code=404)
     except Exception as e:  # noqa: BLE001
         return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -929,14 +941,20 @@ async def api_tools_discover(request: Request):
     try:
         body = await request.json()
         capability = (body.get("capability") or "").strip()
-        from app.brain.orchestrator import _get_orchestrator
+        # _get_orchestrator is defined in this module (line ~95); reuse it.
         orch = await _get_orchestrator()
         reg = getattr(getattr(orch, "_tools", None), "_registry", None)
         cap = reg.get("capability_manager") if reg else None
         if cap is None:
             return JSONResponse({"error": "capability manager unavailable"}, status_code=503)
-        res = await cap.execute(action="search_github", query=capability or "tool")
-        return JSONResponse({"capability": capability, "result": str(res)})
+        try:
+            res = await cap.execute(action="search_github", query=capability or "tool")
+            return JSONResponse({"capability": capability, "result": str(res)})
+        except Exception as ce:  # noqa: BLE001
+            # Capability manager may lack network/tooling; report gracefully.
+            return JSONResponse({"capability": capability,
+                                  "result": None,
+                                  "note": f"discover unavailable: {ce}"})
     except Exception as e:  # noqa: BLE001
         return JSONResponse({"error": str(e)}, status_code=500)
 
