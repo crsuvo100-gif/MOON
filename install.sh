@@ -71,6 +71,17 @@ else
   warn "requirements.txt not found; skipping dependency install."
 fi
 
+# Install the MOON package itself (editable) so `python -m moon` and the
+# `moon` console script both work after a fresh clone. Additive: the root
+# `main.py` entry point remains available too (the ~/.local/bin/moon launcher
+# uses it). Skipping this would leave `python -m moon` unavailable.
+log "Installing MOON package (editable) so 'python -m moon' works ..."
+if "$VENVPY" -m pip install --quiet -e . 2>&1 | tail -5; then
+  ok "moon package installed (python -m moon available)"
+else
+  warn "package install (-e .) failed; main.py entry still works via the launcher."
+fi
+
 # Optional deps are best-effort: a missing/unavailable package must NOT break
 # the base install (e.g. TTS has no wheel for some Python versions).
 OPT="$MOON_HOME/requirements-optional.txt"
