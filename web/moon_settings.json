@@ -6,7 +6,7 @@
   "aspect": "auto",
   "avatar_mode": "neural",
   "resolution": "hd",
-  "core_glow": 1,
+  "core_glow": 2,
   "autostart": true,
   "idle_speed": 0.25
 }

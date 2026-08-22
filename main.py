@@ -300,6 +300,21 @@ def _cmd_status() -> int:
         return 1
 
 
+def _cmd_monitor() -> int:
+    """Run the health monitor + self-heal script."""
+    import subprocess
+
+    project = os.path.dirname(os.path.abspath(__file__))
+    script = os.path.join(project, "scripts", "moon_monitor.py")
+    env = dict(os.environ)
+    env.pop("PYTHONPATH", None)
+    py = os.path.join(project, ".venv", "bin", "python")
+    if not os.path.exists(py):
+        py = sys.executable
+    r = subprocess.run([py, script], cwd=project, env=env)
+    return r.returncode
+
+
 def _cmd_doctor() -> int:
     """Real health check (spec 10). Reports PASS / WARN / FAIL per subsystem."""
     import importlib.util
@@ -471,9 +486,12 @@ def main() -> None:
     sub.add_parser("install", help="Run the Python bootstrap installer (venv + deps + models)")
     sub.add_parser("update", help="Safe update: git pull --ff-only + pip install -e . --upgrade")
     sub.add_parser("version", help="Print MOON version")
+    sub.add_parser("monitor", help="Run health monitor + self-heal (backend, models, git sync)")
     args = ap.parse_args()
     _ensure_default_peer()
-    if args.cmd == "start":
+    if args.cmd == "monitor":
+        raise SystemExit(_cmd_monitor())
+    elif args.cmd == "start":
         _run_terminal()
     elif args.cmd == "run":
         asyncio.run(_run(args.task, args.agent))
