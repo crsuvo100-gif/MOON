@@ -355,6 +355,14 @@ async def three_js():
     return HTMLResponse("/* not found */", status_code=404)
 
 
+@app.get("/panel3d.js")
+async def panel3d_js():
+    p = WEB_DIR / "panel3d.js"
+    if p.exists():
+        return FileResponse(str(p), media_type="application/javascript")
+    return HTMLResponse("/* panel3d.js not found */", status_code=404)
+
+
 def _proc_uptime() -> float:
     try:
         return float(open("/proc/uptime").read().split()[0])
@@ -983,11 +991,11 @@ async def api_knowledge_search(q: str = "", request: Request = None):
     try:
         # Reuse the live knowledge base wired into the orchestrator when present.
         orch = await _get_orchestrator()
-        kb = getattr(getattr(orch, "_memory", None), "knowledge_base", None)
+        kb = getattr(getattr(orch, "_memory", None), "_kb", None)
         if kb is None or not hasattr(kb, "search"):
             return JSONResponse({"query": q, "results": [],
                                   "note": "knowledge base not initialised in this runtime"})
-        res = await kb.search(q, k=5) if hasattr(kb, "search") else []
+        res = await kb.search(q, top_k=5) if hasattr(kb, "search") else []
         return JSONResponse({"query": q, "results": [str(r)[:200] for r in (res or [])]})
     except Exception as e:  # noqa: BLE001
         return JSONResponse({"error": str(e)}, status_code=500)
