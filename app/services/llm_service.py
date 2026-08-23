@@ -100,9 +100,13 @@ class LLMService:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
         try:
+            # Use the operator-configured timeout (default 120s). An earlier
+            # 45s hard cap silently truncated valid slow local-model responses
+            # (qwen3:0.6b routinely takes 35-50s per completion) into EMPTY
+            # content -- a fake-success. Honor self._timeout instead.
             resp = await self._client.post(
                 "/chat/completions", json=payload,
-                timeout=min(45.0, self._timeout),
+                timeout=self._timeout,
             )
             resp.raise_for_status()
             data = resp.json()
