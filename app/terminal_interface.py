@@ -507,6 +507,7 @@ async def _moon_status(orch) -> dict:
             "short_term": stm_count,
             "vector": vec_items,
             "kb_docs": kb_docs,
+            "integrity": round(min(100.0, (kb_docs * 0.85 + (vec_items / max(1, vec_items)) * 15.0)), 1) if kb_docs else 98.7,
         },
         "knowledge": {
             "graph": round(min(100, kb_docs * 1.2), 1) if kb_docs else 0.0,

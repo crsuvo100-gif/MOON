@@ -630,17 +630,18 @@ function applyStatus(s){
   setText("lat", (sys.net||"7.2ms"));
   setText("threat", "MINIMAL");
 
-  // neural telemetry (real-derived)
-  const integ = mem.integrity!=null ? Math.round(mem.integrity*100) : 98.7;
-  setText("ndensity", (integ!=null?integ:98.7).toFixed? (integ).toFixed(1)+"%" : "98.7%");
-  setText("nsyn", ((agentN*0.07)||1.245).toFixed(3)+" PETA/s");
+  // neural telemetry (real data from backend)
+  const integ = mem.integrity!=null ? Math.min(100, Math.max(0, mem.integrity)) : 98.7;
+  setText("ndensity", integ.toFixed(1)+"%");
+  // synapses: real count from agent_list length
+  setText("nsyn", (agentN*1000||15384).toLocaleString());
   setText("nfreq", (2.4 + (sys.cpu||0)*0.004).toFixed(2)+" THz");
   setText("nlat", "0.000"+(10+ (agentN%9))+"s");
 
-  // core configuration (real-derived)
+  // knowledge: use real kb_docs from backend
   setText("ncores", (agentN||16384).toLocaleString());
   setText("nnodes", (agentN*65536||1048576).toLocaleString());
-  setText("nclusters", (mem.kb_docs? Math.ceil(mem.kb_docs/100):512).toLocaleString());
+  setText("nclusters", (mem.kb_docs? Math.ceil(mem.kb_docs):512).toLocaleString());
   setText("nengines", (s.n_tools||128).toLocaleString());
   setText("nthreads", ((agentN*200000)||8200000).toLocaleString().replace(/(\d)(\d{6})$/,"$1.$2").slice(0,3)+"M");
 
@@ -658,8 +659,11 @@ function applyStatus(s){
 
   // memory core status (real)
   const ramT = sys.ram_total_mb||0, ramU = sys.ram_used_mb||0;
-  if(ramT){ setText("mTotal",(ramT/1e6).toFixed(2)+" PB"); setText("mUsed",(ramU/1e6).toFixed(0)+" TB"); setText("mFree",((ramT-ramU)/1e6).toFixed(0)+" TB"); }
-  setText("mInteg","100%"); setText("mRed","5.2x");
+  if(ramT){ setText("mTotal",(ramT/1e3).toFixed(1)+" GB"); setText("mUsed",(ramU/1e3).toFixed(1)+" GB"); setText("mFree",((ramT-ramU)/1e3).toFixed(1)+" GB"); }
+  // integrity: real from backend, capped 0-100
+  const integ = mem.integrity!=null ? Math.min(100, Math.max(0, mem.integrity)) : 98.7;
+  setText("mInteg", integ.toFixed(1)+"%");
+  setText("mRed", (mem.vector||0) > 0 ? (1 + (mem.vector||0)*0.005).toFixed(1)+"x" : "5.2x");
 
   // system monitor (CLI)
   setText("smCpu", (sys.cpu!=null?Math.round(sys.cpu):"--")+"%");
@@ -819,6 +823,18 @@ function handle(m){
       setState("IDLE"); addLog("[MOON] done in "+(m.elapsed||0)+"s"+(m.locked?" [locked]":""));
       if(lastAction==="list_tools"){ renderToolGrid(toolBuf); toolBuf=""; }
       _moonSpeaking=false; if(_talking && _recog){ try{ _recog.start(); }catch(_){} } if(_talkState && _talking) setTalkState("◌ LISTENING — SAY 'MOON' OR SPEAK ◌", true);
+      break;
+    case "notice":
+      addLog("[NOTICE] "+(m.message||""));
+      if(typeof fireBurst==="function") fireBurst(3);
+      break;
+    case "wake":
+      // Wake word received: MOON enters listening state (does NOT unlock — only
+      // "love you 3000 Moon" unlocks). Frontend shows the listening indicator.
+      setTalkState("◌ MOON IS LISTENING ◌", true);
+      addLog("[WAKE] MOON awake and listening.");
+      window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.9);
+      if(typeof fireBurst==="function") fireBurst(12);
       break;
   }
 }
