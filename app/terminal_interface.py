@@ -686,8 +686,13 @@ async def api_voice_status(request: Request):
         from fastapi import Response
         return Response("Unauthorized", status_code=401)
     try:
-        from app.voice_engine import VoiceEngine
-        ve = VoiceEngine()
+        ve = _get_voice_engine()
+        if ve is None:
+            import shutil as _sh
+            return JSONResponse({"voice_status": {"xtts": False, "openai": False,
+                                                 "espeak": bool(_sh.which("espeak-ng") or _sh.which("espeak")),
+                                                 "current": "default", "cloned_voices": [],
+                                                 "note": "voice engine unavailable"}})
         return JSONResponse({"voice_status": ve.backend_status()})
     except Exception as e:  # noqa: BLE001
         return JSONResponse({"error": str(e)}, status_code=500)
@@ -1822,6 +1827,13 @@ async def ws_endpoint(ws: WebSocket):
         try:
             await ws.close()
         except Exception:
+            pass
+    finally:
+        # Clean up the per-connection EventBus subscription so connections
+        # don't leak subscribers across reconnects (Task 2 wiring hygiene).
+        try:
+            _bus.unsubscribe(_on_event)
+        except Exception:  # noqa: BLE001
             pass
 
 

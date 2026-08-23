@@ -57,6 +57,17 @@ class VoiceEngine:
         self._cloned: dict[str, str] = self._load_registry()
         self._xtts = None
         self._openai_key = (getattr(settings, "openai_api_key", "") or "") if settings else ""
+        # Session breaker for cloud backends that are configured but dead
+        # (e.g. quota-exhausted OpenAI key). Avoids a network round-trip on
+        # every single speak() call; set True once a hard failure is seen.
+        self._openai_dead: bool = False
+        self._xtts_dead: bool = False
+
+    def _mark_openai_dead(self) -> None:
+        self._openai_dead = True
+
+    def _mark_xtts_dead(self) -> None:
+        self._xtts_dead = True
 
     # -- registry -----------------------------------------------------------
     def _load_registry(self) -> dict[str, str]:
@@ -138,13 +149,21 @@ class VoiceEngine:
             backend = spec["backend"]
             if backend == "auto":
                 backend = self._best_backend()
-            if backend == "xtts" and self._xtts_available():
+            if backend == "xtts" and self._xtts_available() and not self._xtts_dead:
                 return self._xtts_speak(text, spec, self._cloned.get(self.current))
-            if backend == "openai" and self._openai_key:
+            if backend == "openai" and self._openai_key and not self._openai_dead:
                 return self._openai_speak(text, spec["voice"])
             return await self._espeak_speak(text, self.current)
         except Exception as exc:  # noqa: BLE001
             logger.warning("voice engine speak failed: %s", exc)
+            # Hard-fail signatures (quota/auth) -> circuit-break so we don't
+            # keep hitting a dead cloud backend on every reply.
+            msg = str(exc).lower()
+            if "429" in msg or "quota" in msg or "401" in msg or "403" in msg:
+                if "openai" in msg or backend == "openai":
+                    self._mark_openai_dead()
+                if "xtts" in msg or backend == "xtts":
+                    self._mark_xtts_dead()
             try:
                 return await self._espeak_speak(text, "seductive")
             except Exception:  # noqa: BLE001
@@ -162,10 +181,11 @@ class VoiceEngine:
         from TTS.api import TTS  # type: ignore
 
         model = "tts_models/multilingual/multi-dataset/xtts_v2"
-        tts = TTS(model).to("cpu") if hasattr(Tts := TTS, "to") else TTS(model)  # cpu-safe
+        # Load on CPU (CPU-only host). `.to("cpu")` is a method on the TTS
+        # instance, not the class, so call it unconditionally after construct.
+        tts = TTS(model).to("cpu")
         fd, out = tempfile.mkstemp(suffix=".wav")
         os.close(fd)
-        speaker = clone_sample or None
         speaker_wav = clone_sample  # XTTS accepts a reference wav for cloning
         tts.tts_to_file(
             text=text,
