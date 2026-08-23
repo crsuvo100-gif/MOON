@@ -651,6 +651,48 @@ async def status(request: Request):
     return await _moon_status(orch)
 
 
+@app.get("/api/capabilities")
+async def api_capabilities(request: Request):
+    """List registered capabilities (spec 35: GET /api/capabilities)."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        from app.capability.manager import CapabilityManager
+        mgr = CapabilityManager()
+        return JSONResponse({"capabilities": mgr.list_capabilities()})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/connections")
+async def api_connections(request: Request):
+    """List registered connections (spec 35: GET /api/connections)."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        from app.connector.gateway import ConnectionGateway
+        gw = ConnectionGateway()
+        return JSONResponse({"connections": [c.to_dict() for c in gw.list()]})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/voice/status")
+async def api_voice_status(request: Request):
+    """Voice engine capability status (spec 35: GET /api/voice/status)."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        from app.voice_engine import VoiceEngine
+        ve = VoiceEngine()
+        return JSONResponse({"voice_status": ve.backend_status()})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 @app.get("/api/health")
 async def api_health(request: Request):
     """Project-wide health endpoint (Phase 27).
@@ -1097,6 +1139,25 @@ async def ws_endpoint(ws: WebSocket):
     orch = await _get_orchestrator()
     # Serialize outbound frames so concurrent message-tasks never interleave.
     _send_lock = asyncio.Lock()
+    # Subscribe this WS to the EventBus so agent runs / tool calls / task
+    # lifecycle events flow to the HUD EVENTS timeline in real time.
+    from app.runtime.event_bus import bus as _bus_fn
+    _bus = _bus_fn()
+
+    def _on_event(ev):
+        _emit_event(ev.type, ev.detail[:200] if ev.detail else "")
+        # Also push to WS as a real-time event
+        asyncio.create_task(_ws_event_push(ev))
+
+    _bus.subscribe(_on_event)
+
+    async def _ws_event_push(ev):
+        try:
+            await ws.send_json({"type": "event", "event_type": ev.type,
+                                "detail": (ev.detail or "")[:300],
+                                "execution_id": ev.execution_id or ""})
+        except Exception:
+            pass
 
     async def send(**msg):
         # Capture real activity into the events ring buffer (for /api/events +
