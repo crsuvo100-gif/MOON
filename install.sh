@@ -94,17 +94,28 @@ if [[ -f "$OPT" ]]; then
   fi
 fi
 
-# --- 2b. Delegate the Python-stage bootstrap to install_moon.py (single source
-#         of truth for .env creation, Ollama model pull, voice stack, smoke
-#         import). It reuses the venv we just built (--no-venv) so dependency
-#         install is never duplicated. This is additive: install_moon.py remains
-#         fully runnable on its own; install.sh just orchestrates it.
+# --- 2b. Delegate the Python-stage bootstrap to install_moon_full.py (the
+#         authoritative 100% installer: deps incl. Kokoro voice, Ollama models,
+#         Kokoro voice assets, sane .env, launcher, and a REAL post-install
+#         acceptance that proves the install works). It reuses the venv we just
+#         built (--no-venv) so dependency install is never duplicated.
+#         install_moon.py remains as a fallback single-stage runner.
 if [[ -x "$VENVPY" ]]; then
-  log "Delegating .env / models / voice / smoke-import to install_moon.py ..."
-  if "$VENVPY" install_moon.py --no-venv 2>&1 | tail -8; then
-    ok "Python-stage bootstrap complete (via install_moon.py)"
+  if [[ -f "$MOON_HOME/install_moon_full.py" ]]; then
+    log "Delegating full bootstrap + verification to install_moon_full.py ..."
+    if "$VENVPY" install_moon_full.py --no-service 2>&1 | tail -20; then
+      ok "Full install + verification complete (via install_moon_full.py)"
+    else
+      warn "install_moon_full.py reported issues; falling back to install_moon.py."
+      "$VENVPY" install_moon.py --no-venv 2>&1 | tail -8 || true
+    fi
   else
-    warn "install_moon.py reported issues (MOON may still run; review output above)."
+    log "Delegating .env / models / voice / smoke-import to install_moon.py ..."
+    if "$VENVPY" install_moon.py --no-venv 2>&1 | tail -8; then
+      ok "Python-stage bootstrap complete (via install_moon.py)"
+    else
+      warn "install_moon.py reported issues (MOON may still run; review output above)."
+    fi
   fi
 else
   warn "venv python missing; skipping install_moon.py delegation."
