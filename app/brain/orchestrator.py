@@ -509,8 +509,8 @@ class Orchestrator:
                 )
                 decision = await self._llm.complete(
                     [
-                        {"role": "system", "content": sys_p},
-                        {"role": "user", "content": f"Task: {task.prompt}"},
+                        ChatMessage(role="system", content=sys_p),
+                        ChatMessage(role="user", content=f"Task: {task.prompt}"),
                     ],
                     max_tokens=600, temperature=0.2,
                 )

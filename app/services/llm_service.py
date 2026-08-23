@@ -59,10 +59,16 @@ class LLMService:
         if disable_thinking is None:
             disable_thinking = False
         self._disable_thinking = disable_thinking
+        # Generous floor for local-first models: qwen3:0.6b on CPU routinely
+        # takes 35-120s per call, and a COLD first call after backend start can
+        # exceed even 120s (Ollama model load). A tight timeout here silently
+        # raised httpx.ReadTimeout -> empty content -> fake-success/fallback.
+        # Use the configured timeout but never below 300s for reliability.
+        _client_timeout = max(float(timeout), 300.0)
         self._client = httpx.AsyncClient(
             base_url=self._base,
             headers={"Authorization": f"Bearer {api_key}"},
-            timeout=timeout,
+            timeout=_client_timeout,
         )
 
     async def setup(self) -> None:
@@ -147,7 +153,7 @@ class LLMService:
                     self._model, self._base, status,
                 )
             else:
-                logger.warning("LLM complete failed: %s", exc)
+                logger.warning("LLM complete failed [%s]: %s", type(exc).__name__, exc)
             return CompletionResult(content=None, has_tool_calls=False, tool_calls=[])
 
 
