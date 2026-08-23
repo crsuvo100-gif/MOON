@@ -106,13 +106,14 @@ class LLMService:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
         try:
-            # Use the operator-configured timeout (default 120s). An earlier
-            # 45s hard cap silently truncated valid slow local-model responses
-            # (qwen3:0.6b routinely takes 35-50s per completion) into EMPTY
-            # content -- a fake-success. Honor self._timeout instead.
+            # Per-request timeout must match the client floor: local-first models
+            # (qwen3:0.6b on CPU) routinely need 35-120s, and a COLD first call
+            # after backend start can exceed 120s. A tight timeout here raises
+            # httpx.ReadTimeout -> empty content -> fake-success. Never below 300s.
+            _req_timeout = max(float(self._timeout), 300.0)
             resp = await self._client.post(
                 "/chat/completions", json=payload,
-                timeout=self._timeout,
+                timeout=_req_timeout,
             )
             resp.raise_for_status()
             data = resp.json()

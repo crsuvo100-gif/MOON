@@ -23,12 +23,14 @@ pypdf>=4.2
 PyYAML>=6.0
 
 # Voice engine (MOON's female voice + cloning; all optional)
-# XTTS-v2 = local, high-quality, cloneable female voice (needs a capable host).
-# openai = cloud 'nova'/'shimmer' alluring female voices (needs OPENAI_API_KEY).
+# Kokoro-ONNX is the default premium female voice and is now in requirements.txt
+# (offline, CPU, py3.13-compatible). espeak-ng+sox (system) is the fallback.
 # vosk + pyaudio = offline speech-to-text (to HEAR and clone any user's voice).
-# TTS is pinned loosely because newer releases drop Python support; the
-# installer tolerates a miss. Use a version your Python supports, e.g.:
-TTS>=0.21
+# openai = cloud 'nova'/'shimmer' alluring female voices (needs OPENAI_API_KEY+quota).
+# XTTS-v2 (Coqui `TTS`) is NOT listed: it requires Python <3.12 and fails to
+# install on 3.13. For neural voice CLONING, run MOON in a py3.11 venv with
+# `pip install TTS`, or supply an OpenAI key with quota. The cloning pipeline in
+# app/voice_engine.py activates automatically when XTTS is present.
 openai>=2.53
 vosk>=0.3
 pyaudio>=0.2

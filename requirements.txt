@@ -20,6 +20,15 @@ numpy>=1.26
 python-dotenv>=1.0
 rich>=13.7
 tenacity>=8.2
+scipy>=1.11
+
+# Voice engine — MOON's natural FEMALE voice (offline, CPU, py3.13-compatible).
+# Kokoro-ONNX is the default premium voice (af_heart/af_bella); espeak+sox is a
+# graceful fallback. XTTS-v2 (Coqui) is intentionally NOT a hard dep: it requires
+# Python <3.12 and cannot install on 3.13 (use a 3.11 venv for cloning, or an
+# OpenAI key with quota for nova/shimmer). The Kokoro model/voices binaries are
+# fetched at install time by install_moon.py (or on first voice use).
+kokoro-onnx>=0.2.1
 
 # Testing / quality
 pytest>=8.0
