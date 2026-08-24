@@ -90,16 +90,41 @@ def ensure_models():
     return ok
 
 
+def _port_in_use(port):
+    """Return True if something is already listening on 127.0.0.1:<port>.
+
+    Used so we NEVER kill a living backend just because a single health
+    probe hiccupped -- a kill+restart is exactly what makes the HUD
+    WebSocket drop and the terminal appear to 'blink'."""
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.settimeout(1)
+        return s.connect_ex(("127.0.0.1", port)) == 0
+    finally:
+        s.close()
+
+
 def ensure_backend():
-    st, _ = http_get(f"http://127.0.0.1:{BACKEND_PORT}/api/health")
+    # Probe twice -- transient network blips should not trigger a restart.
+    st = None
+    for _ in range(2):
+        st, _ = http_get(f"http://127.0.0.1:{BACKEND_PORT}/api/health")
+        if st == 200:
+            break
+        time.sleep(2)
+    # If the port is already served, SOMETHING is answering -- do not touch it.
+    # This guarantees we never pkill the healthy moon.service backend (whose
+    # command line contains 'terminal_interface') and cause a HUD reconnect blip.
+    if _port_in_use(BACKEND_PORT):
+        log("OK: backend healthy (port :%d already served)" % BACKEND_PORT)
+        return True
     if st == 200:
         log("OK: backend healthy")
         return True
-    log("HEAL: backend not responding -- restarting via make terminal")
-    # kill any stale backend on the port, then launch fresh
-    run(["pkill", "-f", "moon_terminal|terminal_interface|main.py terminal"], timeout=20)
-    time.sleep(3)
-    # launch in background detached
+    log("HEAL: nothing answering on :%d -- launching backend" % BACKEND_PORT)
+    # Launch in background detached; main.py self-guards against double-binding
+    # the port, so this can never create a second competing backend.
     env = dict(os.environ)
     env.pop("PYTHONPATH", None)
     subprocess.Popen(
@@ -111,8 +136,8 @@ def ensure_backend():
     for _ in range(20):
         time.sleep(3)
         st2, _ = http_get(f"http://127.0.0.1:{BACKEND_PORT}/api/health")
-        if st2 == 200:
-            log("HEAL: backend restarted OK")
+        if st2 == 200 or _port_in_use(BACKEND_PORT):
+            log("HEAL: backend up")
             return True
     log("FAIL: backend did not come back up")
     return False

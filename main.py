@@ -260,13 +260,39 @@ def _run_terminal() -> None:
         except Exception:
             pass
 
-    threading.Thread(target=_auto_open_ui, daemon=True).start()
+    # NOTE: the visible HUD window is now owned exclusively by the dedicated
+    # moon-terminal.service (scripts/open_hud.py) so the backend launcher never
+    # competes for the display or double-spawns a Chrome window. The HUD opener
+    # logic below is intentionally NOT invoked here anymore.
+    # (The _auto_open_ui definition is retained for manual `python main.py start`
+    #  use when run outside systemd, but is disabled under the service path.)
+
+    # --- Guard against double-binding :PORT (root cause of the HUD "blink") ---
+    # If another MOON backend already owns the port (e.g. moon.service is up),
+    # launching a 2nd uvicorn fails to bind and systemd restarts us in a tight
+    # crash-loop. That makes the HUD WebSocket drop/reconnect every few seconds
+    # and the whole terminal appears to blink. So: if the port is taken, just
+    # attach the HUD to the existing backend and exit cleanly (no loop).
+    def _port_busy(port):
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            s.settimeout(1)
+            return s.connect_ex(("127.0.0.1", port)) == 0
+        finally:
+            s.close()
+
+    if _port_busy(PORT):
+        print(f"🌙 MOON backend already listening on :{PORT} "
+              f"-- attaching HUD only (not spawning a 2nd backend).")
+        return 0
 
     print(f"🌙 MOON Terminal starting at http://0.0.0.0:{PORT}  (LAN: http://<this-host-ip>:{PORT})")
     subprocess.run([
         sys.executable, "-m", "uvicorn", "app.terminal_interface:app",
         "--host", "0.0.0.0", "--port", str(PORT), "--log-level", "info",
     ], env=env)
+    return 0
 
 
 # ---------------------------------------------------------------------------
