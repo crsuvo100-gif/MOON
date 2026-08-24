@@ -40,7 +40,7 @@ body{display:grid;place-items:center}
 .sweep{position:absolute;left:0;right:0;top:0;height:14%;pointer-events:none;z-index:98;opacity:.35;
   background:linear-gradient(180deg,transparent,rgba(255,40,40,.10) 45%,rgba(255,90,90,.55) 50%,rgba(255,40,40,.10) 55%,transparent);
   box-shadow:0 0 22px rgba(255,40,40,.35);animation:hudSweep 7s linear infinite;mix-blend-mode:screen}
-@keyframes hudSweep{0%{transform:translateY(-20%);opacity:.15}6%{opacity:.7}50%{opacity:.85}94%{opacity:.7}100%{transform:translateY(780%);opacity:.15}}
+@keyframes hudSweep{0%{transform:translateY(-20%);opacity:.45}6%{opacity:.45}50%{opacity:.45}94%{opacity:.45}100%{transform:translateY(780%);opacity:.45}}
 /* LAYER B: data-rain (ambient falling glyphs), burst layer, reactive edge glow */
 .datarain{position:absolute;inset:0;pointer-events:none;z-index:2;opacity:.22;mix-blend-mode:screen}
 .burstLayer{position:absolute;inset:0;pointer-events:none;z-index:97;overflow:hidden}
@@ -117,9 +117,16 @@ h3{text-shadow:0 0 10px rgba(255,30,30,.8),0 0 4px rgba(255,80,80,.5)}
 /* avatar core cortex pulse + brighter rings */
 @keyframes cortex{0%,100%{box-shadow:0 0 20px rgba(255,0,0,.8),inset 0 0 24px rgba(255,0,0,.55)}50%{box-shadow:0 0 36px rgba(255,60,60,1),inset 0 0 34px rgba(255,40,40,.8)}}
 .avatar .core{animation:cortex 2.4s ease-in-out infinite}
-/* subtle CRT flicker on whole app */
-@keyframes crt{0%,100%{opacity:1}50%{opacity:.97}}
-#app{animation:crt 8s ease-in-out infinite}
+/* subtle CRT flicker on whole app -- DISABLED: the global opacity oscillation
+   read as the entire terminal "blinking" on many displays. Kept static so the
+   HUD is stable; per-element glows still convey liveness. */
+@keyframes crt{0%,100%{opacity:1}50%{opacity:1}}
+#app{animation:none}
+/* Accessibility: if the OS requests reduced motion, kill ALL HUD animation so
+   the terminal never blinks/strobes. The HUD stays fully functional + readable. */
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important;transition:none !important}
+}
 .title b{text-shadow:0 0 14px var(--red),0 0 26px rgba(255,0,0,.5)}
 /* MEDIUM + BOLD typography upgrade (terminal fonts medium weight, titles/labels/buttons bold) */
 h3,.nav,.metric strong,.btn,.title,.bcell h4,.logo,.aspectTitle,.ratio,.navcol .nav{font-weight:700}
