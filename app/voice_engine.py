@@ -6,18 +6,21 @@ high-quality, cloneable female voice. Pluggable backends, tried in order:
   1. kokoro -- Kokoro-ONNX (local, CPU). Natural, clearly FEMALE voices
              (af_heart / af_bella / af_sarah) with no cloud dependency and no
              heavy torch install. The default premium offline voice.
-  2. xtts   -- Coqui XTTS-v2 (local). The canonical open voice-CLONING model:
-             speaks in any reference voice from a ~6s sample, with female
-             speakers. Requires Python <3.12 (Coqui constraint); optional.
-  3. openai -- OpenAI TTS (cloud). 'nova' / 'shimmer' are the alluring, clearly
+  2. f5     -- F5-TTS (local, zero-shot voice CLONING from a reference WAV).
+             Works on Python 3.13 (torch 2.x wheels). This is the cloning
+             engine used on modern Python; replaces XTTS-v2 which needs <3.12.
+  3. xtts   -- Coqui XTTS-v2 (local). The canonical open voice-CLONING model:
+             speaks in any reference voice from a ~6s sample. Requires Python
+             <3.12 (Coqui constraint); optional, kept for older hosts.
+  4. openai -- OpenAI TTS (cloud). 'nova' / 'shimmer' are the alluring, clearly
              FEMALE voices -- used when an OPENAI_API_KEY with quota is set.
-  4. espeak -- app.voice.Voice female (always available, CPU-only fallback).
+  5. espeak -- app.voice.Voice female (always available, CPU-only fallback).
 
 Voice cloning: Moon can capture/hear a user's voice (a WAV sample) and thereafter
 speak USING that voice. Cloned voices are stored under voices/ and referenced by
-name; XTTS uses the sample as the speaker embedding. On hosts without XTTS the
-sample is still stored and the engine reports cloning as pending (so the UI is
-honest about capability, never fake).
+name; F5-TTS / XTTS use the sample as the speaker embedding. On hosts without a
+cloning engine the sample is still stored and the engine reports cloning as
+pending (so the UI is honest about capability, never fake).
 
 No secrets are logged; API keys come from settings (gitignored .env).
 """
@@ -67,12 +70,14 @@ class VoiceEngine:
         self._cloned: dict[str, str] = self._load_registry()
         self._xtts = None
         self._kokoro = None
+        self._f5 = None
         self._openai_key = (getattr(settings, "openai_api_key", "") or "") if settings else ""
         # Session breaker for cloud backends that are configured but dead
         # (e.g. quota-exhausted OpenAI key). Avoids a network round-trip on
         # every single speak() call; set True once a hard failure is seen.
         self._openai_dead: bool = False
         self._xtts_dead: bool = False
+        self._f5_dead: bool = False
         self._kokoro_dead: bool = False
 
     def _mark_openai_dead(self) -> None:
@@ -80,6 +85,9 @@ class VoiceEngine:
 
     def _mark_xtts_dead(self) -> None:
         self._xtts_dead = True
+
+    def _mark_f5_dead(self) -> None:
+        self._f5_dead = True
 
     def _mark_kokoro_dead(self) -> None:
         self._kokoro_dead = True
@@ -101,15 +109,27 @@ class VoiceEngine:
 
     # -- capability detection ----------------------------------------------
     def backend_status(self) -> dict[str, Any]:
-        xtts = bool(shutil.which("xtts_available") or self._xtts_available())
         return {
             "kokoro": self._kokoro_available(),
-            "xtts": xtts,
+            "f5": self._f5_available(),
+            "xtts": self._xtts_available(),
             "openai": bool(self._openai_key) and not self._openai_dead,
             "espeak": bool(shutil.which("espeak-ng") or shutil.which("espeak")),
             "current": self.current,
             "cloned_voices": list(self._cloned.keys()),
+            # True when a real zero-shot cloning engine is present.
+            "cloning_ready": self._f5_available() or self._xtts_available(),
         }
+
+    def _f5_available(self) -> bool:
+        if self._f5 is not None:
+            return self._f5 is not False
+        try:
+            import f5_tts  # type: ignore  # noqa: F401
+            self._f5 = True
+        except Exception:  # noqa: BLE001
+            self._f5 = False
+        return bool(self._f5)
 
     def _kokoro_available(self) -> bool:
         if self._kokoro is not None:
@@ -148,8 +168,14 @@ class VoiceEngine:
         return f"Unknown voice '{name}'. Use 'voice list'."
 
     # -- cloning -------------------------------------------------------------
-    def clone_voice(self, name: str, sample_b64: str) -> str:
-        """Store a user's voice sample and register it as a clone (XTTS uses it)."""
+    def clone_voice(self, name: str, sample_b64: str, transcript: str = "") -> str:
+        """Store a user's voice sample and register it as a clone.
+
+        F5-TTS / XTTS use the sample as the speaker embedding for zero-shot
+        cloning. `transcript` is the text spoken in the reference sample
+        (improves F5-TTS clone fidelity; optional -- F5 tolerates an empty
+        transcript, XTTS does not require it).
+        """
         if not name:
             return "clone requires a name."
         try:
@@ -159,12 +185,17 @@ class VoiceEngine:
         path = self.voices_dir / f"{name}.wav"
         path.write_bytes(raw)
         self._cloned[name] = str(path)
+        # Persist the optional transcript so F5-TTS cloning is high-fidelity.
+        if transcript:
+            (self.voices_dir / f"{name}.txt").write_text(transcript, encoding="utf-8")
         self._save_registry()
-        if self._xtts_available():
-            return (f"Cloned voice '{name}' from your sample. Moon can now speak "
-                    f"using your voice (set 'voice set {name}').")
-        return (f"Stored voice sample for '{name}'. Cloning activates with XTTS-v2 "
-                f"installed (pip install TTS); sample saved at {path}.")
+        if self._f5_available() or self._xtts_available():
+            engine = "F5-TTS" if self._f5_available() else "XTTS-v2"
+            return (f"Cloned voice '{name}' from your sample using {engine}. "
+                    f"Moon can now speak using your voice (set 'voice set {name}').")
+        return (f"Stored voice sample for '{name}'. Cloning activates with a "
+                f"cloning engine installed (pip install f5-tts on Python 3.13+, "
+                f"or TTS on <3.12); sample saved at {path}.")
 
     # -- TTS ----------------------------------------------------------------
     async def speak(self, text: str) -> str | None:
@@ -176,8 +207,26 @@ class VoiceEngine:
             backend = spec["backend"]
             if backend == "auto":
                 backend = self._best_backend()
+            # A selected CLONED voice always routes through a cloning engine.
+            if self.current in self._cloned:
+                clone_sample = self._cloned[self.current]
+                if self._f5_available() and not self._f5_dead:
+                    return self._f5_speak(text, clone_sample)
+                if self._xtts_available() and not self._xtts_dead:
+                    return self._xtts_speak(text, spec, clone_sample)
+                # No cloning engine: fall back to the premium female voice.
+                logger.warning("clone requested but no cloning engine available")
+                if self._kokoro_available():
+                    return self._kokoro_speak(text, KOKORO_FEMALE_VOICES[0])
+                return await self._espeak_speak(text, "seductive")
             if backend == "kokoro" and self._kokoro_available() and not self._kokoro_dead:
                 return self._kokoro_speak(text, spec["voice"])
+            if backend == "f5" and self._f5_available() and not self._f5_dead:
+                # f5 as a base voice needs a reference sample; without a clone we
+                # cannot synthesize, so fall through to kokoro/espeak.
+                if self._kokoro_available():
+                    return self._kokoro_speak(text, spec["voice"])
+                return await self._espeak_speak(text, self.current)
             if backend == "xtts" and self._xtts_available() and not self._xtts_dead:
                 return self._xtts_speak(text, spec, self._cloned.get(self.current))
             if backend == "openai" and self._openai_key and not self._openai_dead:
@@ -195,6 +244,8 @@ class VoiceEngine:
                     self._mark_xtts_dead()
                 if "kokoro" in msg or backend == "kokoro":
                     self._mark_kokoro_dead()
+                if "f5" in msg or backend == "f5":
+                    self._mark_f5_dead()
             try:
                 return await self._espeak_speak(text, "seductive")
             except Exception:  # noqa: BLE001
@@ -203,6 +254,8 @@ class VoiceEngine:
     def _best_backend(self) -> str:
         if self._kokoro_available():
             return "kokoro"
+        if self._f5_available():
+            return "f5"
         if self._xtts_available():
             return "xtts"
         if self._openai_key and not self._openai_dead:
@@ -254,6 +307,36 @@ class VoiceEngine:
             speaker="female" if not clone_sample else None,  # type: ignore[arg-type]
             language="en",
             file_path=out,
+        )
+        return out
+
+    def _f5_speak(self, text: str, clone_sample: str) -> str | None:
+        """Zero-shot voice cloning via F5-TTS (local, CPU, Python 3.13-safe).
+
+        `clone_sample` is a reference WAV; F5-TTS reproduces that speaker's
+        voice for `text`. An optional transcript of the reference sample
+        (voices/<name>.txt) improves fidelity; F5 tolerates a missing one.
+        """
+        from f5_tts.api import F5TTS  # type: ignore
+
+        # Optional reference transcript (same stem as the .wav sample).
+        ref_text = ""
+        txt_path = Path(clone_sample).with_suffix(".txt")
+        if txt_path.exists():
+            try:
+                ref_text = txt_path.read_text(encoding="utf-8").strip()
+            except Exception:  # noqa: BLE001
+                ref_text = ""
+
+        fd, out = tempfile.mkstemp(suffix=".wav")
+        os.close(fd)
+        tts = F5TTS(model="F5TTS_v1_Base", device="cpu")
+        tts.infer(
+            ref_audio=str(clone_sample),
+            ref_text=ref_text,
+            gen_text=text,
+            file_path=out,
+            seed=42,
         )
         return out
 

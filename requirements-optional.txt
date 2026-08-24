@@ -27,10 +27,12 @@ PyYAML>=6.0
 # (offline, CPU, py3.13-compatible). espeak-ng+sox (system) is the fallback.
 # vosk + pyaudio = offline speech-to-text (to HEAR and clone any user's voice).
 # openai = cloud 'nova'/'shimmer' alluring female voices (needs OPENAI_API_KEY+quota).
+# F5-TTS = zero-shot voice CLONING from a reference WAV, works on Python 3.13
+# (torch 2.x wheels). This is the cloning engine used on modern Python; the
+# cloning pipeline in app/voice_engine.py auto-activates when f5_tts is present.
 # XTTS-v2 (Coqui `TTS`) is NOT listed: it requires Python <3.12 and fails to
-# install on 3.13. For neural voice CLONING, run MOON in a py3.11 venv with
-# `pip install TTS`, or supply an OpenAI key with quota. The cloning pipeline in
-# app/voice_engine.py activates automatically when XTTS is present.
+# install on 3.13. On a py3.11 venv, `pip install TTS` also enables cloning.
+f5-tts>=1.1
 openai>=2.53
 vosk>=0.3
 pyaudio>=0.2

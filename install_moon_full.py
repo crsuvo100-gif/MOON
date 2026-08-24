@@ -221,9 +221,43 @@ def install_kokoro_voice():
             warn(f"Kokoro asset download skipped (lazy-fetch on first use): {exc}")
 
 
-# --------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+# 5b. F5-TTS cloning model (zero-shot voice cloning, Python 3.13-safe)
+# -------------------------------------------------------------------------
+def install_f5_clone_model():
+    """Pre-download the F5-TTS base model + vocos so voice CLONING works
+    out-of-the-box (no first-call fetch delay). Best-effort: a network
+    failure must NOT break the install; voice_engine lazy-downloads on use."""
+    py = str(VENV / "bin" / "python")
+    chk = subprocess.run([py, "-c", "import f5_tts"], env=_env(),
+                        capture_output=True, text=True)
+    if chk.returncode != 0:
+        warn("f5-tts not installed -- skipping clone-model pre-download "
+             "(cloning still lazy-fetches on first use).")
+        return
+    log("Pre-downloading F5-TTS cloning model (base + vocos) ...")
+    script = (
+        "from f5_tts.api import F5TTS\n"
+        "F5TTS(model='F5TTS_v1_Base', device='cpu')\n"
+        "print('F5 model ready')\n"
+    )
+    tmp = ROOT / ".install_f5_tmp.py"
+    tmp.write_text(script, encoding="utf-8")
+    try:
+        r = _run([py, str(tmp)], capture_output=True, text=True, timeout=600)
+        if r.returncode == 0:
+            ok("F5-TTS cloning model downloaded")
+        else:
+            warn("F5 model pre-download skipped (lazy-fetch on first use).")
+    except Exception as exc:  # noqa: BLE001
+        warn(f"F5 model pre-download skipped: {exc}")
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+# -------------------------------------------------------------------------
 # 6. Launcher + desktop + optional service
-# --------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 def install_launcher():
     bin_dir = Path.home() / ".local" / "bin"
     bin_dir.mkdir(parents=True, exist_ok=True)
@@ -284,9 +318,11 @@ def verify_install(venv_python: str) -> bool:
         "        from app.config.settings import get_settings\n"
         "        ve = VoiceEngine(settings=get_settings())\n"
         "        bs = ve.backend_status()\n"
-        "        vk = bs.get('kokoro'); vs = bs.get('espeak')\n"
-        "        print('VOICE kokoro=%s espeak=%s' % (vk, vs))\n"
+        "        vk = bs.get('kokoro'); vs = bs.get('espeak'); vf = bs.get('f5')\n"
+        "        print('VOICE kokoro=%s espeak=%s f5=%s' % (vk, vs, vf))\n"
         "        ok = ok and bool(vk or vs)\n"
+        "        print('CLONING_READY=%s' % bs.get('cloning_ready'))\n"
+        "        ok = ok and bool(bs.get('cloning_ready'))\n"
         "        from app.brain.orchestrator import Orchestrator\n"
         "        o = Orchestrator(get_settings()); await o.setup()\n"
         "        print('AGENTS=%d TOOLS=%d' % (len(o._agents), len(o._tools._registry.tool_names)))\n"
@@ -337,6 +373,7 @@ def main():
     if not args.no_models:
         install_ollama_and_models()
     install_kokoro_voice()
+    install_f5_clone_model()
     install_launcher()
     if not args.no_service:
         install_service()
