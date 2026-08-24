@@ -29,6 +29,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from pydantic import BaseModel
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 TERMINAL_HTML = WEB_DIR / "moon_terminal.html"
@@ -696,6 +697,56 @@ async def api_voice_status(request: Request):
         return JSONResponse({"voice_status": ve.backend_status()})
     except Exception as e:  # noqa: BLE001
         return JSONResponse({"error": str(e)}, status_code=500)
+
+
+class VoiceCloneRequest(BaseModel):
+    name: str
+    sample_b64: str          # base64-encoded WAV reference sample
+    transcript: str = ""     # optional text spoken in the reference sample
+
+
+@app.post("/api/voice/clone")
+async def api_voice_clone(req: VoiceCloneRequest, request: Request):
+    """Clone a voice from an uploaded reference WAV (zero-shot, F5-TTS).
+    MOON can then speak as that voice. Exposes the cloning function via the API."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        import base64
+        ve = _get_voice_engine()
+        if ve is None:
+            return JSONResponse({"ok": False, "error": "voice engine unavailable"}, status_code=500)
+        msg = ve.clone_voice(req.name, req.sample_b64, req.transcript)
+        return JSONResponse({
+            "ok": True,
+            "message": msg,
+            "cloning_ready": ve.backend_status().get("cloning_ready", False),
+            "cloned_voices": ve.backend_status().get("cloned_voices", []),
+        })
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+class VoiceSetRequest(BaseModel):
+    name: str
+
+
+@app.post("/api/voice/set")
+async def api_voice_set(req: VoiceSetRequest, request: Request):
+    """Switch MOON's active voice (a built-in female preset or a cloned voice)."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        ve = _get_voice_engine()
+        if ve is None:
+            return JSONResponse({"ok": False, "error": "voice engine unavailable"}, status_code=500)
+        ok = ve.set_voice(req.name)
+        return JSONResponse({"ok": ok, "current": ve.current,
+                             "message": "voice set" if ok else "unknown voice name"})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 
 @app.get("/api/health")
