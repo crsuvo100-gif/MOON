@@ -6,14 +6,15 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=__MOON_HOME__
-ExecStart=__MOON_HOME__/.venv/bin/python main.py start
+# Run uvicorn directly so systemd tracks the real long-running server process
+# (main.py start only spawns uvicorn as a child, leaving the parent in the
+# 'activating' state). This makes the unit report 'active' cleanly.
+ExecStart=__MOON_HOME__/.venv/bin/python -m uvicorn app.terminal_interface:app --host 0.0.0.0 --port 8777 --log-level info
 # Clear PYTHONPATH so the broken system Python path can't shadow MOON's venv
 Environment=PYTHONPATH=
 # Auto-restart on crash / exit so the terminal always comes back
 Restart=always
 RestartSec=3
-# Give the port a moment to free if we restart quickly
-ExecStartPre=/bin/sleep 1
 StandardOutput=journal
 StandardError=journal
 
