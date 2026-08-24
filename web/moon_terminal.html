@@ -127,6 +127,15 @@ h3{text-shadow:0 0 10px rgba(255,30,30,.8),0 0 4px rgba(255,80,80,.5)}
 @media (prefers-reduced-motion: reduce){
   *{animation:none !important;transition:none !important}
 }
+/* DEFAULT: neutralize the discrete opacity-pulse "blink" animations so the
+   HUD never strobes into the display. Smooth continuous canvas visuals
+   (neural-core render loop) are unaffected -- those are motion, not blinking.
+   Each keyframe below is flattened to a constant value. */
+@keyframes ledblink{0%,100%{opacity:1}50%{opacity:1}}
+@keyframes idleblink{0%,100%{opacity:.9}50%{opacity:.9}}
+@keyframes beamflick{0%,100%{opacity:.6}50%{opacity:.6}}
+@keyframes cortex{0%,100%{box-shadow:0 0 28px rgba(255,0,0,.9),inset 0 0 28px rgba(255,0,0,.65)}50%{box-shadow:0 0 28px rgba(255,0,0,.9),inset 0 0 28px rgba(255,0,0,.65)}}
+@keyframes corebreathe{0%,100%{transform:scale(1)}50%{transform:scale(1)}}
 .title b{text-shadow:0 0 14px var(--red),0 0 26px rgba(255,0,0,.5)}
 /* MEDIUM + BOLD typography upgrade (terminal fonts medium weight, titles/labels/buttons bold) */
 h3,.nav,.metric strong,.btn,.title,.bcell h4,.logo,.aspectTitle,.ratio,.navcol .nav{font-weight:700}
@@ -1015,11 +1024,11 @@ function fireBurst(n){ const layer=el("burstLayer"); if(!layer) return;
     layer.appendChild(b); setTimeout(()=>b.remove(),950);
   }
 }
-// Reactive edge glow flash on events
+// Reactive edge glow flash on events -- DISABLED: the full-screen edge flash
+// fired on every backend event and read as the whole display blinking. Kept
+// as a no-op so HUD stays calm; core-energy state still conveys liveness.
 let _edgeT=null;
-function edgeFlash(amt){ const eg=el("edgeGlow"); if(!eg) return;
-  eg.classList.add("on"); clearTimeout(_edgeT); _edgeT=setTimeout(()=>eg.classList.remove("on"), 380+(amt||0.5)*400);
-}
+function edgeFlash(amt){ /* disabled to stop display blinking */ }
 
 // allow backend events to energize the core (interacts with Moon brain)
 window.MOON_UI.onCorePulse = (amt)=>{ coreEnergy=Math.min(1.5,(coreEnergy||0)+(amt||0.6));
@@ -1028,7 +1037,7 @@ window.MOON_UI.onCorePulse = (amt)=>{ coreEnergy=Math.min(1.5,(coreEnergy||0)+(a
   const a=Math.min(0.9,amt||0.6);
   _drActive=Math.min(1,_drActive+0.25*(amt||0.6)); // rain intensifies on activity, decays
   setTimeout(()=>{_drActive=Math.max(0.3,_drActive-0.25*(amt||0.6));},900);
-  edgeFlash(a); if(a>0.6) fireBurst(Math.round(a*14));
+  edgeFlash(a); // no-op (disabled to stop blinking)
   const orb=document.getElementById("fusionOrb"); if(orb){orb.style.filter="brightness("+(1+a)+") saturate(1.2)";clearTimeout(orb._t);orb._t=setTimeout(()=>orb.style.filter="",700+a*500);}
   const cv=document.querySelector(".fusionCore"); if(cv){cv.style.filter="brightness("+(1+a)+")";clearTimeout(cv._t);cv._t=setTimeout(()=>cv.style.filter="",700+a*500);} };
 /* floating sparkle particles (futuristic polish) */
@@ -1349,20 +1358,12 @@ function runBoot(){
     i++; setTimeout(next, 300+Math.random()*220);
   })();
 }
-/* ===== PER-PANEL GLITCH (ambient random + reactive on backend events) ===== */
+/* ===== PER-PANEL GLITCH -- DISABLED: the RGB-split jitter fired on every
+   backend message (and on an ambient timer) read as the HUD blinking/strobing
+   into the display. Kept as no-op so backend events no longer flash panels. ===== */
 let _glitchBusy=false, _lastGlitch=0;
-function triggerGlitch(){
-  const now=Date.now();
-  if(_glitchBusy || now-_lastGlitch<220) return; // throttle rapid bursts
-  _lastGlitch=now; _glitchBusy=true;
-  const panels=[...document.querySelectorAll(".panel")];
-  if(panels.length){
-    const p=panels[Math.floor(Math.random()*panels.length)];
-    p.classList.add("glitch");
-    setTimeout(()=>{ p.classList.remove("glitch"); _glitchBusy=false; }, 360);
-  } else { _glitchBusy=false; }
-}
-function glitchLoop(){ triggerGlitch(); setTimeout(glitchLoop, 1400+Math.random()*2600); }
+function triggerGlitch(){ /* disabled to stop display blinking */ }
+function glitchLoop(){ /* disabled: no ambient panel glitch */ }
 glitchLoop();
 /* ===== AUDIO CUES (self-contained WebAudio — works offline, no files) ===== */
 let _actx=null;
