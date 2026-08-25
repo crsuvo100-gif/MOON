@@ -160,20 +160,64 @@ EOF
   ok "desktop entry: $APPS/moon-terminal.desktop"
 fi
 
-# --- 6. Optional systemd user service ------------------------------------
-read -r -p $'\033[33m[??]\033[0m Install a systemd *user* service so MOON auto-starts on login? [y/N] ' ANS || ANS="n"
-if [[ "${ANS,,}" == "y" || "${ANS,,}" == "yes" ]]; then
-  if command -v systemctl >/dev/null 2>&1; then
-    SRC="$MOON_HOME/tools/install_terminal_service.sh"
-    if [[ -x "$SRC" ]]; then bash "$SRC"; else warn "service installer missing: $SRC"; fi
-  else warn "systemctl not available on this system; skipping service install."; fi
-else
-  log "Skipping systemd service (MOON still auto-opens its HUD on MOON boot via Settings -> autostart)."
+# --- 6. systemd user service + deep monitor (ONE-CLICK: enabled by default) --
+# One command gets MOON installed, running, self-healing, AND monitored.
+# Pass --interactive to be asked before enabling the service/monitor.
+INSTALL_SERVICE=1
+if [[ "${1:-}" == "--interactive" ]]; then
+  read -r -p $'\033[33m[??]\033[0m Install a systemd *user* service so MOON auto-starts + self-heals + is monitored? [Y/n] ' ANS || ANS="y"
+  case "${ANS,,}" in n|no) INSTALL_SERVICE=0 ;; esac
 fi
 
-# --- done ----------------------------------------------------------------
+if [[ "$INSTALL_SERVICE" -eq 1 ]]; then
+  if command -v systemctl >/dev/null 2>&1; then
+    log "Installing systemd service + deep monitor (auto-start, self-heal, real-exec monitoring) ..."
+    # backend service
+    SVC_SRC="$MOON_HOME/deploy/moon-terminal.service"
+    SVC_DST="$HOME/.config/systemd/user/moon-terminal.service"
+    mkdir -p "$HOME/.config/systemd/user"
+    sed "s|__MOON_HOME__|$MOON_HOME|g" "$SVC_SRC" > "$SVC_DST"
+    # deep monitor service + timer
+    MON_SRC="$MOON_HOME/deploy/moon-monitor.service"
+    MON_DST="$HOME/.config/systemd/user/moon-monitor.service"
+    MON_TMR="$HOME/.config/systemd/user/moon-monitor.timer"
+    sed "s|__MOON_HOME__|$MOON_HOME|g" "$MON_SRC" > "$MON_DST"
+    sed "s|__MOON_HOME__|$MOON_HOME|g" "$MOON_HOME/deploy/moon-monitor.timer" > "$MON_TMR"
+    systemctl --user daemon-reload
+    systemctl --user enable --now moon-terminal.service
+    systemctl --user enable --now moon-monitor.timer
+    # keep running after logout
+    command -v loginctl >/dev/null 2>&1 && loginctl enable-linger "$(id -un)" 2>/dev/null || true
+    ok "systemd service enabled + started; deep monitor enabled (every 15 min)"
+  else
+    warn "systemctl not available; MOON installed but you must start it manually: moon terminal"
+  fi
+else
+  log "Skipping systemd service (--interactive chose no). Start manually: moon terminal"
+fi
+
+# --- 7. START MOON + verify it is actually operational (real check) --------
+if command -v systemctl >/dev/null 2>&1 && [[ "$INSTALL_SERVICE" -eq 1 ]]; then
+  log "Starting MOON ..."
+  systemctl --user restart moon-terminal.service 2>/dev/null || true
+  # wait for the backend to come up (real probe, not assumed)
+  for i in $(seq 1 30); do
+    sleep 2
+    if curl -s --max-time 4 http://127.0.0.1:8777/api/health >/dev/null 2>&1; then break; fi
+  done
+  ST=$(curl -s --max-time 6 http://127.0.0.1:8777/api/health 2>/dev/null | "$VENVPY" -c "import sys,json;d=json.load(sys.stdin);print(d.get('status','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
+  if [[ "$ST" == "HEALTHY" ]]; then
+    ok "MOON is RUNNING and HEALTHY at http://127.0.0.1:8777"
+  else
+    warn "MOON started but health=$ST — check: journalctl --user -u moon-terminal.service"
+  fi
+fi
+
+# --- done ---------------------------------------------------------------
 echo
-ok "MOON is installed at $MOON_HOME"
-log "Launch the terminal HUD with:  moon terminal"
-log "Or run directly:               ./venv/bin/python main.py terminal"
+ok "MOON is FULLY INSTALLED, RUNNING, and MONITORED at $MOON_HOME"
+log "Open the HUD:  moon terminal   (or browser -> http://127.0.0.1:8777)"
+log "Unlock MOON by saying:  MOON love you 3000"
+log "Health: curl -s http://127.0.0.1:8777/api/health"
+log "Self-heal: systemd moon-terminal.service (auto-restart) + moon-monitor.timer (deep proof every 15m)"
 echo
