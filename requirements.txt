@@ -34,5 +34,6 @@ kokoro-onnx>=0.2.1
 pytest>=8.0
 pytest-asyncio>=0.23
 
-# NOTE: the old Textual TUI / flask orb were removed; the terminal UI is
-# pure HTML/CSS/Canvas2D served by app.terminal_interface — no Python UI dep.
+# NOTE: the primary terminal UI is the pure HTML/CSS/Canvas2D HUD served by
+# app.terminal_interface (no Python UI dep). A separate beautiful Textual TUI
+# is available via `moon tui` (optional dep: textual, see requirements-optional.txt).

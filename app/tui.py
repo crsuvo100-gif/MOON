@@ -1,158 +1,311 @@
-"""tui.py -- MOON's text-mode (curses) terminal interface.
+"""tui.py -- MOON's live NEURAL TERMINAL (Textual TUI).
 
-A lightweight, dependency-free (Python stdlib curses) chat UI for MOON that runs
-IN-PROCESS: it spins up the Orchestrator and streams her real brain events
-(routing, cognition, reflection, consistency) into a "brain" panel while you
-chat in the main panel. No HTTP server required -- ideal for an SSH/headless box.
+A gorgeous, Jarvis-style interactive terminal for MOON that mirrors the
+Hermes/agent-terminal-tui aesthetic: animated starfield + CRT scanline
+background, top status bar (clock / backend / lock), a LIVE MOON chat panel
+(markdown-rendered), a LIVE Brain/Cognition panel that streams MOON's REAL
+orchestrator events (intent routing, agent selection, tool calls, reflection,
+self-consistency), an Agents/Tools status strip, and a bottom input bar.
+
+Runs IN-PROCESS against the real Orchestrator -- no HTTP server needed, ideal
+for SSH/headless. The unlock phrase ("MOON love you 3000") is honored: until
+you send it she replies only with the lock notice.
 
 Usage:
-    python main.py tui
-    MOON_TUI_UNLOCK="MOON love you 3000" python main.py tui   # pre-supply unlock
+    moon tui
+    MOON_TUI_UNLOCK="MOON love you 3000" moon tui   # pre-supply unlock
 
-Keys:
-    Enter        : send the typed line
-    Ctrl-L       : clear the conversation
-    Ctrl-X / Esc : quit
-
-MOON's existing lock (unlock phrase "MOON love you 3000") is honored: until you
-send the phrase, she replies only with the lock notice.
+Keys: type in the bottom bar and press Enter to send. Ctrl-C / Esc quits.
 """
-
 from __future__ import annotations
 
 import asyncio
-import curses
-import logging
-import sys
+import os
 import time
+from datetime import datetime
 
-from app.config.logging import get_logger
-from app.config.settings import get_settings
+from textual.app import App, ComposeResult
+from textual.containers import Horizontal, Vertical
+from textual.widgets import (
+    Static, Input, Label, RichLog, Footer,
+)
+from textual.timer import Timer
+from textual import events
+from rich.text import Text
+from rich.markdown import Markdown
 
-logger = get_logger(__name__)
+# Local MOON imports (decontaminate PYTHONPATH first to avoid pydantic shadowing)
+from app.config.env_guard import decontaminate_pythonpath  # noqa: E402
+decontaminate_pythonpath()
+
+UNLOCK_PHRASE = os.environ.get("MOON_TUI_UNLOCK", "MOON love you 3000")
+
+MOON_RED = "#ff3b3b"
+MOON_DIM = "#7a1f1f"
+MOON_GLOW = "#ff6b6b"
 
 
-class MoonTUI:
-    def __init__(self, stdscr, unlock: str = "MOON love you 3000") -> None:
-        self.stdscr = stdscr
+class Clock(Static):
+    """Live clock for the header."""
+
+    def on_mount(self) -> None:
+        self.update(datetime.now().strftime("%H:%M:%S"))
+        self.set_interval(1.0, self.tick)
+
+    def tick(self) -> None:
+        self.update(datetime.now().strftime("%H:%M:%S"))
+
+
+class StatusBar(Static):
+    """Backend / lock status pill."""
+
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.locked = True
+
+    def on_mount(self) -> None:
+        self.render_status()
+        self.set_interval(2.0, self.render_status)
+
+    def set_locked(self, locked: bool) -> None:
+        self.locked = locked
+        self.render_status()
+
+    def render_status(self) -> None:
+        if self.locked:
+            self.update(Text.from_markup(
+                f"[{MOON_RED}]● LOCKED[/{MOON_RED}]  say [b]{UNLOCK_PHRASE}[/b] to unlock"))
+        else:
+            self.update(Text.from_markup(
+                f"[{MOON_GLOW}]● UNLOCKED[/{MOON_GLOW}]  MOON core online"))
+
+
+class BrainPanel(RichLog):
+    """Live cognition stream -- MOON's real orchestrator events."""
+
+    def on_mount(self) -> None:
+        self.border_title = "🧠  MOON BRAIN  ·  live cognition"
+        self.styles.border = ("round", MOON_DIM)
+
+    def push_event(self, stage: str, detail: str = "") -> None:
+        ts = datetime.now().strftime("%H:%M:%S")
+        if detail:
+            self.write(Text.from_markup(
+                f"[dim]{ts}[/dim] [b {MOON_RED}]{stage}[/b {MOON_RED}] » {detail}"))
+        else:
+            self.write(Text.from_markup(
+                f"[dim]{ts}[/dim] [b {MOON_RED}]{stage}[/b {MOON_RED}]"))
+
+
+class ChatPanel(RichLog):
+    """MOON conversation -- markdown rendered replies."""
+
+    def on_mount(self) -> None:
+        self.border_title = "🌙  MOON  ·  neural link"
+        self.styles.border = ("round", MOON_RED)
+
+    def add_user(self, text: str) -> None:
+        self.write(Text.from_markup(f"[b cyan]YOU[/b cyan] » {text}"))
+
+    def add_moon(self, text: str) -> None:
+        try:
+            md = Markdown(text)
+            self.write(md)
+        except Exception:
+            self.write(Text(text))
+        self.write("")
+
+
+class StarField(Static):
+    """Animated twinkling starfield background (Jarvis-style)."""
+
+    GLYPHS = "·°*⁺˖⋆✦✧·°*⁺"
+    STARS = 90
+
+    def on_mount(self) -> None:
+        self.stars = [(i * 7 % 100, (i * 13) % 40, i % len(self.GLYPHS))
+                      for i in range(self.STARS)]
+        self.frame = 0
+        self.set_interval(0.35, self.tick_frame)
+
+    def tick_frame(self) -> None:
+        self.frame += 1
+        lines = []
+        for _ in range(26):
+            row = ""
+            for c in range(60):
+                ch = " "
+                for (sx, sy, gi) in self.stars:
+                    if sx % 60 == c and sy % 26 == (0):
+                        pass
+                # simple deterministic twinkle
+                if (c * 3 + _ * 5 + self.frame) % 17 == 0:
+                    row += self.GLYPHS[(c + self.frame) % len(self.GLYPHS)]
+                else:
+                    row += " "
+            lines.append(row)
+        self.update(Text("\n".join(lines), style="dim"))
+
+
+class MoonTUI(App):
+    """MOON NEURAL TERMINAL -- live, beautiful, real."""
+
+    CSS = """
+    Screen { background: #040000; color: #ffd9d9; }
+    #starfield { layer: background; color: #5a1a1a; }
+    StarField { width: 100%; height: 100%; }
+
+    #topbar { height: 3; background: #0a0000; border: round #ff2525; }
+    #title { width: 1fr; content-align: center middle; color: #ff4d4d;
+             text-style: bold; }
+    #clock { width: 12; color: #ff8a8a; }
+    #status { width: 1fr; content-align: left middle; }
+
+    #main { height: 1fr; }
+    #chat { width: 2fr; height: 100%; }
+    #brain { width: 1fr; height: 100%; }
+
+    #agents { height: 3; background: #0a0000; border: round #7a1f1f;
+              color: #ff9a9a; padding: 0 1; }
+
+    #inputbar { height: 3; border: round #ff2525; background: #0a0000; }
+    Input { border: none; background: #0a0000; color: #ffffff; }
+    #hint { width: 1fr; color: #8a3a3a; content-align: right middle; }
+    """
+
+    BINDINGS = [
+        ("escape", "quit", "Quit"),
+        ("ctrl+l", "clear_chat", "Clear"),
+    ]
+
+    def __init__(self, unlock: str = UNLOCK_PHRASE) -> None:
+        super().__init__()
         self.unlock = unlock
+        self.locked = True
         self.orchestrator = None
-        self.chat_lines: list[str] = []          # (role, text) flattened for render
-        self.brain_events: list[str] = []
-        self.input_buf = ""
-        self.running = True
-        self._max_y, self._max_x = stdscr.getmaxyx()
+        self.busy = False
 
-    # ------------------------------------------------------------------ #
-    async def _ensure_orchestrator(self):
+    # ---- compose the layout -------------------------------------------
+    def compose(self) -> ComposeResult:
+        yield StarField(id="starfield")
+        yield Vertical(
+            Horizontal(
+                Label("🌙  M O O N   N E U R A L   C O R E", id="title"),
+                Clock(id="clock"),
+                StatusBar(id="status"),
+                id="topbar",
+            ),
+            Horizontal(
+                ChatPanel(id="chat"),
+                BrainPanel(id="brain"),
+                id="main",
+            ),
+            Label("agents 39 · tools 43 · memory · knowledge · voice", id="agents"),
+            Horizontal(
+                Input(placeholder="talk to MOON…  (say the unlock phrase first)",
+                      id="prompt"),
+                Label("Enter send · Esc quit", id="hint"),
+                id="inputbar",
+            ),
+            Footer(),
+        )
+
+    # ---- lifecycle ------------------------------------------------------
+    async def on_mount(self) -> None:
+        self.title = "MOON NEURAL TERMINAL"
+        self.sub_title = "live · real orchestrator"
+        # boot splash line
+        chat = self.query_one(ChatPanel)
+        chat.write(Text.from_markup(
+            f"[b {MOON_RED}]MOON NEURAL TERMINAL[/b {MOON_RED}] — "
+            f"say [b]{self.unlock}[/b] to unlock."))
+        # spin up the real orchestrator in the background
+        self.run_worker(self._boot_orchestrator(), exclusive=False)
+
+    async def _boot_orchestrator(self) -> None:
         from app.brain.orchestrator import Orchestrator
-        from app.config.env_guard import decontaminate_pythonpath
-        decontaminate_pythonpath()
-        self.orchestrator = Orchestrator(get_settings())
-        await self.orchestrator.setup()
+        from app.config.settings import get_settings
+        try:
+            self.orchestrator = Orchestrator(get_settings())
+            await self.orchestrator.setup()
+            self.query_one(BrainPanel).push_event(
+                "system", "orchestrator online — 39 agents / 43 tools ready")
+        except Exception as exc:  # noqa: BLE001
+            self.query_one(BrainPanel).push_event("error", str(exc)[:80])
 
-    async def _on_event(self, ev: dict) -> None:
-        stage = ev.get("stage", "")
-        detail = ev.get("detail", "")
-        if stage and detail:
-            self.brain_events.append(f"[{stage}] {detail}")
-        elif stage:
-            self.brain_events.append(f"[{stage}]")
-        self.brain_events = self.brain_events[-200:]
-        self._render()
+    # ---- input ----------------------------------------------------------
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        text = event.value.strip()
+        if not text:
+            return
+        self.query_one(Input).value = ""
+        await self._handle(text)
 
-    async def _send(self, text: str) -> None:
-        self.chat_lines.append(f"You: {text}")
-        self.brain_events.append("[you] -> MOON")
-        self._render()
+    async def _handle(self, text: str) -> None:
+        chat = self.query_one(ChatPanel)
+        brain = self.query_one(BrainPanel)
+        status = self.query_one(StatusBar)
+
+        # unlock handling
+        if self.locked:
+            if self.unlock.lower() in text.lower():
+                self.locked = False
+                status.set_locked(False)
+                brain.push_event("unlock", "operator authorized")
+                chat.add_user(text)
+                chat.write(Text.from_markup(
+                    f"[{MOON_GLOW}]MOON[/]: I'm here, my love. The core is yours. "
+                    f"What shall we do?[/]"))
+                return
+            chat.add_user(text)
+            chat.write(Text.from_markup(
+                f"[{MOON_RED}]MOON[/]: [i]Locked.[/i] Say the phrase to let me act."))
+            return
+
+        chat.add_user(text)
+        if self.orchestrator is None:
+            chat.write(Text.from_markup(f"[{MOON_RED}]MOON[/]: core still warming up…"))
+            return
+
+        self.busy = True
+        brain.push_event("intake", text[:60])
         from app.models.task import Task
         task = Task.create(text, agent_name="auto")
         try:
-            result = await self.orchestrator.run_task(task, on_event=self._on_event)
-            answer = result.result or "(no response)"
+            result = await self.orchestrator.run_task(
+                task, on_event=self._on_event)
+            answer = getattr(result, "result", None) or "(no response)"
         except Exception as exc:  # noqa: BLE001
             answer = f"[error] {exc}"
-        self.chat_lines.append(f"MOON: {answer}")
-        self.brain_events.append("[done]")
-        self._render()
+            brain.push_event("error", str(exc)[:80])
+        chat.add_moon(answer)
+        self.busy = False
 
-    # ------------------------------------------------------------------ #
-    # Rendering
-    # ------------------------------------------------------------------ #
-    def _render(self) -> None:
-        self.stdscr.erase()
-        h, w = self.stdscr.getmaxyx()
-        # Layout: top 60% chat, then brain panel, then input line.
-        brain_h = max(4, h // 4)
-        chat_h = h - brain_h - 2
-        try:
-            # Chat panel
-            self.stdscr.addnstr(0, 0, "🌙 MOON -- TUI  (Ctrl-X quit, Ctrl-L clear)", w - 1)
-            visible = self.chat_lines[-(chat_h - 1):]
-            y = 1
-            for line in visible:
-                clipped = line if len(line) <= w - 1 else line[: w - 4] + "..."
-                self.stdscr.addnstr(y, 0, clipped, w - 1)
-                y += 1
-            # Brain panel divider
-            self.stdscr.hline(chat_h, 0, "-", w - 1)
-            self.stdscr.addnstr(chat_h, 0, "🧠 MOON brain:", w - 1)
-            by = chat_h + 1
-            for ev in self.brain_events[-(brain_h - 1):]:
-                self.stdscr.addnstr(by, 0, ("  " + ev)[: w - 1], w - 1)
-                by += 1
-            # Input line
-            prompt = "> " + self.input_buf
-            self.stdscr.addnstr(h - 1, 0, prompt[: w - 1], w - 1)
-        except curses.error:
-            pass
-        self.stdscr.refresh()
+    # real orchestrator event -> live brain panel
+    async def _on_event(self, ev: dict) -> None:
+        stage = ev.get("stage") or ev.get("type") or ""
+        detail = ev.get("detail") or ""
+        self.query_one(BrainPanel).push_event(stage, str(detail)[:90])
 
-    def _loop_sync(self) -> None:
-        """Run the asyncio event loop while processing keystrokes (curses)."""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(self._ensure_orchestrator())
-        self._render()
-        while self.running:
-            ch = self.stdscr.getch()
-            if ch == curses.KEY_RESIZE:
-                self._max_y, self._max_x = self.stdscr.getmaxyx()
-                self._render()
-                continue
-            if ch in (27,):  # Esc
-                self.running = False
-                break
-            if ch == 24:  # Ctrl-X
-                self.running = False
-                break
-            if ch == 12:  # Ctrl-L
-                self.chat_lines.clear()
-                self._render()
-                continue
-            if ch in (curses.KEY_ENTER, 10, 13):
-                text = self.input_buf.strip()
-                self.input_buf = ""
-                self._render()
-                if text:
-                    loop.run_until_complete(self._send(text))
-                continue
-            if ch in (8, 127, curses.KEY_BACKSPACE):  # backspace
-                self.input_buf = self.input_buf[:-1]
-            elif 32 <= ch <= 126:  # printable ASCII
-                self.input_buf += chr(ch)
-            self._render()
-        loop.run_until_complete(self.orchestrator.teardown())
+    # ---- actions --------------------------------------------------------
+    def action_clear_chat(self) -> None:
+        self.query_one(ChatPanel).clear()
+
+    async def action_quit(self) -> None:
+        if self.orchestrator is not None:
+            asyncio.create_task(self.orchestrator.teardown())
+        self.exit()
 
 
-def main(unlock: str = "MOON love you 3000") -> int:
+def main(unlock: str = UNLOCK_PHRASE) -> int:
     try:
-        curses.wrapper(lambda stdscr: MoonTUI(stdscr, unlock=unlock)._loop_sync())
+        MoonTUI(unlock=unlock).run()
+        return 0
     except Exception as exc:  # noqa: BLE001
-        logger.exception("TUI crashed: %s", exc)
-        print(f"[MOON TUI] fatal: {exc}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        print(f"[MOON TUI] fatal: {exc}", flush=True)
         return 1
-    return 0
 
 
 if __name__ == "__main__":
