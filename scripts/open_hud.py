@@ -117,11 +117,31 @@ def _display_size():
 
 
 def open_hud():
+    # Atomic single-instance guard: refuse to open a second window if one is
+    # already recorded (or if a previous invocation is mid-launch). We create
+    # the lockfile up-front (with a sentinel) BEFORE spawning Chrome so two
+    # near-simultaneous callers cannot both pass the check and stack windows.
+    try:
+        if _hud_alive():
+            return None  # a HUD window already exists -- don't duplicate
+        # claim the lock immediately so a concurrent caller sees it
+        with open(LOCK, "w") as fh:
+            fh.write("launching")
+    except Exception:
+        pass
     disp, wayland = _detect_display()
     if not (disp or wayland):
+        try:
+            os.remove(LOCK)
+        except Exception:
+            pass
         return None  # no graphical display -> nothing to do (headless/SSH)
     chrome = _detect_browser()
     if not chrome:
+        try:
+            os.remove(LOCK)
+        except Exception:
+            pass
         return None
     url = _load_url()
     # GPU-ACCELERATED rendering (fixes the dominant display-blink cause): the
@@ -147,6 +167,10 @@ def open_hud():
                                 stderr=subprocess.DEVNULL,
                                 start_new_session=True)
     except Exception:
+        try:
+            os.remove(LOCK)
+        except Exception:
+            pass
         return None
     try:
         with open(LOCK, "w") as fh:
