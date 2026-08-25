@@ -19,7 +19,7 @@ import pytest
 
 
 # --------------------------------------------------------------------------- #
-# TUI
+# TUI  (live Textual NEURAL TERMINAL)
 # --------------------------------------------------------------------------- #
 def test_tui_module_importable_and_class_present():
     m = importlib.import_module("app.tui")
@@ -27,17 +27,19 @@ def test_tui_module_importable_and_class_present():
     assert callable(getattr(m, "main"))
 
 
-def test_tui_construct_without_curses_draw():
-    # Build a fake curses stdscr so MoonTUI can be constructed off a real terminal.
-    fake = types.SimpleNamespace(getmaxyx=lambda: (24, 80), erase=lambda: None,
-                                 addnstr=lambda *a, **k: None, hline=lambda *a, **k: None,
-                                 refresh=lambda: None, getch=lambda: 27)
+def test_tui_construct_without_terminal():
+    # The Textual TUI must be constructible off a real terminal (headless),
+    # mirroring the old curses TUI's "constructible without drawing" contract.
     from app.tui import MoonTUI
-    tui = MoonTUI(fake)
+    tui = MoonTUI(unlock="MOON love you 3000")
     assert tui.unlock == "MOON love you 3000"
-    # A queued chat line should render without raising.
-    tui.chat_lines.append("You: hi")
-    tui._render()
+    assert tui.locked is True
+    # compose() must yield real widgets without raising (off-TTY safe).
+    widgets = list(tui.compose())
+    assert len(widgets) >= 1
+    # The chat/brain panels exist as queryable attributes after mount would,
+    # but at minimum the app object is coherent.
+    assert tui.orchestrator is None  # not booted until mount
 
 
 # --------------------------------------------------------------------------- #
