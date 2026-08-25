@@ -33,7 +33,7 @@ class Settings(BaseSettings):
         default="http://127.0.0.1:11434/v1",
         description="Base URL of an OpenAI-compatible model endpoint you operate.",
     )
-    model_name: str = Field(default="qwen3:0.6b", description="Model id to request.")
+    model_name: str = Field(default="qwen2.5:3b", description="Model id to request (default local Ollama model).")
     model_api_key: str = Field(
         default="not-required-for-local",
         description="API key; most local endpoints ignore this.",
