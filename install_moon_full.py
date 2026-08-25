@@ -174,10 +174,26 @@ def ensure_env_file():
 # 4. Ollama + models
 # --------------------------------------------------------------------------
 def install_ollama_and_models():
+    # Auto-install the Ollama binary if missing so the one-click installer is
+    # truly complete on a fresh machine (don't just warn and leave MOON
+    # without a model backend).
     if not shutil.which("ollama"):
-        warn("ollama not found on PATH. Install Ollama (https://ollama.com) then "
-             "run: ollama pull qwen3:0.6b")
-        warn("MOON will start but cannot reason without a model backend.")
+        installer = ROOT / "scripts" / "install_ollama.py"
+        if installer.exists():
+            log("Ollama not found -- auto-installing via scripts/install_ollama.py ...")
+            try:
+                subprocess.run([sys.executable, str(installer)],
+                               env=_env(), check=False)
+            except Exception as exc:  # noqa: BLE001
+                warn(f"Ollama auto-install failed: {exc}")
+        else:
+            warn("ollama not found and scripts/install_ollama.py missing. "
+                 "Install Ollama (https://ollama.com) then run: ollama pull qwen3:0.6b")
+            warn("MOON will start but cannot reason without a model backend.")
+            return
+    if not shutil.which("ollama"):
+        warn("Ollama still not available after install attempt. "
+             "MOON will start but needs a model backend to reason.")
         return
     # ensure running
     def _up():
@@ -198,7 +214,7 @@ def install_ollama_and_models():
     for m in REQUIRED_MODELS:
         log(f"Pulling model: {m}")
         _run(["ollama", "pull", m])
-    ok("Ollama models pulled")
+    ok("Ollama installed + models pulled")
 
 
 # --------------------------------------------------------------------------
