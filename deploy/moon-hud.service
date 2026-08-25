@@ -1,0 +1,20 @@
+[Unit]
+Description=MOON HUD window keeper (reopens the NEURAL CORE window if closed)
+After=network-online.target moon-terminal.service
+Wants=network-online.target
+Requires=moon-terminal.service
+PartOf=moon-terminal.service
+
+[Service]
+Type=simple
+WorkingDirectory=__MOON_HOME__
+Environment=PYTHONPATH=
+# Keeper loop: opens one HUD window, then reopens it if the user closes it.
+ExecStart=__MOON_HOME__/.venv/bin/python __MOON_HOME__/scripts/open_hud.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

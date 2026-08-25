@@ -10,6 +10,11 @@ WorkingDirectory=__MOON_HOME__
 # (main.py start only spawns uvicorn as a child, leaving the parent in the
 # 'activating' state). This makes the unit report 'active' cleanly.
 ExecStart=__MOON_HOME__/.venv/bin/python -m uvicorn app.terminal_interface:app --host 0.0.0.0 --port 8777 --log-level info
+# Open the visible NEURAL CORE HUD window once after the backend starts.
+# --once so this returns and the unit reaches 'active' (the keeper loop that
+# reopens the window if closed lives in moon-hud.service). open_hud.py is
+# idempotent (one window, GPU-accelerated) and never touches :8777.
+ExecStartPost=__MOON_HOME__/.venv/bin/python __MOON_HOME__/scripts/open_hud.py --once
 # Clear PYTHONPATH so the broken system Python path can't shadow MOON's venv
 Environment=PYTHONPATH=
 # Auto-restart on crash / exit so the terminal always comes back

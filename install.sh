@@ -183,8 +183,13 @@ if [[ "$INSTALL_SERVICE" -eq 1 ]]; then
     MON_TMR="$HOME/.config/systemd/user/moon-monitor.timer"
     sed "s|__MOON_HOME__|$MOON_HOME|g" "$MON_SRC" > "$MON_DST"
     sed "s|__MOON_HOME__|$MOON_HOME|g" "$MOON_HOME/deploy/moon-monitor.timer" > "$MON_TMR"
+    # HUD window keeper (opens + reopens the visible NEURAL CORE window)
+    HUD_SRC="$MOON_HOME/deploy/moon-hud.service"
+    HUD_DST="$HOME/.config/systemd/user/moon-hud.service"
+    sed "s|__MOON_HOME__|$MOON_HOME|g" "$HUD_SRC" > "$HUD_DST"
     systemctl --user daemon-reload
     systemctl --user enable --now moon-terminal.service
+    systemctl --user enable --now moon-hud.service
     systemctl --user enable --now moon-monitor.timer
     # keep running after logout
     command -v loginctl >/dev/null 2>&1 && loginctl enable-linger "$(id -un)" 2>/dev/null || true

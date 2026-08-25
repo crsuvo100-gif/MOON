@@ -157,6 +157,24 @@ def open_hud():
 
 
 def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--once", action="store_true",
+                   help="open the HUD window once and exit (used by the "
+                        "systemd ExecStartPost hook so the unit reaches "
+                        "'active' instead of blocking on the keeper loop)")
+    args = ap.parse_args()
+
+    if args.once:
+        # Open exactly one window (idempotent via lockfile) and return.
+        _wait_backend(timeout=90)
+        pid = open_hud()
+        if pid:
+            print(f"[moon-hud] opened HUD window (chrome pid {pid})", flush=True)
+        else:
+            print("[moon-hud] no display/browser available; skipping", flush=True)
+        return
+
     # Give the backend a moment to come up before the first open.
     _wait_backend(timeout=90)
     while True:

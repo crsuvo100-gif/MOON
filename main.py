@@ -283,8 +283,24 @@ def _run_terminal() -> None:
             s.close()
 
     if _port_busy(PORT):
-        print(f"🌙 MOON backend already listening on :{PORT} "
+        print(f"\U0001F319 MOON backend already listening on :{PORT} "
               f"-- attaching HUD only (not spawning a 2nd backend).")
+        # The backend is already up: open (or focus) the visible HUD window
+        # instead of just exiting. open_hud() is idempotent (one window, GPU
+        # accelerated) and never touches :8777, so it's safe to call here.
+        try:
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from scripts.open_hud import open_hud
+            pid = open_hud()
+            if pid:
+                print(f"\U0001F319 HUD window opened (chrome pid {pid}). "
+                      f"Open http://{HOST}:{PORT}/ if no window appears.")
+            else:
+                print(f"\U0001F319 No display/browser detected -- open "
+                      f"http://{HOST}:{PORT}/ manually in your browser.")
+        except Exception as e:  # noqa: BLE001
+            print(f"\U0001F319 Could not auto-open HUD ({e}); "
+                  f"open http://{HOST}:{PORT}/ manually.")
         return 0
 
     print(f"🌙 MOON Terminal starting at http://0.0.0.0:{PORT}  (LAN: http://<this-host-ip>:{PORT})")
