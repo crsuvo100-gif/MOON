@@ -1137,8 +1137,9 @@ class Orchestrator:
         registry = getattr(self._tools, "_registry", None)
         if registry is None:
             return None
-        tool_names = getattr(registry, "tool_names", [])
-        # Map common request phrases to a registered tool.
+        tool_names = list(getattr(registry, "tool_names", []))
+        # Map common request phrases to a registered tool (kept for the
+        # special-case arg builders below).
         aliases = {
             "python_executor": ["python_executor", "run code", "execute code", "run python", "execute python", "compute"],
             "file_manager": ["file_manager", "write a file", "read the file", "list files", "create file"],
@@ -1147,13 +1148,44 @@ class Orchestrator:
             "git_tool": ["git_tool", "git "],
         }
         chosen = None
+        # 1) Direct mention of any registered tool name in the prompt.
         for tname in tool_names:
-            for kw in aliases.get(tname, []):
-                if kw in prompt:
-                    chosen = tname
-                    break
-            if chosen:
+            if tname.lower() in prompt:
+                chosen = tname
                 break
+        # 2) Alias phrase match (the 5 special cases above).
+        if chosen is None:
+            for tname in tool_names:
+                for kw in aliases.get(tname, []):
+                    if kw in prompt:
+                        chosen = tname
+                        break
+                if chosen:
+                    break
+        # 3) Keyword match against the registry's real tool descriptions so the
+        #    brain can deterministically run ANY of the 43 tools when the small
+        #    local model narrates instead of emitting OpenAI-style tool_calls.
+        if chosen is None:
+            import re as _re
+            # tokenise the prompt into words (drop very short/trivial tokens)
+            words = set(_re.findall(r"[a-z0-9_]+", prompt))
+            best, best_score = None, 0
+            for tname in tool_names:
+                card = registry.tool_meta.get(tname) if hasattr(registry, "tool_meta") else None
+                desc = (getattr(card, "description", "") or "").lower()
+                score = 0
+                # match on tool name tokens
+                for tok in _re.findall(r"[a-z0-9_]+", tname.lower()):
+                    if len(tok) >= 4 and tok in words:
+                        score += 2
+                # match on description keywords present in the prompt
+                for kw in _re.findall(r"[a-z0-9_]{4,}", desc):
+                    if kw in words:
+                        score += 1
+                if score > best_score:
+                    best, best_score = tname, score
+            if best_score >= 2:
+                chosen = best
         if chosen is None:
             return None
         # Build minimal args from the prompt (best-effort, safe).
