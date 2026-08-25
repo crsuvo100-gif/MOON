@@ -798,7 +798,7 @@ function wsSend(o){ if(ws && ws.readyState===1){ if(o.action) lastAction=o.actio
 function connect(){
   const pr=location.protocol==="https:"?"wss":"ws";
   ws=new WebSocket(`${pr}://${location.host}/ws`);
-  ws.onopen=()=>{ addLog("[CORE] Quantum link handshake complete."); wsSend({action:"status"}); wsSend({action:"log_stream"}); };
+  ws.onopen=()=>{ addLog("[CORE] Quantum link handshake complete."); wsSend({action:"status"}); wsSend({action:"log_stream"}); runBoot(); };
   ws.onmessage=e=>{ let m; try{m=JSON.parse(e.data);}catch(_){return;} handle(m); };
   ws.onerror=()=>addLog("[NETWORK] socket error");
   ws.onclose=()=>{ addLog("[NETWORK] link closed — retrying…"); setTimeout(connect,3000); };
@@ -1447,10 +1447,12 @@ if(typeof window.MOON_UI!=="undefined"){
     if(ws && ws.readyState===1){
       wsSend({action:"status"});
       tries++;
-      if(tries>3 && document.getElementById("boot")){
-        // safety: if boot never cleared, force-reveal the HUD
+      if(tries>1 && document.getElementById("boot")){
+        // safety: if boot never cleared, force-reveal the HUD (unconditionally,
+        // after a short grace period) so the terminal is never stuck on the
+        // near-black boot overlay.
         const b=document.getElementById("boot");
-        if(b && getComputedStyle(b).display!=="none"){ b.classList.add("gone"); setTimeout(()=>b.remove(),900); }
+        if(b){ b.classList.add("gone"); setTimeout(()=>b.remove(),900); }
       }
     }
   }, 3000);
