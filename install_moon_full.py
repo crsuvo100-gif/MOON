@@ -111,8 +111,12 @@ def make_venv() -> str:
         ok("venv created")
     _run([py, "-m", "pip", "install", "--quiet", "--upgrade", "pip", "wheel", "setuptools"])
     req = ROOT / "requirements.txt"
-    log("Installing CORE dependencies (req^ui^res.txt) ...")
-    r = _run([py, "-m", "pip", "install", "-r", str(req)])
+    log("Installing CORE dependencies (requirements.txt) ...")
+    # The PyTorch CPU index is required so the pinned torch==2.6.0+cpu /
+    # torchaudio==2.6.0+cpu wheels resolve on GPU-less hosts (otherwise pip
+    # cannot find the +cpu build and a CUDA torchaudio may break F5-TTS).
+    r = _run([py, "-m", "pip", "install", "-r", str(req),
+              "--extra-index-url", "https://download.pytorch.org/whl/cpu"])
     if r.returncode != 0:
         err("core dependency install failed -- MOON cannot run without them.")
         sys.exit(1)

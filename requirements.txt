@@ -30,6 +30,14 @@ scipy>=1.11
 # fetched at install time by install_moon.py (or on first voice use).
 kokoro-onnx>=0.2.1
 
+# CPU-only torch/torchaudio (pinned + CPU wheels) -- REQUIRED so installs on
+# GPU-less hosts never pull a CUDA-built torchaudio that dlopen()s the missing
+# libcudart.so.13 and hard-crashes F5-TTS voice cloning. The PyTorch CPU index
+# below must be supplied at install time (see install.sh / install_moon_full.py).
+# NOTE: keep these two on the SAME minor as the pinned torch above.
+torch==2.6.0+cpu
+torchaudio==2.6.0+cpu
+
 # Testing / quality
 pytest>=8.0
 pytest-asyncio>=0.23
