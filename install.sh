@@ -25,7 +25,7 @@ set -euo pipefail
 MOON_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$MOON_HOME"
 
-# --- colours --------------------------------------------------------------
+# --- colours + logging (defined early so the wizard step can use them) ---
 if [[ -t 1 ]]; then
   R=$'\033[31m'; G=$'\033[32m'; Y=$'\033[33m'; B=$'\033[36m'; N=$'\033[0m'
 else R=""; G=""; Y=""; B=""; N=""; fi
@@ -34,10 +34,32 @@ ok(){ printf '%s[OK]%s  %s\n' "$G" "$N" "$1"; }
 warn(){ printf '%s[!!]%s  %s\n' "$Y" "$N" "$1"; }
 err(){ printf '%s[XX]%s  %s\n' "$R" "$N" "$1"; }
 
-# --- 1. Python check ------------------------------------------------------
+# Minimal python detection (enough to run the wizard before the full check).
 PY_BIN="$(command -v python3 || true)"
 if [[ -z "$PY_BIN" ]]; then err "python3 not found. Install Python >= 3.10 first."; exit 1; fi
-PY_VER="$("$PY_BIN" -c 'import sys;print("%d.%d"%sys.version_info[:2])')"
+PY_VER="$($PY_BIN -c 'import sys;print("%d.%d"%sys.version_info[:2])')"
+
+# --- 0. Setup wizard (first-run, interactive) -------------------------
+# On a fresh install (.env absent) launch the setup wizard so the operator
+# configures MOON's model backend / keys / safety boundary up front -- like
+# other AI agents do. Pass --yes to skip straight to recommended defaults
+# (true one-click). If .env already exists we keep it and don't re-prompt.
+if [[ ! -f "$MOON_HOME/.env" ]]; then
+  if [[ "${1:-}" == "--yes" || "${1:-}" == "-y" ]]; then
+    log "No .env found -- running setup wizard in non-interactive (defaults) mode."
+    "$PY_BIN" setup_wizard.py --yes || true
+  elif [[ -t 0 && -t 1 && -n "$PY_BIN" ]]; then
+    log "First run: launching MOON Setup Wizard ..."
+    "$PY_BIN" setup_wizard.py || true
+  else
+    log "Non-interactive shell and no .env -- using wizard defaults."
+    "$PY_BIN" setup_wizard.py --yes || true
+  fi
+else
+  log "Existing .env found -- skipping setup wizard (keeping your config)."
+fi
+
+# --- colours --------------------------------------------------------------
 if [[ "$(printf '%s\n' "$PY_VER" "3.10" | sort -V | head -1)" != "3.10" ]]; then
   err "Python $PY_VER found, but MOON needs >= 3.10."; exit 1
 fi
