@@ -1,15 +1,23 @@
 [Unit]
 Description=MOON HUD window keeper (reopens the NEURAL CORE window if closed)
 After=network-online.target moon-terminal.service
-Wants=network-online.target
-Requires=moon-terminal.service
-PartOf=moon-terminal.service
+Wants=network-online.target moon-terminal.service
+# NOTE: intentionally NOT "Requires"/"PartOf" moon-terminal.service. If the
+# backend restarts (crash or the deep monitor's heal), we must NOT kill the
+# HUD keeper with it -- otherwise the visible terminal window flaps/never
+# opens. The keeper simply waits for the backend to return.
 
 [Service]
 Type=simple
 WorkingDirectory=__MOON_HOME__
+# Clear PYTHONPATH so the broken system Python path can't shadow MOON's venv.
 Environment=PYTHONPATH=
-# Keeper loop: opens one HUD window, then reopens it if the user closes it.
+# The HUD opens a real X11 window. A user service started at login may not
+# inherit DISPLAY, so set it explicitly (Kali/X11 uses :0). On Wayland-only
+# sessions this is harmless; open_hud.py also probes WAYLAND_DISPLAY.
+Environment=DISPLAY=:0
+# Keeper loop: opens one HUD window, then reopens it if the user closes it
+# (or if the display becomes available after a late graphical login).
 ExecStart=__MOON_HOME__/.venv/bin/python __MOON_HOME__/scripts/open_hud.py
 Restart=on-failure
 RestartSec=5
