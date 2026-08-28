@@ -35,8 +35,8 @@ kokoro-onnx>=0.2.1
 # libcudart.so.13 and hard-crashes F5-TTS voice cloning. The PyTorch CPU index
 # below must be supplied at install time (see install.sh / install_moon_full.py).
 # NOTE: keep these two on the SAME minor as the pinned torch above.
-torch==2.6.0+cpu
-torchaudio==2.6.0+cpu
+torch==2.9.0+cpu
+torchaudio==2.9.0+cpu
 
 # Testing / quality
 pytest>=8.0

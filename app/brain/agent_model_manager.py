@@ -92,7 +92,10 @@ AGENT_MODELS: dict[str, str | None] = {
     # --- Coordination / meta -----------------------------------------------
     "planning": _M_CPU,
     "coordinator": _M_CPU,
-    "manager": _M_CPU,
+    # manager does orchestration/planning -> give it a DISTINCT reasoning model
+    # (not the global default) so per-agent binding is meaningful; deepseek-r1
+    # is pulled on CPU and improves planning accuracy.
+    "manager": _M_REASON,
     "router": _M_TINY,          # pure classification -> smallest/fastest
     "review": _M_CPU,
     "critic": _M_CPU,

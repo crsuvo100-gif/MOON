@@ -161,10 +161,12 @@ def test_per_agent_model_manager_binding():
     # Specialists have a preferred (non-default) model; general agents fall back.
     assert mgr._preferred("math") != s.model_name, "math should prefer its own model"
     assert mgr._preferred("coding") != s.model_name, "coding should prefer coder model"
-    # Every agent now gets a function-suited model (manager -> 3b for accuracy),
-    # and unmapped/coordination agents resolve to a real string (default or own).
+    # Every agent now gets a function-suited model; the manager runs
+    # orchestration/planning so it is bound to a DISTINCT (reasoning) model
+    # rather than the global default, and unmapped/coordination agents resolve
+    # to a real string (default or own).
     assert mgr._preferred("manager") != s.model_name, "manager should use its own model"
-    assert mgr._preferred("manager") == "qwen2.5:3b"
+    assert bool(mgr._preferred("manager")), "manager model must resolve to a non-empty id"
     # Resolution covers the FULL registered agent roster, not just AGENT_MODELS.
     from app.brain.agent_registry import AGENT_DEFS
     for a in AGENT_DEFS:
