@@ -223,7 +223,7 @@ class Orchestrator:
         )
         stm = ShortTermMemory()
         ltm = LongTermMemory(path=f"{self._settings.log_dir}/long_term.jsonl")
-        store = InMemoryVectorStore(dim=ecfg.dim)
+        store = InMemoryVectorStore()
         kb = KnowledgeBase(store, self._embeddings)
         self._memory = MemoryManager(short_term=stm, long_term=ltm, knowledge_base=kb)
         await self._memory.setup()
