@@ -149,14 +149,18 @@ def open_hud():
     # software rasterizer. On a non-composited X11 desktop a full-screen,
     # canvas-heavy page rendered in software drops frames and strobes. We now
     # let Chrome use the real Intel GPU (ANGLE/GL via Mesa) + GPU compositing.
+    # NOTE: do NOT pass both --start-maximized and --window-size -- on several
+    # window managers that combination collapses the window to a tiny 10x10
+    # box. Use --window-size (true native resolution) + --window-position=0,0
+    # so the HUD always opens full and on-screen.
     args = [chrome, "--disable-setuid-sandbox",
             "--enable-gpu", "--ignore-gpu-blocklist",
             "--enable-gpu-compositing", "--enable-gpu-rasterization",
             "--use-gl=angle", "--use-angle=gl",
-            f"--app={url}", "--start-maximized",
+            f"--app={url}",
             "--disable-infobars", "--no-first-run", "--no-default-browser-check"]
     w, h = _display_size()
-    args += [f"--window-size={w},{h}"]
+    args += [f"--window-size={w},{h}", "--window-position=0,0"]
     if wayland:
         args += ["--ozone-platform=wayland", f"--wayland-display={wayland}"]
     if disp:
