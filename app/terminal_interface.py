@@ -323,6 +323,17 @@ async def moon_core_webp():
     return HTMLResponse("<svg/>", status_code=404)
 
 
+@app.get("/moon_core_transparent.webp")
+async def moon_core_transparent_webp():
+    # Same 3D sphere with its violet/blue background chroma-keyed to transparent
+    # (orb only) -- used when Settings -> core_bg = transparent. Separate asset so
+    # the default full-background core is untouched.
+    f = WEB_DIR / "assets" / "moon_core_transparent.webp"
+    if f.exists():
+        return FileResponse(str(f), media_type="image/webp")
+    return HTMLResponse("<svg/>", status_code=404)
+
+
 @app.get("/moon_fiery.jpg")
 async def moon_fiery_jpg():
     # Dim fiery holographic-sphere backdrop behind the red/black HUD.

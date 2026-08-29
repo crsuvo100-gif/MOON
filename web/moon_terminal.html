@@ -629,6 +629,12 @@ footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;d
         </select></div>
       <div class="ovRow"><label>Core glow intensity</label>
         <input id="setGlow" type="range" min="0.2" max="2" step="0.1" value="1" style="width:100%"></div>
+      <div class="ovRow"><label>Core background</label>
+        <div class="ratioGrid" id="setCoreBg" style="grid-template-columns:repeat(3,1fr)">
+          <button class="ratio" data-b="auto">AUTO (blend)</button>
+          <button class="ratio" data-b="transparent">TRANSPARENT</button>
+          <button class="ratio" data-b="solid">SOLID</button>
+        </div></div>
     </fieldset>
     <div class="ovRow setActions">
       <button class="ovBtn" onclick="saveSettings()">SAVE</button>
@@ -1082,6 +1088,10 @@ async function loadSettingsUI(){
   el("setIdle").value=idle;
   const glow=String(s.core_glow!=null?s.core_glow:localStorage.getItem("moon-ui-glow")||"1");
   if(el("setGlow")) el("setGlow").value=glow;
+  // core background treatment
+  _coreBg = (s.core_bg||localStorage.getItem("moon-ui-corebg")||"auto");
+  $$("#setCoreBg .ratio").forEach(b=>b.classList.toggle("sel", b.dataset.b===_coreBg));
+  applyCoreBg();
   // aspect selection
   $$("#setAspect .ratio").forEach(b=>b.classList.toggle("sel", b.dataset.r===aspect));
   // avatar selection
@@ -1106,6 +1116,11 @@ $$("#setAvatar .ratio").forEach(b=>b.onclick=()=>{
 $$("#setRes .ratio").forEach(b=>b.onclick=()=>{
   $$("#setRes .ratio").forEach(x=>x.classList.remove("sel")); b.classList.add("sel");
   _resolution=b.dataset.r; applyResolution(); localStorage.setItem("moon-ui-resolution",_resolution);
+});
+// core background pick inside settings
+$$("#setCoreBg .ratio").forEach(b=>b.onclick=()=>{
+  $$("#setCoreBg .ratio").forEach(x=>x.classList.remove("sel")); b.classList.add("sel");
+  _coreBg=b.dataset.b; applyCoreBg(); localStorage.setItem("moon-ui-corebg",_coreBg);
 });
 // core glow slider (live)
 const _glowEl=el("setGlow");
@@ -1133,6 +1148,18 @@ function applyResolution(){
   const app=el("app"); if(!app) return;
   app.classList.toggle("hd", _resolution!=="compact");
 }
+// Core background treatment (adjustable, non-destructive to the asset):
+//  auto       -> keep full-bg image but CSS screen-blend so the violet bg dissolves
+//                into the dark HUD (invisible / matched). DEFAULT.
+//  transparent -> swap to the keyed orb-only WebP (true alpha).
+//  solid       -> full file as-is.
+let _coreBg = (localStorage.getItem("moon-ui-corebg")||"auto");
+function applyCoreBg(){
+  const orb=el("fusionOrb"); if(!orb) return;
+  if(_coreBg==="transparent"){ orb.src="/moon_core_transparent.webp"; orb.style.mixBlendMode="normal"; }
+  else if(_coreBg==="solid"){ orb.src="/moon_core.webp"; orb.style.mixBlendMode="normal"; }
+  else { orb.src="/moon_core.webp"; orb.style.mixBlendMode="screen"; } // auto: blend bg into dark HUD
+}
 let _resolution = (localStorage.getItem("moon-ui-resolution")||"hd");
 function collectSettings(){
   return {
@@ -1146,6 +1173,7 @@ function collectSettings(){
     resolution: ($$("#setRes .ratio.sel")[0]||{}).dataset?.r || _resolution,
     core_glow: parseFloat(el("setGlow").value)||1,
     idle_speed: parseFloat(el("setIdle").value)||1,
+    core_bg: ($$("#setCoreBg .ratio.sel")[0]||{}).dataset?.b || _coreBg,
   };
 }
 async function saveSettings(){
@@ -1162,7 +1190,7 @@ async function saveSettings(){
 }
 function applySettingsNow(){
   const s=collectSettings();
-  setAspect(s.aspect); applyAvatarMode(); applyResolution();
+  setAspect(s.aspect); applyAvatarMode(); applyResolution(); applyCoreBg();
   coreGlow = s.core_glow||1; localStorage.setItem("moon-ui-glow",String(coreGlow));
   const app=el("app"); if(app) app.style.setProperty("--idle-speed", s.idle_speed);
   const sweep=document.querySelector(".sweep"); if(sweep) sweep.style.animationDuration=(7/s.idle_speed)+"s";
@@ -1173,9 +1201,9 @@ function applySettingsNow(){
 }
 function resetSettings(){
   fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({host:"127.0.0.1",port:8777,display:"",browser:"",autostart:true,aspect:"auto",avatar_mode:"fusion",resolution:"hd",core_glow:1.0,idle_speed:1})})
+    body:JSON.stringify({host:"127.0.0.1",port:8777,display:"",browser:"",autostart:true,aspect:"auto",avatar_mode:"fusion",resolution:"hd",core_glow:1.0,idle_speed:1,core_bg:"auto"})})
     .catch(()=>{});
-  localStorage.removeItem("moon-ui-ratio"); localStorage.removeItem("moon-ui-idle-speed"); localStorage.removeItem("moon-ui-avatar"); localStorage.removeItem("moon-ui-resolution"); localStorage.removeItem("moon-ui-glow");
+  localStorage.removeItem("moon-ui-ratio"); localStorage.removeItem("moon-ui-idle-speed"); localStorage.removeItem("moon-ui-avatar"); localStorage.removeItem("moon-ui-resolution"); localStorage.removeItem("moon-ui-glow"); localStorage.removeItem("moon-ui-corebg");
   loadSettingsUI(); applySettingsNow(); el("setMsg").textContent="✓ reset to defaults";
 }
 el("setBtn").onclick=()=>toggleSettings(true);
