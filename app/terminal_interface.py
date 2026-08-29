@@ -313,6 +313,16 @@ async def moon_brain_webp():
     return HTMLResponse("<svg/>", status_code=404)
 
 
+@app.get("/moon_core.webp")
+async def moon_core_webp():
+    # The user-supplied animated core graphic, made the living MOON fusion core
+    # AND neural core (integrated into the central panel, not a floating overlay).
+    f = WEB_DIR / "assets" / "moon_core.webp"
+    if f.exists():
+        return FileResponse(str(f), media_type="image/webp")
+    return HTMLResponse("<svg/>", status_code=404)
+
+
 @app.get("/moon_fiery.jpg")
 async def moon_fiery_jpg():
     # Dim fiery holographic-sphere backdrop behind the red/black HUD.

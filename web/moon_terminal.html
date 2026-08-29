@@ -88,7 +88,7 @@ body{display:grid;place-items:center}
    --core-e (set in JS) for a real pulse on every workflow event. Red HUD stays
    canonical; the sphere is the emissive centerpiece behind the data panels. */
 .fusionOrb{position:absolute;left:50%;top:50%;width:118%;height:118%;transform:translate(-50%,-50%) scale(calc(1 + var(--core-e,0)*0.10));
-  background:#000 center/cover no-repeat;filter:saturate(1.05) brightness(calc(1 + var(--core-e,0)*0.55));
+  background:#000 center/cover no-repeat url('/moon_core.webp');filter:saturate(1.05) brightness(calc(1 + var(--core-e,0)*0.55));
   mix-blend-mode:screen;opacity:calc(.82 + var(--core-e,0)*0.18);border-radius:50%;
   box-shadow:0 0 calc(60px + var(--core-e,0)*70px) rgba(255,120,40,calc(.5 + var(--core-e,0)*.4));
   transition:filter .25s, transform .35s, opacity .35s, box-shadow .35s;pointer-events:none;z-index:-1}
@@ -1172,7 +1172,11 @@ function setAspect(r){
 }
 function applyAvatarMode(){
   const orb=el("fusionOrb"), fx=el("coreFx"), nf=el("neuralFx");
-  if(_avatarMode==="neural"){ if(orb)orb.style.display="none"; if(fx)fx.style.display="none"; if(nf)nf.style.display="block"; }
+  // Both 'fusion' and 'neural' render the same living core graphic (the user's
+  // animated WebP) integrated into the central panel -- it IS the MOON fusion core
+  // AND neural core. The brain canvas (neuralFx) is kept only as a layered accent
+  // behind the orb, never a separate floating overlay.
+  if(_avatarMode==="neural"){ if(orb)orb.style.display=""; if(fx)fx.style.display=""; if(nf)nf.style.display="block"; }
   else { if(orb)orb.style.display=""; if(fx)fx.style.display=""; if(nf)nf.style.display="none"; }
 }
 function applyResolution(){

@@ -4,7 +4,7 @@
   "display": "",
   "browser": "",
   "aspect": "auto",
-  "avatar_mode": "neural",
+  "avatar_mode": "fusion",
   "resolution": "hd",
   "core_glow": 2,
   "autostart": true,
