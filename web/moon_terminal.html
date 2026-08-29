@@ -96,21 +96,44 @@ body{display:grid;place-items:center}
   filter:saturate(1.05) brightness(calc(1 + var(--core-e,0)*0.40))
          drop-shadow(0 0 calc(34px + var(--core-e,0)*46px) rgba(255,200,80,calc(.45 + var(--core-e,0)*.3)));
   transition:filter .35s;pointer-events:none;z-index:-1}
-/* Idle breathing: gentle scale pulse ONLY when MOON is idle (no .thinking). It
-   complements the orb's native 3D frames (does not replace them). */
-.fusionOrb.idle{animation:moonCoreBreath 6s ease-in-out infinite}
+/* Idle breathing: gentle scale pulse ONLY when MOON is calm/idle (no .thinking). */
+.fusionOrb.idle{animation:moonCoreBreath calc(8s / var(--breath-speed,1)) ease-in-out infinite}
 @keyframes moonCoreBreath{
   0%,100%{transform:translate(-50%,-50%) scale(1)}
   50%{transform:translate(-50%,-50%) scale(1.045)}
 }
+/* Severity tiers -- the orb behaves with MOON's brain. Color + glow shift by tier;
+   .thinking drives intensity, .sev-* drives the hue. Calm = green, normal = cyan,
+   working = amber, dangerous = red, aggressive = magenta-red + volatile flicker. */
 .fusionOrb.thinking{filter:saturate(1.15) brightness(calc(1.15 + var(--core-e,0)*0.5))
          drop-shadow(0 0 calc(54px + var(--core-e,0)*60px) rgba(255,220,110,.95))}
-/* Small state label under the orb, tied to MOON's workflow state. */
+.fusionOrb.sev-normal{filter:saturate(1.1) brightness(calc(1.05 + var(--core-e,0)*0.4))
+         drop-shadow(0 0 calc(40px + var(--core-e,0)*50px) rgba(80,220,255,.8))}
+.fusionOrb.sev-working{filter:saturate(1.2) brightness(calc(1.1 + var(--core-e,0)*0.45))
+         drop-shadow(0 0 calc(48px + var(--core-e,0)*55px) rgba(255,190,60,.9))}
+.fusionOrb.sev-dangerous{filter:saturate(1.3) brightness(calc(1.2 + var(--core-e,0)*0.55))
+         drop-shadow(0 0 calc(60px + var(--core-e,0)*70px) rgba(255,60,40,.95));
+         animation:coreVolatile calc(1.6s / var(--breath-speed,1)) ease-in-out infinite}
+.fusionOrb.sev-aggressive{filter:saturate(1.45) brightness(calc(1.3 + var(--core-e,0)*0.6))
+         drop-shadow(0 0 calc(72px + var(--core-e,0)*80px) rgba(255,40,200,.95));
+         animation:coreVolatile calc(1.1s / var(--breath-speed,1)) ease-in-out infinite}
+@keyframes coreVolatile{
+  0%,100%{transform:translate(-50%,-50%) scale(1)}
+  50%{transform:translate(-50%,-50%) scale(1.07) rotate(.6deg)}
+}
+/* Small state label under the orb, tied to MOON's workflow state + maturity. */
 .coreState{position:absolute;left:50%;top:84%;transform:translateX(-50%);z-index:7;
   font-family:var(--ff);font-size:clamp(8px,1vw,15px);letter-spacing:.34em;font-weight:800;
   color:#9dffc4;text-shadow:0 0 14px #0f8;pointer-events:none;white-space:nowrap;opacity:.92}
 .coreState.thinking{color:#ffd86b;text-shadow:0 0 16px #fb4}
 .coreState.speaking{color:#7df9ff;text-shadow:0 0 16px #2cf}
+.coreState.sev-normal{color:#7fe0ff;text-shadow:0 0 16px #2cf}
+.coreState.sev-working{color:#ffd86b;text-shadow:0 0 16px #fb4}
+.coreState.sev-dangerous{color:#ff6a4a;text-shadow:0 0 18px #f43}
+.coreState.sev-aggressive{color:#ff5ad0;text-shadow:0 0 18px #f2c}
+.coreMaturity{position:absolute;left:50%;top:90%;transform:translateX(-50%);z-index:7;
+  font-family:var(--ff);font-size:clamp(6px,.7vw,11px);letter-spacing:.28em;font-weight:700;
+  color:#6f8;opacity:.7;pointer-events:none;white-space:nowrap}
 .coreTitle{position:absolute;left:50%;top:8.5%;transform:translateX(-50%);z-index:7;color:#9dffc4;font-family:var(--ff-title);font-size:clamp(9px,1.1vw,21px);letter-spacing:.3em;font-weight:800;text-shadow:0 0 18px #0f8;pointer-events:none;white-space:nowrap}
 .coreSide{position:absolute;top:13%;width:25%;height:74%;z-index:6;display:flex;flex-direction:column;gap:2.2%;font-family:var(--ff);pointer-events:none}
 .coreSideL{left:3%}.coreSideR{right:3%}
@@ -541,7 +564,7 @@ footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;d
         <div class="coreBox"><span class="lab">FIRING RATE</span><span class="val" id="cfRate">1.28/s</span><canvas class="spark" id="spR2"></canvas></div>
         <div class="coreBox"><span class="lab">SIGNAL STRENGTH</span><span class="val" id="cfSig">MAX</span><canvas class="spark" id="spR3"></canvas></div>
       </div>
-      <div class="fusionCore"><img class="fusionOrb" id="fusionOrb" src="/moon_core.webp" alt="MOON core" draggable="false"><canvas id="coreFx"></canvas><canvas id="neuralFx" style="display:none"></canvas><div id="coreState" class="coreState">IDLE</div></div>
+      <div class="fusionCore"><img class="fusionOrb" id="fusionOrb" src="/moon_core.webp" alt="MOON core" draggable="false"><canvas id="coreFx"></canvas><canvas id="neuralFx" style="display:none"></canvas><div id="coreState" class="coreState">IDLE</div><div id="coreMaturity" class="coreMaturity">MATURITY 0%</div></div>
       <div class="idleTag">◌ MOON IDLE — NEURAL CORE STANDBY ◌</div>
       <div class="idleTag">◌ MOON IDLE — NEURAL CORE STANDBY ◌</div>
       <div id="talkState">◌ LISTENING ◌</div>
@@ -885,12 +908,37 @@ function wsSend(o){ if(ws && ws.readyState===1){ if(o.action) lastAction=o.actio
 // MOON's brain core reacts to her workflow: .thinking = intense glow burst while
 // she is actively working (reply/task/execution), removed when she goes idle.
 // .idle = gentle breathing pulse when she is idle (complements native animation).
-function setCoreThinking(on){ const o=el("fusionOrb"); if(o){ o.classList.toggle("thinking", !!on); o.classList.toggle("idle", !on); } }
+// .sev-* = severity tier hue (calm/normal/working/dangerous/aggressive) driven by
+//   MOON's real workflow classification from the backend.
+function setCoreThinking(on){ const o=el("fusionOrb"); if(o){ o.classList.toggle("thinking", !!on); if(!on) o.classList.remove("sev-dangerous","sev-aggressive"); } }
 function setCoreState(txt, cls){ const s=el("coreState"); if(!s) return; s.textContent=txt; s.classList.remove("thinking","speaking"); if(cls) s.classList.add(cls); }
+// Severity tier: color + volatile flicker by how hard MOON's brain is working.
+let _coreSeverity="calm", _maturity=0;
+function setCoreSeverity(tier){
+  _coreSeverity = tier;
+  const o=el("fusionOrb"); if(!o) return;
+  o.classList.remove("sev-normal","sev-working","sev-dangerous","sev-aggressive");
+  if(tier==="normal"||tier==="working"||tier==="dangerous"||tier==="aggressive") o.classList.add("sev-"+tier);
+  // breathing speed: calm slow, aggressive fast (maturity widens the envelope)
+  const speed = {"calm":1,"normal":1.4,"working":2.2,"dangerous":3.4,"aggressive":4.5}[tier] || 1;
+  document.documentElement.style.setProperty("--breath-speed", (speed*(1+_maturity/200)).toFixed(2));
+}
+// Brain maturity: accumulated from real task history (persisted by backend in
+// brain_stats.json). Higher maturity = stronger, steadier core reactions.
+function setCoreMaturity(m){
+  _maturity = Math.max(0, Math.min(100, m|0));
+  const e=el("coreMaturity"); if(e) e.textContent="MATURITY "+_maturity+"%";
+  // maturity slightly boosts idle breathing steadiness + base glow floor
+  document.documentElement.style.setProperty("--core-mat", (_maturity/100).toFixed(3));
+}
+// Pull maturity from backend stats on connect (so learning persists across sessions)
+async function loadBrainMaturity(){
+  try{ const r=await fetch("/api/brain-stats"); if(r.ok){ const d=await r.json(); setCoreMaturity(d.maturity||0); } }catch(_){}
+}
 function connect(){
   const pr=location.protocol==="https:"?"wss":"ws";
   ws=new WebSocket(`${pr}://${location.host}/ws`);
-  ws.onopen=()=>{ addLog("[CORE] Quantum link handshake complete."); wsSend({action:"status"}); wsSend({action:"log_stream"}); runBoot(); };
+  ws.onopen=()=>{ addLog("[CORE] Quantum link handshake complete."); wsSend({action:"status"}); wsSend({action:"log_stream"}); runBoot(); loadBrainMaturity(); };
   ws.onmessage=e=>{ let m; try{m=JSON.parse(e.data);}catch(_){return;} handle(m); };
   ws.onerror=()=>addLog("[NETWORK] socket error");
   ws.onclose=()=>{ addLog("[NETWORK] link closed — retrying…"); setTimeout(connect,3000); };
@@ -899,8 +947,8 @@ function handle(m){
   switch(m.type){
     case "ready": case "status": applyStatus(m.status||m); addLog("[SYSTEM] status received."); if((m.status||m).load!=null) window.MOON_UI.onCorePulse && window.MOON_UI.onCorePulse((m.status||m).load/180); if(m.type==="ready" && typeof window.MOON_UI.onReady==="function") window.MOON_UI.onReady(m); break;
     case "assistant_start": setState("SPEAKING"); addLog("[MOON] thinking…"); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.9); if(typeof fireBurst==="function") fireBurst(14);
-      _moonSpeaking=true; if(_recog){ try{ _recog.stop(); }catch(_){} } if(_talkState) setTalkState("◌ MOON IS SPEAKING ◌", false); setCoreThinking(true); setCoreState("◌ SPEAKING ◌","speaking"); break;
-    case "workflow": setState((m.stage||"").toUpperCase(), {stage:m.stage}); addLog("[FLOW] "+(m.stage||"")+": "+(m.detail||"")); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.7); setCoreThinking(true); setCoreState("◌ THINKING ◌","thinking"); pushEvent("work","FLOW "+((m.stage||"")+": "+(m.detail||"")).replace(/[<>]/g,"")); break;
+      _moonSpeaking=true; if(_recog){ try{ _recog.stop(); }catch(_){} } if(_talkState) setTalkState("◌ MOON IS SPEAKING ◌", false); setCoreThinking(true); setCoreSeverity("normal"); setCoreState("◌ SPEAKING ◌","speaking"); break;
+    case "workflow": setState((m.stage||"").toUpperCase(), {stage:m.stage}); addLog("[FLOW] "+(m.stage||"")+": "+(m.detail||"")); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.7); setCoreThinking(true); setCoreSeverity(m.severity||"working"); setCoreState("◌ THINKING ◌","thinking"); pushEvent("work","FLOW "+((m.stage||"")+": "+(m.detail||"")).replace(/[<>]/g,"")); break;
     case "assistant_chunk":
       addLog("[MOON] "+(m.content||""));
       if(lastAction==="list_tools"){ toolBuf += (m.content||""); }
@@ -923,7 +971,7 @@ function handle(m){
       window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.6);
       // brief execution flash on the core (stronger coupling to task execution)
       const _orb=el("fusionOrb");
-      if(_orb && !_orb.classList.contains("thinking")){ setCoreThinking(true); setCoreState("◌ EXECUTING ◌","thinking"); setTimeout(()=>{ if(_orb.classList.contains("thinking") && !_moonSpeaking){ setCoreThinking(false); setCoreState("◌ IDLE ◌"); } }, 700); }
+      if(_orb && !_orb.classList.contains("thinking")){ setCoreThinking(true); setCoreSeverity(m.severity||"working"); setCoreState("◌ EXECUTING ◌","thinking"); setTimeout(()=>{ if(_orb.classList.contains("thinking") && !_moonSpeaking){ setCoreThinking(false); setCoreSeverity("calm"); setCoreState("◌ IDLE ◌"); } }, 700); }
       break;
     case "log":
       // live backend log event -> System Logs panel + workspace timeline
@@ -933,7 +981,7 @@ function handle(m){
     case "assistant_done":
       setState("IDLE"); addLog("[MOON] done in "+(m.elapsed||0)+"s"+(m.locked?" [locked]":""));
       if(lastAction==="list_tools"){ renderToolGrid(toolBuf); toolBuf=""; }
-      _moonSpeaking=false; setCoreThinking(false); setCoreState("◌ IDLE ◌"); if(_talking && _recog){ try{ _recog.start(); }catch(_){} } if(_talkState && _talking) setTalkState("◌ LISTENING — SAY 'MOON' OR SPEAK ◌", true);
+      _moonSpeaking=false; setCoreThinking(false); setCoreSeverity("calm"); setCoreState("◌ IDLE ◌"); if(_talking && _recog){ try{ _recog.start(); }catch(_){} } if(_talkState && _talking) setTalkState("◌ LISTENING — SAY 'MOON' OR SPEAK ◌", true);
       break;
     case "notice":
       addLog("[NOTICE] "+(m.message||""));

@@ -826,6 +826,28 @@ async def api_health(request: Request):
         return JSONResponse({"status": "FAILED", "error": str(exc)}, status_code=503)
 
 
+@app.get("/api/brain-stats")
+async def api_brain_stats(request: Request):
+    """MOON's brain-core learning profile (accumulated task history).
+
+    Persisted across sessions in app/data/brain_stats.json so the HUD orb's
+    maturity (and thus its reaction envelope) survives restarts -- the core
+    'upgrades' from real workload, not from fabricated metrics.
+    """
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    stats = _load_brain_stats()
+    return JSONResponse({
+        "total": stats.get("total", 0),
+        "normal": stats.get("normal", 0),
+        "working": stats.get("working", 0),
+        "dangerous": stats.get("dangerous", 0),
+        "aggressive": stats.get("aggressive", 0),
+        "maturity": stats.get("maturity", 0),
+    })
+
+
 @app.get("/api/agents")
 async def api_agents(request: Request):
     """Read-only roster of MOON's agent brains (real data from the Orchestrator).
@@ -1223,6 +1245,82 @@ async def _run_diagnostics(orch) -> dict:
     return {"checks": checks, "summary": f"{sum(1 for c in checks if c[1]=='OK')}/{len(checks)} subsystems nominal"}
 
 
+# ---------------------------------------------------------------------------
+# MOON brain-core behavior model
+# The terminal HUD orb IS MOON's brain core. Its animation/reactivity is driven by
+# real workflow events classified into severity tiers. This classifier + persisted
+# stats make the core behave with her brain: calm when idle, alive when working,
+# red/volatile when the task is dangerous or aggressive. Stats accumulate across
+# sessions (brain_stats.json) so the core "learns/upgrades" its reaction envelope.
+# ---------------------------------------------------------------------------
+_BRAIN_STATS_PATH = Path(__file__).resolve().parent / "data" / "brain_stats.json"
+_BRAIN_STATS_PATH.parent.mkdir(parents=True, exist_ok=True)
+_BRAIN_STATS_LOCK = asyncio.Lock() if False else None  # module import is sync; guard writes in ws_endpoint
+
+# Risky shell patterns => "dangerous". Mirrors app/brain/safety_validator.py intent.
+_RISKY_PATTERNS = ("rm -rf", "sudo ", "format disk", "wipe", "mkfs", "dd if=",
+                   "chmod 777", ":(){", "shutdown", "reboot", "kill -9", "> /dev/sd")
+
+# Stages that are inherently heavy/aggressive orchestration (spawning agents, etc.)
+_AGGRESSIVE_STAGES = ("agent factory", "global connector", "linking agent brains",
+                      "capability system", "reading security posture")
+
+# Normal, low-intensity cognitive stages (recall/knowledge/voice/idle chatter).
+_NORMAL_STAGES = ("recall", "memory", "knowledge", "voice", "speaking", "input",
+                  "listening", "locked")
+
+
+def _classify_severity(stage: str, detail: str, risk_level=None) -> str:
+    """Map a workflow/exec event to a brain-core severity tier."""
+    s = (stage or "").lower()
+    d = (detail or "").lower()
+    # Dangerous: explicit risky command patterns, or a high agent risk_level.
+    if any(p in d for p in _RISKY_PATTERNS):
+        return "dangerous"
+    if isinstance(risk_level, (int, float)) and risk_level >= 4:
+        return "dangerous"
+    if risk_level in ("high", "critical"):
+        return "dangerous"
+    # Aggressive: multi-agent orchestration / heavy capability ops.
+    if any(a in s for a in _AGGRESSIVE_STAGES) or "agent factory" in d:
+        return "aggressive"
+    # Normal: pure cognitive stages.
+    if any(n in s for n in _NORMAL_STAGES):
+        return "normal"
+    # Everything else (tools, diagnostics, exec, enumerations) = working.
+    return "working"
+
+
+def _load_brain_stats() -> dict:
+    try:
+        if _BRAIN_STATS_PATH.exists():
+            return json.loads(_BRAIN_STATS_PATH.read_text())
+    except Exception:
+        pass
+    return {"total": 0, "normal": 0, "working": 0, "dangerous": 0,
+            "aggressive": 0, "peak_tier": "calm", "sessions": 0}
+
+
+def _save_brain_stats(stats: dict):
+    try:
+        _BRAIN_STATS_PATH.write_text(json.dumps(stats, indent=2))
+    except Exception:
+        pass
+
+
+def _bump_brain_stats(tier: str) -> dict:
+    """Increment the running brain-profile counters for one task; persist; return it."""
+    stats = _load_brain_stats()
+    stats["total"] = stats.get("total", 0) + 1
+    stats[tier] = stats.get(tier, 0) + 1
+    # maturity: grows with total tasks, weighted toward harder tiers (real learning).
+    hard = stats.get("dangerous", 0) + stats.get("aggressive", 0) * 1.5
+    stats["maturity"] = min(100, round(100 * (1 - 1 / (1 + stats["total"] / 50))
+                                       + min(20, hard / 5)))
+    _save_brain_stats(stats)
+    return stats
+
+
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
     # Authorization gate for remote exposure: require Bearer token when set.
@@ -1264,6 +1362,14 @@ async def ws_endpoint(ws: WebSocket):
             _emit_event("chat", f"{_kind} (locked={msg.get('locked')})")
         elif _kind == "exec_output":
             _emit_event("exec", str(msg.get("output", ""))[:200])
+        # Brain-core behavior: classify severity + accumulate the brain profile so
+        # the HUD orb can react to MOON's real workload (calm/normal/working/
+        # dangerous/aggressive) and "learn/upgrade" across sessions.
+        if _kind in ("workflow", "exec_output", "assistant_start"):
+            sev = _classify_severity(msg.get("stage", ""), msg.get("detail", "") or str(msg.get("output", "")), msg.get("risk_level"))
+            msg["severity"] = sev
+            if _kind in ("workflow", "exec_output", "assistant_start"):
+                _bump_brain_stats(sev)
         async with _send_lock:
             try:
                 await ws.send_json(msg)
