@@ -81,6 +81,10 @@ def test_two_phase_parse_logic():
     o = asyncio.new_event_loop()
     try:
         brain = AgentBrain("test_parse", main_brain=None)
+        # Force the two-phase refine path on for this unit test (it is gated by the
+        # global enable_agent_validation flag, which may be False on low-spec hosts
+        # for speed; this test only validates the parse logic, not the flag).
+        brain._refine = True
 
         # Simulate main-brain verdicts via a fake main_brain
         class FakeMain:
@@ -139,9 +143,11 @@ def test_pick_llm_routing():
     o = asyncio.new_event_loop()
     try:
         orch = o.run_until_complete(_make_orch())
-        # Strong model IS configured (unlocked) -> factual/cyber prompts route to
-        # the strong model, everything else to the default.
-        assert orch._pick_llm("what is 2+2?") is orch._llm_strong, "factual -> strong"
+        # Strong model is reserved for explicit cyber-critical/offensive-security
+        # prompts only; general factual/creative queries stay on the fast default
+        # model so they don't stall on a large reasoning model (verified: qwen3:1.7b
+        # took 74s/reply on the host CPU). _pick_llm must reflect that.
+        assert orch._pick_llm("what is 2+2?") is orch._llm, "factual -> default (fast)"
         assert orch._pick_llm("scan this host for exploits") is orch._llm_strong, "cyber-critical -> strong"
         assert orch._pick_llm("write me a haiku about the moon") is orch._llm, "creative -> default"
         o.run_until_complete(orch.teardown())

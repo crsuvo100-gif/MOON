@@ -933,12 +933,13 @@ class Orchestrator:
             # GUARD: a per-agent reasoning model (e.g. deepseek-r1:1.5b) can
             # "think" for 100+ seconds on CPU and stall the whole task, leaving
             # the terminal with no reply. Bound every completion to a hard timeout
-            # and, on stall, retry on the fast shared model (qwen2.5:3b) so MOON
-            # always answers promptly instead of hanging.
+            # and, on stall, retry on the fast shared model (qwen2.5:1.5b) so MOON
+            # always answers promptly instead of hanging. 30s: a 1.5b/3b call
+            # finishes in 1-3s; anything past 30s is a stuck reasoning model.
             try:
                 resp = await asyncio.wait_for(
                     llm.complete(messages, tools=tool_specs if tool_specs else None),
-                    timeout=60,
+                    timeout=30,
                 )
             except asyncio.TimeoutError:
                 logger.warning("llm.complete timed out (%s); falling back to shared model",
