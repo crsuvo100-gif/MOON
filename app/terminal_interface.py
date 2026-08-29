@@ -1286,7 +1286,7 @@ async def ws_endpoint(ws: WebSocket):
                     t0 = time.time()
                     try:
                         result_task = await asyncio.wait_for(
-                            orch.run_task(task, on_event=stream_event), timeout=75)
+                            orch.run_task(task, on_event=stream_event), timeout=180)
                         answer = result_task.result or ""
                     except (asyncio.TimeoutError, Exception) as e:  # noqa: BLE001
                         _last_error = True
@@ -1294,7 +1294,7 @@ async def ws_endpoint(ws: WebSocket):
                                    detail="run_task slow — using fast brain path")
                         try:
                             answer = await asyncio.wait_for(
-                                orch.quick_reply(text), timeout=70)
+                                orch.quick_reply(text), timeout=150)
                         except (asyncio.TimeoutError, Exception) as e2:  # noqa: BLE001
                             answer = f"[MOON error: {e2}]"
                     if not answer:

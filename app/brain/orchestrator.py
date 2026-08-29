@@ -923,7 +923,21 @@ class Orchestrator:
                     llm = self._pick_llm(task.prompt)
             else:
                 llm = self._pick_llm(task.prompt)
-            resp = await llm.complete(messages, tools=tool_specs if tool_specs else None)
+            # GUARD: a per-agent reasoning model (e.g. deepseek-r1:1.5b) can
+            # "think" for 100+ seconds on CPU and stall the whole task, leaving
+            # the terminal with no reply. Bound every completion to a hard timeout
+            # and, on stall, retry on the fast shared model (qwen2.5:3b) so MOON
+            # always answers promptly instead of hanging.
+            try:
+                resp = await asyncio.wait_for(
+                    llm.complete(messages, tools=tool_specs if tool_specs else None),
+                    timeout=60,
+                )
+            except asyncio.TimeoutError:
+                logger.warning("llm.complete timed out (%s); falling back to shared model",
+                               getattr(llm, "_model", "?"))
+                resp = await self._llm.complete(
+                    messages, tools=tool_specs if tool_specs else None)
             total_tokens += 1
             if resp.has_tool_calls:
                 for call in resp.tool_calls:
