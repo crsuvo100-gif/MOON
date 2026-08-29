@@ -410,10 +410,11 @@ footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;d
 
 /* ===== Per-panel animated function glyph ===== */
 .panel{position:relative}
-.panel .pglyph{position:absolute;left:50%;top:50%;width:min(54%,210px);height:min(54%,210px);
-  transform:translate(-50%,-50%);z-index:0;opacity:.22;pointer-events:none;color:var(--emerald);
-  filter:drop-shadow(0 0 14px currentColor);mix-blend-mode:screen;
-  background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.05),transparent 62%)}
+.panel .pglyph{position:absolute;left:50%;top:50%;width:min(56%,220px);height:min(56%,220px);
+  transform:translate(-50%,-50%);z-index:0;opacity:.26;pointer-events:none;color:var(--emerald);
+  filter:drop-shadow(0 0 16px currentColor);mix-blend-mode:screen;
+  background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.06),transparent 64%)}
+.panel .pglyph::before{content:"";position:absolute;inset:6%;border:1px dashed currentColor;opacity:.25;border-radius:50%;animation:pglyphspin 22s linear infinite}
 .panel .pglyph svg{width:100%;height:100%;display:block;overflow:visible}
 .panel .pglyph .spin{transform-origin:50% 50%;animation:pglyphspin 9s linear infinite}
 .panel .pglyph .pulse{transform-origin:50% 50%;animation:pglyphpulse 3.4s ease-in-out infinite}
@@ -1534,38 +1535,34 @@ connect();
     signal:'<svg viewBox="0 0 100 100"><g class="pulse"><path class="dash" d="M22 64 A28 28 0 0 1 50 36" fill="none" stroke="currentColor" stroke-width="3"/><path class="dash" d="M16 70 A36 36 0 0 1 50 30" fill="none" stroke="currentColor" stroke-width="2" opacity=".6"/><circle cx="50" cy="50" r="5" fill="currentColor"/></g></svg>',
     default:'<svg viewBox="0 0 100 100"><g class="spin"><circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="50" cy="50" r="18" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".7"/><path class="dash" d="M50 12 V24 M50 76 V88 M12 50 H24 M76 50 H88" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></g></svg>'
   };
+  function norm(s){return (s||"").toLowerCase().replace(/[^a-z0-9 ]/g," ");}
+  // Authoritative mapping: panel header text (h3) + cell text -> exact glyph key,
+  // so every panel shows an emblem based on its real function name.
+  const MAP = [
+    ["neural telemetry","wave"],["synaptic activity","wave"],["real-time neural feed","signal"],
+    ["fusion core","brain"],["neural map","brain"],["brain topology","brain"],
+    ["core configuration","cpu"],["processor array","cpu"],
+    ["neural network topology","net"],["network protocols","net"],["net latency","signal"],["latency","signal"],
+    ["quantum neural matrix","matrix"],["memory matrix","matrix"],
+    ["memory core","doc"],["memory core visualization","doc"],
+    ["cognitive process pipeline","command"],["cognitive core","core"],
+    ["power management","gauge"],["learning progress","gauge"],["learning engine","wave"],["system efficiency","gauge"],["core temp","gauge"],["quantum load","gauge"],
+    ["threat assessment","shield"],["threat level","shield"],["security grid","shield"],
+    ["system logs","log"],["event stream","log"],["event timeline","log"],
+    ["voice synthesis","chat"],["neural agent","agent"],["agent grid","agent"],["tool status","tools"],
+    ["core status","core"],["neural core","core"],["moon neural core","core"],
+    ["uptime","clock"],
+    ["overview","grid"],["configuration","tools"],["preferences","tools"],["settings","tools"],["workspace","link"],
+    ["quantum channels","hex"],["moon","diamond"]
+  ];
   function mapKey(p){
-    const id=(p.id||"").toLowerCase(), t=(p.getAttribute("data-glyph")||"").toLowerCase();
-    if(G[t]) return t;
-    const h=(p.querySelector("h3")?p.querySelector("h3").textContent:p.querySelector(".hcell")?p.querySelector(".hcell").textContent:"").toLowerCase();
-    const keys=Object.keys(G);
-    for(const k of keys){ if(id.indexOf(k)>=0||h.indexOf(k)>=0) return k; }
-    if(/cpu|proc/.test(id+h)) return "cpu";
-    if(/ram|mem/.test(id+h)) return "ram";
-    if(/net|globe|internet/.test(id+h)) return "globe";
-    if(/agent|swarm|bot/.test(id+h)) return "agent";
-    if(/threat|secur|shield|defen/.test(id+h)) return "shield";
-    if(/eye|vision|recon|surveil/.test(id+h)) return "eye";
-    if(/wave|signal|radio|freq/.test(id+h)) return "wave";
-    if(/neural|brain|core|mind/.test(id+h)) return "core";
-    if(/matrix|grid|mesh|field/.test(id+h)) return "matrix";
-    if(/tool|util|kit/.test(id+h)) return "tools";
-    if(/chat|talk|voice|comm/.test(id+h)) return "chat";
-    if(/key|api|token|cred/.test(id+h)) return "keys";
-    if(/sat|geo|orbit|space/.test(id+h)) return "sat";
-    if(/map|world|region/.test(id+h)) return "map";
-    if(/time|clock|uptime|date/.test(id+h)) return "clock";
-    if(/log|event|audit|trace/.test(id+h)) return "log";
-    if(/radar|scan|sweep/.test(id+h)) return "radar";
-    if(/gauge|meter|perf|speed/.test(id+h)) return "gauge";
-    if(/shell|term|console|cli/.test(id+h)) return "shell";
-    if(/command|cmd|exec/.test(id+h)) return "command";
-    if(/doc|file|note|memory|kb/.test(id+h)) return "doc";
-    if(/link|fusion|connect|bridge/.test(id+h)) return "link";
-    if(/auth|lock|vault|pass/.test(id+h)) return "key";
-    if(/server|node|host|service/.test(id+h)) return "server";
-    if(/hex|hash|crypt|block/.test(id+h)) return "hex";
-    if(/diamond|gem|data/.test(id+h)) return "diamond";
+    const dg=(p.getAttribute("data-glyph")||"").toLowerCase(); if(G[dg]) return dg;
+    const h3=p.querySelector("h3"); const ht=h3?norm(h3.textContent):"";
+    const hc=p.querySelector(".hcell"); const hct=hc?norm(hc.textContent):"";
+    const txt=norm((p.textContent||"")+" "+(p.id||""));
+    for(let i=0;i<MAP.length;i++){ const k=MAP[i][0]; if(ht.indexOf(k)>=0||hct.indexOf(k)>=0||txt.indexOf(k)>=0) return MAP[i][1]; }
+    if(/cpu|proc/.test(txt)) return "cpu";
+    if(/ram|mem/.test(txt)) return "ram";
     return "default";
   }
   const ACCENT = {
