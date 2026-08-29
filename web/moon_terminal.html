@@ -302,23 +302,6 @@ header{grid-area:head;position:relative;left:0;right:0;top:0;height:auto;display
 .tlft canvas,.tlrt canvas{width:100%;height:100%}
 .lobe{position:absolute;width:20%;height:11%;border:1px solid #0c5a32;background:#090000dd;padding:5px;color:#6dffa0;font-size:clamp(5px,.44vw,9px);z-index:2}.l1{left:1%;top:13%}.l2{left:1%;top:43%}.l3{left:1%;top:73%}.r1{right:1%;top:13%}.r2{right:1%;top:43%}.r3{right:1%;top:73%}
 .wave{height:62%;margin-top:4px}.wave svg{width:100%;height:100%}.wave path{fill:none;stroke:#e92828;stroke-width:1.4;stroke-dasharray:4 3;animation:dash 2s linear infinite}@keyframes dash{to{stroke-dashoffset:-70}}
-/* MOON's animated avatar face (inline SVG). Positioned as her presence above the
-   central core; the orbiting rings form a halo. Idle blink always runs; .speaking
-   (toggled by JS on assistant_start/audio/done) drives lipsync + a warm glow. */
-.avatar{position:absolute;left:50%;top:11%;width:17%;aspect-ratio:1;transform:translate(-50%,0);z-index:9;display:grid;place-items:center;pointer-events:auto;cursor:pointer;transition:filter .25s;filter:drop-shadow(0 0 14px rgba(120,80,255,.55))}
-.avatar:hover{filter:drop-shadow(0 0 20px rgba(0,255,102,.75))}
-.avatar .faceSvg{width:100%;height:100%;display:block;overflow:visible}
-.avatar .eyes{transform-box:fill-box;transform-origin:center;animation:moonBlink 5.2s infinite}
-@keyframes moonBlink{0%,92%,100%{transform:scaleY(1)}95%,97%{transform:scaleY(.08)}}
-.avatar .mouth .mouthShape{transform-box:fill-box;transform-origin:center;transform:scaleY(.35)}
-.avatar.speaking{filter:drop-shadow(0 0 26px rgba(255,120,40,.9)) brightness(1.12)}
-.avatar.speaking .mouth .mouthShape{animation:moonTalk .26s ease-in-out infinite}
-@keyframes moonTalk{0%,100%{transform:scaleY(.30)}50%{transform:scaleY(1.25)}}
-.avatar.core-active{filter:drop-shadow(0 0 26px #f55) brightness(1.3)}
-.avatar:before,.avatar:after{content:"";position:absolute;border:1px solid rgba(0,255,102,.75);border-radius:50%;inset:-7%;animation:orbit 6s linear infinite;pointer-events:none}
-.avatar:after{inset:-18%;animation-direction:reverse;animation-duration:10s;opacity:.45}
-@keyframes orbit{to{transform:rotate(360deg)}}
-.avatar.core-active:before,.avatar.core-active:after{box-shadow:0 0 30px #ff2a2a,inset 0 0 30px #0f8;border-color:#0f9}
 .brainStatus{position:absolute;left:18%;right:18%;bottom:3%;height:8%;border:1px solid #0c5a32;background:#080000cc;display:grid;place-items:center;font-size:clamp(7px,.55vw,11px);z-index:7}.barline{position:absolute;left:20%;right:20%;bottom:1%;height:3px;background:#240707;z-index:7}.barline i{display:block;height:100%;width:87.6%;background:#00ff66;box-shadow:0 0 8px #ff5a3a;transition:width .6s ease}
 .matrix{grid-area:matrix;position:relative;left:auto;right:auto;bottom:auto;top:auto;height:auto;border:1px solid var(--line);background:var(--surf);border-radius:3px;box-shadow:inset 0 0 14px rgba(0,255,102,.05);overflow:hidden}.matrix canvas{width:100%;height:100%}
 .rightTop,.rightMid,.rightMem,.rightThreat{height:100%}
@@ -541,52 +524,7 @@ footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;d
         <div class="coreBox"><span class="lab">SIGNAL STRENGTH</span><span class="val" id="cfSig">MAX</span><canvas class="spark" id="spR3"></canvas></div>
       </div>
       <div class="fusionCore"><img class="fusionOrb" id="fusionOrb" src="/moon_core.webp" alt="MOON core" draggable="false"><canvas id="coreFx"></canvas><canvas id="neuralFx" style="display:none"></canvas></div>
-      <!-- MOON's animated avatar face: idle blink + lipsync while she speaks.
-           Inline SVG (from web/avatar.svg design) so eyes/mouth are individually
-           animatable. Positioned above the core as her presence; the orbiting rings
-           (CSS .avatar:before/:after) form a halo. -->
-      <div class="avatar" id="moonFace" aria-label="MOON avatar">
-        <svg viewBox="0 0 240 240" width="100%" height="100%" class="faceSvg">
-          <defs>
-            <radialGradient id="mSkin" cx="42%" cy="38%" r="70%">
-              <stop offset="0%" stop-color="#ffe3d0"/><stop offset="55%" stop-color="#f6c4a6"/><stop offset="100%" stop-color="#c98e72"/>
-            </radialGradient>
-            <radialGradient id="mHair" cx="50%" cy="20%" r="80%">
-              <stop offset="0%" stop-color="#4a2b6b"/><stop offset="60%" stop-color="#2a1740"/><stop offset="100%" stop-color="#150a24"/>
-            </radialGradient>
-            <linearGradient id="mEye" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#7fe9ff"/><stop offset="100%" stop-color="#1d6f9c"/>
-            </linearGradient>
-            <filter id="mGlow"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-          </defs>
-          <path d="M120 26 C70 26 50 70 52 120 C54 170 78 214 120 214 C162 214 186 170 188 120 C190 70 170 26 120 26 Z" fill="url(#mHair)"/>
-          <ellipse cx="120" cy="122" rx="58" ry="70" fill="url(#mSkin)"/>
-          <path d="M120 24 C82 24 58 52 60 96 C66 64 92 44 120 44 C150 44 176 66 182 98 C184 54 160 24 120 24 Z" fill="url(#mHair)"/>
-          <path d="M60 96 C58 130 64 150 74 162 C70 138 70 116 78 100 Z" fill="url(#mHair)" opacity="0.9"/>
-          <path d="M182 98 C180 132 174 152 164 164 C168 140 168 118 160 102 Z" fill="url(#mHair)" opacity="0.9"/>
-          <g class="eyes">
-            <ellipse cx="100" cy="118" rx="13" ry="9" fill="#fff"/>
-            <ellipse cx="142" cy="116" rx="13" ry="9" fill="#fff"/>
-            <circle cx="101" cy="119" r="6.5" fill="url(#mEye)" filter="url(#mGlow)"/>
-            <circle cx="143" cy="117" r="6.5" fill="url(#mEye)" filter="url(#mGlow)"/>
-            <circle cx="103" cy="120" r="2.4" fill="#06121a"/>
-            <circle cx="145" cy="118" r="2.4" fill="#06121a"/>
-          </g>
-          <path d="M86 104 q14 -10 30 -2" stroke="#3a2233" stroke-width="3" fill="none" stroke-linecap="round"/>
-          <path d="M126 102 q16 -8 30 2" stroke="#3a2233" stroke-width="3" fill="none" stroke-linecap="round"/>
-          <path d="M87 116 q13 -7 26 0" stroke="#2a1740" stroke-width="2" fill="none"/>
-          <path d="M129 114 q13 -7 26 0" stroke="#2a1740" stroke-width="2" fill="none"/>
-          <path d="M120 124 q-6 16 -2 24 q6 4 12 -1" stroke="#b07a5f" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-          <ellipse cx="86" cy="146" rx="11" ry="7" fill="#ff7ac0" opacity="0.32"/>
-          <ellipse cx="154" cy="144" rx="11" ry="7" fill="#ff7ac0" opacity="0.32"/>
-          <g class="mouth">
-            <path class="mouthShape" d="M104 158 q16 12 32 0 q-16 8 -32 0 Z" fill="#e0497f"/>
-            <path d="M104 158 q16 6 32 0" stroke="#a8325c" stroke-width="2" fill="none"/>
-          </g>
-          <circle cx="120" cy="92" r="3" fill="#00f3ff" filter="url(#mGlow)"/>
-          <path d="M120 95 v10 M114 99 h12" stroke="#00f3ff" stroke-width="1" opacity="0.6"/>
-        </svg>
-      </div>
+      <div class="idleTag">◌ MOON IDLE — NEURAL CORE STANDBY ◌</div>
       <div class="idleTag">◌ MOON IDLE — NEURAL CORE STANDBY ◌</div>
       <div id="talkState">◌ LISTENING ◌</div>
       <div class="brainStatus">NEURAL CONVERGENCE IN PROGRESS &nbsp; <b id="conv">87.6%</b></div>
@@ -920,11 +858,6 @@ function wsCli(line, cls){ if(_wsCliOut && !wsEl.classList.contains("hidden")){ 
 let ws=null, _muted=false;
 let lastAction=null, toolBuf="";
 function wsSend(o){ if(ws && ws.readyState===1){ if(o.action) lastAction=o.action; ws.send(JSON.stringify(o)); } }
-// MOON's animated face: toggle lipsync/glow while she speaks.
-function setFaceSpeaking(on){
-  const f=el("moonFace"); if(!f) return;
-  f.classList.toggle("speaking", !!on);
-}
 function connect(){
   const pr=location.protocol==="https:"?"wss":"ws";
   ws=new WebSocket(`${pr}://${location.host}/ws`);
@@ -937,7 +870,7 @@ function handle(m){
   switch(m.type){
     case "ready": case "status": applyStatus(m.status||m); addLog("[SYSTEM] status received."); if((m.status||m).load!=null) window.MOON_UI.onCorePulse && window.MOON_UI.onCorePulse((m.status||m).load/180); if(m.type==="ready" && typeof window.MOON_UI.onReady==="function") window.MOON_UI.onReady(m); break;
     case "assistant_start": setState("SPEAKING"); addLog("[MOON] thinking…"); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.9); if(typeof fireBurst==="function") fireBurst(14);
-      _moonSpeaking=true; if(_recog){ try{ _recog.stop(); }catch(_){} } if(_talkState) setTalkState("◌ MOON IS SPEAKING ◌", false); setFaceSpeaking(true); break;
+      _moonSpeaking=true; if(_recog){ try{ _recog.stop(); }catch(_){} } if(_talkState) setTalkState("◌ MOON IS SPEAKING ◌", false); break;
     case "workflow": setState((m.stage||"").toUpperCase(), {stage:m.stage}); addLog("[FLOW] "+(m.stage||"")+": "+(m.detail||"")); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.7); pushEvent("work","FLOW "+((m.stage||"")+": "+(m.detail||"")).replace(/[<>]/g,"")); break;
     case "assistant_chunk":
       addLog("[MOON] "+(m.content||""));
@@ -945,7 +878,7 @@ function handle(m){
       window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.25);
       if(typeof fireBurst==="function") fireBurst(5);
       break;
-    case "audio": playWav(m.data); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.5); setFaceSpeaking(true); break;
+    case "audio": playWav(m.data); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.5); break;
     case "exec_output":
       (function(){
         const out=el("cliOut"); if(!out) return;
@@ -968,7 +901,7 @@ function handle(m){
     case "assistant_done":
       setState("IDLE"); addLog("[MOON] done in "+(m.elapsed||0)+"s"+(m.locked?" [locked]":""));
       if(lastAction==="list_tools"){ renderToolGrid(toolBuf); toolBuf=""; }
-      _moonSpeaking=false; setFaceSpeaking(false); if(_talking && _recog){ try{ _recog.start(); }catch(_){} } if(_talkState && _talking) setTalkState("◌ LISTENING — SAY 'MOON' OR SPEAK ◌", true);
+      _moonSpeaking=false; if(_talking && _recog){ try{ _recog.start(); }catch(_){} } if(_talkState && _talking) setTalkState("◌ LISTENING — SAY 'MOON' OR SPEAK ◌", true);
       break;
     case "notice":
       addLog("[NOTICE] "+(m.message||""));
@@ -1080,19 +1013,7 @@ function coreFx(t){
       fxCtx.beginPath();fxCtx.arc(x,y,1.4,0,Math.PI*2);fxCtx.fillStyle="rgba("+rg.col+","+(0.7+e*0.3)+")";fxCtx.fill();}
     fxCtx.restore();});
   fxCtx.shadowBlur=0;
-  // glowing core bloom (warm amber -> deep red; no harsh white/ -yellow disc,
-  // so the edited fiery backdrop shows through as the core's surface)
-  const gl = coreGlow;  // live intensity multiplier from Settings
-  const g=fxCtx.createRadialGradient(cx,cy,0,cx,cy,R*1.05*pulse);
-  g.addColorStop(0,"rgba(255,225,170,"+Math.min(1,(0.62+e*0.18)*gl)+")");
-  g.addColorStop(0.25,"rgba(255,190,100,"+Math.min(1,(0.68+e*0.12)*gl)+")");
-  g.addColorStop(0.55,"rgba(255,140,45,"+Math.min(1,(0.78+e*0.12)*gl)+")");
-  g.addColorStop(0.82,"rgba(220,70,25,"+Math.min(1,(0.66+e*0.12)*gl)+")");
-  g.addColorStop(1,"rgba(120,20,10,0)");
-  fxCtx.save();fxCtx.shadowBlur=(40+e*45)*gl;fxCtx.shadowColor="#ff7a2a";fxCtx.fillStyle=g;
-  fxCtx.beginPath();fxCtx.arc(cx,cy,R*1.02*pulse,0,Math.PI*2);fxCtx.fill();fxCtx.restore();
-  // soft inner highlight (small, warm — not a bright white/yellow circle)
-  fxCtx.beginPath();fxCtx.arc(cx,cy,R*0.10*pulse,0,Math.PI*2);fxCtx.fillStyle="rgba(255,205,150,"+Math.min(1,(0.38+e*0.22)*gl)+")";fxCtx.shadowBlur=14*gl;fxCtx.shadowColor="#ff9a4a";fxCtx.fill();fxCtx.shadowBlur=0;
+  // [removed] amber/yellow core bloom orb per user request (keep WebP core + other canvas effects)
   coreEnergy*=0.965; // decay after MOON stops thinking
 }
 
