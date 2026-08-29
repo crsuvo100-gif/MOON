@@ -201,13 +201,31 @@ def _current_emotion(locked: bool) -> dict:
 def _get_voice_engine():
     global _voice_engine
     if _voice_engine is None:
+        # Build the engine robustly. _ORCH may not yet exist at startup (the
+        # boot probe runs before the orchestrator is created), so settings can be
+        # None; VoiceEngine tolerates that. If the settings-based init fails for
+        # any reason, fall back to a bare engine (default offline kokoro female
+        # voice). We do NOT permanently cache failure: a transient import/weight
+        # hiccup must self-heal on the next call so auto-voice stays reliable.
         try:
             from app.voice_engine import VoiceEngine
 
             s = _ORCH._settings if _ORCH is not None else None
-            _voice_engine = VoiceEngine(settings=s)
-        except Exception:
-            _voice_engine = False  # unavailable -> cached so we don't retry forever
+            try:
+                _voice_engine = VoiceEngine(settings=s)
+            except Exception:  # noqa: BLE001
+                _voice_engine = VoiceEngine()
+            # Default to MOON's premium local female voice (kokoro 'aria') when no
+            # user-selected voice is set. Offline, no API key required.
+            try:
+                _voice_engine.set_voice("aria")
+            except Exception:  # noqa: BLE001
+                pass
+        except Exception:  # noqa: BLE001
+            # Still unavailable (e.g. kokoro import truly missing). Retry next
+            # time instead of caching False forever.
+            _voice_engine = None
+            return None
     return _voice_engine or None
 
 
