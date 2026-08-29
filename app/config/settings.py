@@ -33,7 +33,7 @@ class Settings(BaseSettings):
         default="http://127.0.0.1:11434/v1",
         description="Base URL of an OpenAI-compatible model endpoint you operate.",
     )
-    model_name: str = Field(default="qwen2.5:3b", description="Model id to request (default local Ollama model).")
+    model_name: str = Field(default="qwen2.5:1.5b", description="Model id to request (default local Ollama model). 1.5b is the safe default for low-spec / CPU-only hosts (fast, ~1GB RAM); raise to qwen2.5:3b+ on machines with more RAM.")
     model_api_key: str = Field(
         default="not-required-for-local",
         description="API key; most local endpoints ignore this.",
@@ -141,8 +141,8 @@ class Settings(BaseSettings):
     # for a higher-quality pass. Leave empty to use the default model only.
     # Unlocked: route accuracy-critical work to a larger local model on this host.
     strong_model_name: str = Field(
-        default="qwen3:1.7b",
-        description="Larger/more-capable model id for accuracy-critical tasks.",
+        default="qwen2.5:1.5b",
+        description="Larger/more-capable model id for accuracy-critical tasks. On CPU-only / low-RAM hosts keep this small (1.5b); large reasoning models (qwen3:8b) are unusably slow there.",
     )
     strong_model_base_url: str = Field(
         default="",
@@ -199,7 +199,10 @@ class Settings(BaseSettings):
     enable_ocr: bool = True
     enable_pdf: bool = True
 
-    enable_agent_validation: bool = True
+    enable_agent_validation: bool = Field(
+        default=False,
+        description="Two-phase agent self-refine (extra LLM pass per task). Disable on CPU-only / low-RAM hosts to halve per-task latency; enable on capable hardware for higher accuracy.",
+    )
     enable_auto_learning: bool = True
 
     # --- Advanced workflow / speed / accuracy ------------------------------
