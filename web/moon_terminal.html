@@ -83,15 +83,16 @@ body{display:grid;place-items:center}
 /* MOON central fusion-reactor core (matches attached target interface) */
 .fusionCore{position:absolute;left:50%;top:44%;width:46%;height:46%;transform:translate(-50%,-50%);z-index:5;pointer-events:none}
 .fusionCore canvas{width:100%;height:100%;display:block}
-/* DOMINANT CORE: the attached fiery holographic-sphere image, screen-blended so
-   it glows as the living MOON core. Reacts to MOON's brain (coreEnergy) via
-   --core-e (set in JS) for a real pulse on every workflow event. Red HUD stays
-   canonical; the sphere is the emissive centerpiece behind the data panels. */
+/* DOMINANT CORE: the attached animated core graphic IS MOON -- shown directly as
+   itself (no artificial orb casing). It reacts to MOON's brain (coreEnergy) via
+   --core-e for a real pulse on every workflow event. A soft glow follows its own
+   shape; the image's native alpha/animation is preserved (no border-radius clip,
+   no screen-blend wash). Red HUD stays canonical; the core is the living centerpiece. */
 .fusionOrb{position:absolute;left:50%;top:50%;width:118%;height:118%;transform:translate(-50%,-50%) scale(calc(1 + var(--core-e,0)*0.10));
-  background:#000 center/cover no-repeat url('/moon_core.webp');filter:saturate(1.05) brightness(calc(1 + var(--core-e,0)*0.55));
-  mix-blend-mode:screen;opacity:calc(.82 + var(--core-e,0)*0.18);border-radius:50%;
-  box-shadow:0 0 calc(60px + var(--core-e,0)*70px) rgba(255,120,40,calc(.5 + var(--core-e,0)*.4));
-  transition:filter .25s, transform .35s, opacity .35s, box-shadow .35s;pointer-events:none;z-index:-1}
+  object-fit:contain;opacity:calc(.9 + var(--core-e,0)*0.10);
+  filter:saturate(1.05) brightness(calc(1 + var(--core-e,0)*0.40))
+         drop-shadow(0 0 calc(34px + var(--core-e,0)*46px) rgba(255,120,40,calc(.45 + var(--core-e,0)*.3)));
+  transition:transform .35s, opacity .35s, filter .35s;pointer-events:none;z-index:-1}
 .coreTitle{position:absolute;left:50%;top:8.5%;transform:translateX(-50%);z-index:7;color:#9dffc4;font-family:var(--ff-title);font-size:clamp(9px,1.1vw,21px);letter-spacing:.3em;font-weight:800;text-shadow:0 0 18px #0f8;pointer-events:none;white-space:nowrap}
 .coreSide{position:absolute;top:13%;width:25%;height:74%;z-index:6;display:flex;flex-direction:column;gap:2.2%;font-family:var(--ff);pointer-events:none}
 .coreSideL{left:3%}.coreSideR{right:3%}
@@ -523,7 +524,7 @@ footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;d
         <div class="coreBox"><span class="lab">FIRING RATE</span><span class="val" id="cfRate">1.28/s</span><canvas class="spark" id="spR2"></canvas></div>
         <div class="coreBox"><span class="lab">SIGNAL STRENGTH</span><span class="val" id="cfSig">MAX</span><canvas class="spark" id="spR3"></canvas></div>
       </div>
-      <div class="fusionCore"><div class="fusionOrb" id="fusionOrb" style="background-image:url('/moon_orb.jpg')"></div><canvas id="coreFx"></canvas><canvas id="neuralFx" style="display:none"></canvas></div>
+      <div class="fusionCore"><img class="fusionOrb" id="fusionOrb" src="/moon_core.webp" alt="MOON core" draggable="false"><canvas id="coreFx"></canvas><canvas id="neuralFx" style="display:none"></canvas></div>
       <div class="idleTag">◌ MOON IDLE — NEURAL CORE STANDBY ◌</div>
       <div id="talkState">◌ LISTENING ◌</div>
       <div class="brainStatus">NEURAL CONVERGENCE IN PROGRESS &nbsp; <b id="conv">87.6%</b></div>
