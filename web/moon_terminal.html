@@ -980,41 +980,11 @@ let coreEnergy=0, fxStars=[], coreGlow=1.0;  // coreGlow: 0..2 multiplier (Setti
 function fxResize(){if(!fxCv)return;const d=devicePixelRatio||1,w=fxCv.clientWidth,h=fxCv.clientHeight;
   if(fxCv.width!==(w*d)|0){fxCv.width=w*d;fxCv.height=h*d;} fxCtx.setTransform(d,0,0,d,0,0);}
 function coreFx(t){
-  if(!fxCv||!fxCtx) return; const w=fxCv.clientWidth,h=fxCv.clientHeight,cx=w/2,cy=h/2,R=Math.min(w,h)*0.30;
-  fxCtx.clearRect(0,0,w,h);
-  const e=Math.min(1,coreEnergy), pulse=1+0.05*Math.sin(t*0.006)+e*0.14;
-  // starfield
-  if(fxStars.length===0)for(let i=0;i<70;i++)fxStars.push({x:Math.random(),y:Math.random(),s:Math.random()*1.3+.3,p:Math.random()*7});
-  fxCtx.save();
-  for(const s of fxStars){s.p+=0.03;const a=0.15+0.5*Math.abs(Math.sin(s.p));fxCtx.beginPath();fxCtx.arc(s.x*w,s.y*h,s.s,0,Math.PI*2);fxCtx.fillStyle="rgba(255,"+(120+Math.random()*60|0)+",80,"+a+")";fxCtx.fill();}
-  fxCtx.restore();
-  const rot=t*0.0004*(1+e*0.8);
-  // geodesic lattice (faint)
-  fxCtx.save();fxCtx.translate(cx,cy);fxCtx.scale(pulse,pulse);fxCtx.rotate(rot*0.6);
-  const N=18;fxCtx.lineWidth=0.6;
-  for(let i=0;i<N;i++){const a=i/N*Math.PI*2, x1=Math.cos(a)*R, y1=Math.sin(a)*R;
-    for(let j=0;j<N;j++){const b=j/N*Math.PI*2, x2=Math.cos(b)*R, y2=Math.sin(b)*R;
-      if(((i+j)%3)===0){fxCtx.beginPath();fxCtx.moveTo(x1,y1);fxCtx.lineTo(x2,y2);fxCtx.strokeStyle="rgba(255,120,60,"+(0.05+e*0.10)+")";fxCtx.stroke();}}}
-  fxCtx.restore();
-  // energy conduits (vertical pillars)
-  fxCtx.save();fxCtx.translate(cx,cy);fxCtx.scale(pulse,pulse);
-  for(let i=0;i<2;i++){const off=(i?1:-1)*R*0.9;const g=fxCtx.createLinearGradient(0,off*0.95,0,-off*0.95);
-    g.addColorStop(0,"rgba(0,255,102,0)");g.addColorStop(0.5,"rgba(255,180,80,"+(0.25+e*0.3)+")");g.addColorStop(1,"rgba(0,255,102,0)");
-    fxCtx.strokeStyle=g;fxCtx.lineWidth=2.2;fxCtx.shadowBlur=12+e*18;fxCtx.shadowColor="#ff9a3a";
-    fxCtx.beginPath();fxCtx.moveTo(off,-R*0.95);fxCtx.lineTo(off,R*0.95);fxCtx.stroke();}
-  fxCtx.restore();
-  // three tilted cyan orbital rings with ticks
-  const rings=[{tilt:1.15,col:"0,220,255"},{tilt:0.55,col:"90,210,255"},{tilt:1.7,col:"120,240,255"}];
-  rings.forEach((rg,ri)=>{const sp=rot*(1+ri*0.5);
-    fxCtx.save();fxCtx.translate(cx,cy);fxCtx.scale(1,pulse*Math.sin(rg.tilt));
-    fxCtx.lineWidth=1.6;fxCtx.strokeStyle="rgba("+rg.col+","+(0.55+e*0.35)+")";fxCtx.shadowBlur=10+e*14;fxCtx.shadowColor="rgb("+rg.col+")";
-    fxCtx.beginPath();fxCtx.ellipse(0,0,R*1.06,R*1.06,0,0,Math.PI*2);fxCtx.stroke();
-    const tk=20;for(let k=0;k<tk;k++){const a=sp+k/tk*Math.PI*2, x=Math.cos(a)*R*1.06, y=Math.sin(a)*R*1.06;
-      fxCtx.beginPath();fxCtx.arc(x,y,1.4,0,Math.PI*2);fxCtx.fillStyle="rgba("+rg.col+","+(0.7+e*0.3)+")";fxCtx.fill();}
-    fxCtx.restore();});
-  fxCtx.shadowBlur=0;
-  // [removed] amber/yellow core bloom orb per user request (keep WebP core + other canvas effects)
-  coreEnergy*=0.965; // decay after MOON stops thinking
+  // MOON's brain core = the WebP image alone. All canvas decorations (rings,
+  // lattice, conduits, starfield, amber bloom) removed per user request, so only
+  // the core image shows. Keep coreEnergy decay so the brain-reactivity plumbing
+  // (--core-e used elsewhere) stays consistent.
+  coreEnergy*=0.965;
 }
 
 /* Animated neural-core "brain" avatar — used when Settings -> avatar_mode = neural.
@@ -1025,25 +995,8 @@ let _nnodes=[];
 function nfResize(){ if(!nfCv)return; const d=devicePixelRatio||1,w=nfCv.clientWidth,h=nfCv.clientHeight;
   if(nfCv.width!==(w*d)|0){nfCv.width=w*d;nfCv.height=h*d;} nfCtx.setTransform(d,0,0,d,0,0); }
 function neuralFx(t){
-  if(!nfCv||!nfCtx) return; const w=nfCv.clientWidth,h=nfCv.clientHeight,cx=w/2,cy=h/2;
-  nfCtx.clearRect(0,0,w,h);
-  if(_nnodes.length===0){ const N=26; for(let i=0;i<N;i++){const a=i/N*Math.PI*2 + Math.random()*.4;
-    const r=Math.min(w,h)*(0.18+Math.random()*0.26); _nnodes.push({a, r, sp:0.002+Math.random()*0.006, ph:Math.random()*7, sz:2+Math.random()*3}); } }
-  const e=Math.min(1,coreEnergy), pulse=1+0.04*Math.sin(t*0.005)+e*0.12;
-  // connections
-  const pts=_nnodes.map(n=>{ n.a+=n.sp*(1+e*1.2); const x=cx+Math.cos(n.a)*n.r*pulse, y=cy+Math.sin(n.a)*n.r*pulse; return {x,y,sz:n.sz}; });
-  nfCtx.lineWidth=0.8;
-  for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){ const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.hypot(dx,dy);
-    if(d<Math.min(w,h)*0.22){ nfCtx.beginPath(); nfCtx.moveTo(pts[i].x,pts[i].y); nfCtx.lineTo(pts[j].x,pts[j].y);
-      nfCtx.strokeStyle=`rgba(120,200,255,${(1-d/(Math.min(w,h)*0.22))*(0.22+e*0.25)})`; nfCtx.stroke(); } }
-  // nodes
-  pts.forEach((p,i)=>{ const hot=(i%7===0); nfCtx.beginPath(); nfCtx.arc(p.x,p.y,p.sz*(1+e*0.6),0,Math.PI*2);
-    nfCtx.fillStyle=hot?`rgba(255,${180-e*60|0},${120-e*40|0},${0.85+e*0.15})`:`rgba(90,170,255,${0.7+e*0.2})`;
-    nfCtx.shadowBlur=hot?12+e*16:5; nfCtx.shadowColor=hot?"#ff7a3a":"#3aa0ff"; nfCtx.fill(); });
-  // central brain glow
-  const g=nfCtx.createRadialGradient(cx,cy,0,cx,cy,Math.min(w,h)*0.16*pulse);
-  g.addColorStop(0,`rgba(180,230,255,${0.5+e*0.3})`); g.addColorStop(1,"rgba(40,80,160,0)");
-  nfCtx.shadowBlur=0; nfCtx.fillStyle=g; nfCtx.beginPath(); nfCtx.arc(cx,cy,Math.min(w,h)*0.16*pulse,0,Math.PI*2); nfCtx.fill();
+  // Brain canvas removed per user request: the WebP core is MOON's brain core
+  // alone. No-op so the render loop stays consistent.
 }
 
 /* ===== LAYER B: data-rain + particle bursts + reactive edge glow ===== */
