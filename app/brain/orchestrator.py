@@ -563,13 +563,20 @@ class Orchestrator:
         return parts[: self._settings.max_parallel_agents]
 
     def _pick_llm(self, task_prompt: str):
-        """Use the STRONG model for factual / cyber-critical tasks when configured."""
+        """Use the STRONG model only for explicit cyber-critical tasks when configured.
+
+        General factual questions (math, definitions, chat) stay on the fast main
+        model: routing them to a large reasoning model (e.g. qwen3:8b) makes every
+        simple query take 100+ seconds on CPU and leaves the terminal hanging.
+        Only accuracy/critical offensive-security prompts get the strong model.
+        """
         if self._llm_strong is None:
             return self._llm
         crit = any(k in (task_prompt or "").lower() for k in
                     ("exploit", "vuln", "cve", "scan", "red team", "offensive", "pentest",
-                     "malware", "forensic", "reverse", "recon", "payload", "attack"))
-        if self._is_factual(task_prompt) or crit:
+                     "malware", "forensic", "reverse", "recon", "payload", "attack",
+                     "exploitation", "privilege escalation", "lateral movement"))
+        if crit:
             return self._llm_strong
         return self._llm
 
