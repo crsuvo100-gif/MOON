@@ -1276,14 +1276,29 @@ async def ws_endpoint(ws: WebSocket):
                             answer = "I'm here, my love. Say the phrase to let me act."
                 else:
                     # Unlocked (phrase observed) -- run the real brain on the text.
+                    # GUARD: run_task's cognition loop can stall on a slow/hung LLM
+                    # call (verified: direct LLMService.complete works, but the full
+                    # run_task path occasionally hangs). Bound it and fall back to the
+                    # fast, proven quick_reply so the terminal ALWAYS gets a brain
+                    # reply instead of a silent hang.
                     from app.models.task import Task
                     task = Task.create(text, agent_name="auto")
                     t0 = time.time()
                     try:
-                        result_task = await orch.run_task(task, on_event=stream_event)
-                        answer = result_task.result or "(no response)"
-                    except Exception as e:  # noqa: BLE001
-                        answer = f"[MOON error: {e}]"
+                        result_task = await asyncio.wait_for(
+                            orch.run_task(task, on_event=stream_event), timeout=75)
+                        answer = result_task.result or ""
+                    except (asyncio.TimeoutError, Exception) as e:  # noqa: BLE001
+                        _last_error = True
+                        await send(type="workflow", stage="fallback",
+                                   detail="run_task slow — using fast brain path")
+                        try:
+                            answer = await asyncio.wait_for(
+                                orch.quick_reply(text), timeout=70)
+                        except (asyncio.TimeoutError, Exception) as e2:  # noqa: BLE001
+                            answer = f"[MOON error: {e2}]"
+                    if not answer:
+                        answer = "(no response)"
                 await send(type="workflow", stage="speaking", detail="forming response")
                 for chunk in _stream_text(answer):
                     await send(type="assistant_chunk", content=chunk)
@@ -1871,7 +1886,24 @@ async def ws_endpoint(ws: WebSocket):
             elif action is None:
                 continue
             else:
-                asyncio.create_task(_handle(data))
+                # Heavy actions run as their own task so a slow LLM reply never
+                # blocks status/mute/wake. Capture the task result so a failure
+                # surfaces to the client instead of being silently swallowed
+                # (a swallowed exception left the terminal hanging with no reply).
+                task = asyncio.create_task(_handle(data))
+                def _observe(t):
+                    try:
+                        if t.exception() is not None:
+                            err = t.exception()
+                            asyncio.create_task(
+                                send(type="assistant_chunk",
+                                     content=f"\n[MOON error: {err}]"))
+                            asyncio.create_task(
+                                send(type="assistant_done", elapsed=0.0,
+                                     locked=orch._lock.locked, error=True))
+                    except asyncio.CancelledError:
+                        pass
+                task.add_done_callback(_observe)
     except WebSocketDisconnect:
         return
     except Exception:  # noqa: BLE001

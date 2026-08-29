@@ -59,12 +59,12 @@ class LLMService:
         if disable_thinking is None:
             disable_thinking = False
         self._disable_thinking = disable_thinking
-        # Generous floor for local-first models: qwen3:0.6b on CPU routinely
-        # takes 35-120s per call, and a COLD first call after backend start can
-        # exceed even 120s (Ollama model load). A tight timeout here silently
-        # raised httpx.ReadTimeout -> empty content -> fake-success/fallback.
-        # Use the configured timeout but never below 300s for reliability.
-        _client_timeout = max(float(timeout), 300.0)
+        # Reliability floor: local-first models (qwen3:0.6b on CPU) can need
+        # 35-120s, and a COLD first call after backend start can exceed 120s.
+        # But a 5-minute floor makes the terminal appear hung. Cap at 150s so a
+        # genuinely stalled call fails fast and the brain falls back / reports an
+        # error instead of silently hanging the terminal for minutes.
+        _client_timeout = max(float(timeout), 150.0)
         self._client = httpx.AsyncClient(
             base_url=self._base,
             headers={"Authorization": f"Bearer {api_key}"},
@@ -106,11 +106,11 @@ class LLMService:
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
         try:
-            # Per-request timeout must match the client floor: local-first models
-            # (qwen3:0.6b on CPU) routinely need 35-120s, and a COLD first call
-            # after backend start can exceed 120s. A tight timeout here raises
-            # httpx.ReadTimeout -> empty content -> fake-success. Never below 300s.
-            _req_timeout = max(float(self._timeout), 300.0)
+            # Per-request timeout floor: local-first models (qwen3:0.6b on CPU)
+            # can need 35-120s, and a COLD first call after backend start can
+            # exceed 120s. Cap at 150s so a stalled request fails fast instead of
+            # hanging the terminal for 5 minutes.
+            _req_timeout = max(float(self._timeout), 150.0)
             resp = await self._client.post(
                 "/chat/completions", json=payload,
                 timeout=_req_timeout,
