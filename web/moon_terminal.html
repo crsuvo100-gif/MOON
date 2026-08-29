@@ -427,7 +427,28 @@ footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;d
 @keyframes pglyphdash{to{stroke-dashoffset:-36}}
 @keyframes pglyphbreathe{0%,100%{transform:scale(.94)}50%{transform:scale(1.04)}}
 
-</style>
+/* ===== Advanced polish: glass panels + CRT depth ===== */
+.panel{backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+/* subtle scanline + vignette overlay (behind content, non-interactive) */
+.crt{position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:
+    repeating-linear-gradient(0deg,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.16) 2px 3px),
+    radial-gradient(circle at 50% 50%,transparent 55%,rgba(0,0,0,.55) 100%);
+  mix-blend-mode:multiply;opacity:.5}
+/* animated status ticker directly under the header (absolute, non-overlapping) */
+.ticker{position:absolute;left:.7%;right:.7%;top:9.4%;height:3.2%;z-index:6;
+  display:flex;align-items:center;overflow:hidden;border:1px solid var(--line);
+  background:linear-gradient(90deg,rgba(4,18,12,.92),rgba(3,9,14,.92));border-radius:3px;
+  box-shadow:inset 0 0 16px rgba(13,255,140,.07),0 0 14px rgba(13,255,140,.10);font-family:var(--ff-title)}
+.ticker .tick{display:flex;align-items:center;white-space:nowrap;padding:0 14px;height:100%;
+  font-size:clamp(8px,1vw,18px);letter-spacing:.05em;color:var(--muted);border-right:1px solid rgba(13,255,140,.14)}
+.ticker .tick b{color:var(--emerald);margin-left:6px;text-shadow:0 0 10px rgba(13,255,140,.7);font-weight:800}
+.ticker .tick .dot{width:7px;height:7px;border-radius:50%;background:var(--emerald);box-shadow:0 0 9px var(--emerald);margin-right:8px;animation:tickpulse 1.4s ease-in-out infinite}
+.ticker .tick.warn b{color:var(--amber);text-shadow:0 0 10px rgba(255,179,51,.7)}
+.ticker .tick.alert b{color:var(--red);text-shadow:0 0 10px rgba(255,31,61,.8)}
+.ticker .tick.alert .dot{background:var(--red);box-shadow:0 0 9px var(--red)}
+@keyframes tickpulse{0%,100%{opacity:.45}50%{opacity:1}}
+@media(max-width:1000px){.ticker{height:5%}}
 </head>
 <body>
 <div id="app">
@@ -447,6 +468,8 @@ footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;d
 <div class="edgeGlow" id="edgeGlow"></div>
 <div class="energy"></div><div class="appframe"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
 <div class="frame-tr"></div><div class="frame-bl"></div>
+<div class="crt"></div>
+<div class="ticker" id="ticker"><span class="tick"><span class="dot"></span>MOON NEURAL CORE<span id="tkStatus">INITIALIZING</span></span><span class="tick">AGENTS <b id="tkAgents">–</b></span><span class="tick">TOOLS <b id="tkTools">–</b></span><span class="tick">THREAT <b id="tkThreat">–</b></span><span class="tick">UPTIME <b id="tkUp">–</b></span><span class="tick">LATENCY <b id="tkLat">–</b></span></div>
 
 <header>
   <div class="panel hcell logo"><span>MOON</span></div>
@@ -733,6 +756,27 @@ function applyStatus(s){
   }
   // convergence reflects live load
   setText("conv", load+"%"); const b=el("convBar"); if(b)b.style.width=load+"%";
+  updateTicker(s, agentN, load);
+}
+
+// Feed the live status ticker from real backend status (additive; no UI removed)
+function updateTicker(s, agentN, load){
+  const set=(id,v)=>{ const e=el(id); if(e) e.textContent=v; };
+  const tk=el("ticker"); if(!tk) return;
+  const locked = !!s.locked;
+  const st = tk.querySelector("#tkStatus");
+  if(st){ st.textContent = locked? "LOCKED" : "ONLINE"; st.parentElement.classList.toggle("alert", locked); }
+  set("tkAgents", agentN||0);
+  set("tkTools", s.n_tools!=null? s.n_tools : "–");
+  const th=tk.querySelector("#tkThreat");
+  if(th){
+    const lvl = locked? "LOCKED" : "MINIMAL";
+    th.textContent = lvl;
+    th.parentElement.classList.toggle("alert", locked);
+    th.parentElement.classList.toggle("warn", false);
+  }
+  set("tkUp", s.uptime_fmt || "–");
+  set("tkLat", (s.system&&s.system.net) || "–");
 }
 
 function addLog(t){
@@ -1259,7 +1303,20 @@ el("voiceBtn").onclick=()=>toggleVoice(true);
 el("toolsBtn").onclick=()=>toggleTools(true);
 el("funcBtn").onclick=()=>toggleFunc(true);
 el("send").onclick=doSend;
-el("command").addEventListener("keydown",e=>{if(e.key==="Enter")el("send").click();});
+// Command input: Enter sends, ArrowUp/Down recall history (additive terminal UX)
+const _cmdHist=[]; let _cmdIdx=_cmdHist.length;
+el("command").addEventListener("keydown",e=>{
+  if(e.key==="Enter"){ const v=el("command").value.trim(); if(v){ _cmdHist.push(v); _cmdIdx=_cmdHist.length; } el("send").click(); }
+  else if(e.key==="ArrowUp"){ if(_cmdHist.length && _cmdIdx>0){ _cmdIdx--; el("command").value=_cmdHist[_cmdIdx]; e.preventDefault(); } }
+  else if(e.key==="ArrowDown"){ if(_cmdIdx<_cmdHist.length-1){ _cmdIdx++; el("command").value=_cmdHist[_cmdIdx]; } else { _cmdIdx=_cmdHist.length; el("command").value=""; } e.preventDefault(); }
+});
+// Global shortcuts (non-intrusive: ignored while typing in inputs)
+document.addEventListener("keydown",e=>{
+  const tag=(e.target.tagName||"").toUpperCase();
+  const typing = tag==="INPUT"||tag==="TEXTAREA"||e.target.isContentEditable;
+  if(e.key==="/" && !typing){ e.preventDefault(); el("command").focus(); }
+  else if(e.key==="Escape"){ const t=el("terminal"); if(t && t.classList.contains("open")) t.classList.remove("open"); const ws=el("workspace"); if(ws) ws.classList.add("hidden"); }
+});
 $$(".nav").forEach(n=>n.onclick=()=>doNav(n));
 const avatarEl=document.querySelector(".avatar"); if(avatarEl) avatarEl.onclick=doCoreSync;
 
