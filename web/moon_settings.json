@@ -4,9 +4,9 @@
   "display": "",
   "browser": "",
   "aspect": "auto",
-  "avatar_mode": "neural",
+  "avatar_mode": "fusion",
   "resolution": "hd",
-  "core_glow": 2,
+  "core_glow": 1.0,
   "autostart": true,
-  "idle_speed": 0.5
+  "idle_speed": 1
 }

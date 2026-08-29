@@ -1107,7 +1107,7 @@ async function loadSettingsUI(){
   const glow=String(s.core_glow!=null?s.core_glow:localStorage.getItem("moon-ui-glow")||"1");
   if(el("setGlow")) el("setGlow").value=glow;
   // core background treatment
-  _coreBg = (s.core_bg||localStorage.getItem("moon-ui-corebg")||"auto");
+  _coreBg = (s.core_bg||localStorage.getItem("moon-ui-corebg-v2")||"auto");
   $$("#setCoreBg .ratio").forEach(b=>b.classList.toggle("sel", b.dataset.b===_coreBg));
   applyCoreBg();
   setCoreThinking(false); setCoreState("◌ IDLE ◌"); // start idle (breathing)
@@ -1139,7 +1139,7 @@ $$("#setRes .ratio").forEach(b=>b.onclick=()=>{
 // core background pick inside settings
 $$("#setCoreBg .ratio").forEach(b=>b.onclick=()=>{
   $$("#setCoreBg .ratio").forEach(x=>x.classList.remove("sel")); b.classList.add("sel");
-  _coreBg=b.dataset.b; applyCoreBg(); localStorage.setItem("moon-ui-corebg",_coreBg);
+  _coreBg=b.dataset.b; applyCoreBg(); localStorage.setItem("moon-ui-corebg-v2",_coreBg);
 });
 // core glow slider (live)
 const _glowEl=el("setGlow");
@@ -1169,10 +1169,11 @@ function applyResolution(){
 }
 // Core background treatment (adjustable, non-destructive to the asset):
 //  auto       -> keep full-bg image but CSS screen-blend so the violet bg dissolves
-//                into the dark HUD (invisible / matched). DEFAULT.
-//  transparent -> swap to the keyed orb-only WebP (true alpha).
+//                into the dark HUD (invisible / matched).
+//  transparent -> swap to the keyed orb-only WebP (true alpha). DEFAULT (user wants
+//                the orb only, no background imposed).
 //  solid       -> full file as-is.
-let _coreBg = (localStorage.getItem("moon-ui-corebg")||"auto");
+let _coreBg = (localStorage.getItem("moon-ui-corebg-v2")||"transparent");
 function applyCoreBg(){
   const orb=el("fusionOrb"); if(!orb) return;
   if(_coreBg==="transparent"){ orb.src="/moon_core_transparent.webp"; orb.style.mixBlendMode="normal"; }
@@ -1220,9 +1221,9 @@ function applySettingsNow(){
 }
 function resetSettings(){
   fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({host:"127.0.0.1",port:8777,display:"",browser:"",autostart:true,aspect:"auto",avatar_mode:"fusion",resolution:"hd",core_glow:1.0,idle_speed:1,core_bg:"auto"})})
+    body:JSON.stringify({host:"127.0.0.1",port:8777,display:"",browser:"",autostart:true,aspect:"auto",avatar_mode:"fusion",resolution:"hd",core_glow:1.0,idle_speed:1,core_bg:"transparent"})})
     .catch(()=>{});
-  localStorage.removeItem("moon-ui-ratio"); localStorage.removeItem("moon-ui-idle-speed"); localStorage.removeItem("moon-ui-avatar"); localStorage.removeItem("moon-ui-resolution"); localStorage.removeItem("moon-ui-glow"); localStorage.removeItem("moon-ui-corebg");
+  localStorage.removeItem("moon-ui-ratio"); localStorage.removeItem("moon-ui-idle-speed"); localStorage.removeItem("moon-ui-avatar"); localStorage.removeItem("moon-ui-resolution"); localStorage.removeItem("moon-ui-glow"); localStorage.removeItem("moon-ui-corebg-v2");
   loadSettingsUI(); applySettingsNow(); el("setMsg").textContent="✓ reset to defaults";
 }
 el("setBtn").onclick=()=>toggleSettings(true);
