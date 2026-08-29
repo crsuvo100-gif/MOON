@@ -409,18 +409,22 @@ footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;d
 .logs #logs .line[data-s="moon"]{color:#ffb0d6;border-left-color:#a31f6a}
 
 /* ===== Per-panel animated function glyph ===== */
-.panel .pglyph{position:absolute;left:50%;top:50%;width:min(46%,170px);height:min(46%,170px);
-  transform:translate(-50%,-50%);z-index:0;opacity:.13;pointer-events:none;color:var(--emerald);
-  filter:drop-shadow(0 0 10px currentColor);mix-blend-mode:screen}
+.panel{position:relative}
+.panel .pglyph{position:absolute;left:50%;top:50%;width:min(54%,210px);height:min(54%,210px);
+  transform:translate(-50%,-50%);z-index:0;opacity:.22;pointer-events:none;color:var(--emerald);
+  filter:drop-shadow(0 0 14px currentColor);mix-blend-mode:screen;
+  background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.05),transparent 62%)}
 .panel .pglyph svg{width:100%;height:100%;display:block;overflow:visible}
 .panel .pglyph .spin{transform-origin:50% 50%;animation:pglyphspin 9s linear infinite}
-.panel .pglyph .pulse{transform-origin:50% 50%;animation:pglyphpulse 2.6s ease-in-out infinite}
-.panel .pglyph .scan{transform-origin:50% 50%;animation:pglyphscan 3.2s ease-in-out infinite}
+.panel .pglyph .pulse{transform-origin:50% 50%;animation:pglyphpulse 3.4s ease-in-out infinite}
+.panel .pglyph .scan{transform-origin:50% 50%;animation:pglyphscan 3.6s ease-in-out infinite}
 .panel .pglyph .dash{stroke-dasharray:5 4;animation:pglyphdash 2.4s linear infinite}
+.panel .pglyph .breathe{transform-origin:50% 50%;animation:pglyphbreathe 5s ease-in-out infinite}
 @keyframes pglyphspin{to{transform:rotate(360deg)}}
-@keyframes pglyphpulse{0%,100%{transform:scale(.82);opacity:.7}50%{transform:scale(1.06);opacity:1}}
-@keyframes pglyphscan{0%,100%{transform:translateY(-6%)}50%{transform:translateY(6%)}}
+@keyframes pglyphpulse{0%,100%{transform:scale(.86);opacity:.65}50%{transform:scale(1.08);opacity:1}}
+@keyframes pglyphscan{0%,100%{transform:translateY(-7%)}50%{transform:translateY(7%)}}
 @keyframes pglyphdash{to{stroke-dashoffset:-36}}
+@keyframes pglyphbreathe{0%,100%{transform:scale(.94)}50%{transform:scale(1.04)}}
 
 </style>
 </head>
@@ -1564,11 +1568,23 @@ connect();
     if(/diamond|gem|data/.test(id+h)) return "diamond";
     return "default";
   }
+  const ACCENT = {
+    brain:'#9a5cff', core:'#9a5cff', matrix:'#0dff8c', grid:'#0dff8c',
+    cpu:'#0dff8c', ram:'#34e6ff', net:'#34e6ff', globe:'#34e6ff', signal:'#34e6ff',
+    agent:'#19ff9b', bot:'#19ff9b', swarm:'#19ff9b',
+    shield:'#ff1f3d', threat:'#ff1f3d', eye:'#ffb733', radar:'#ffb733', recon:'#ffb733',
+    wave:'#22e0ff', tools:'#34e6ff', keys:'#34e6ff', key:'#34e6ff', link:'#34e6ff',
+    chat:'#19ff9b', command:'#0dff8c', shell:'#0dff8c', server:'#34e6ff', hex:'#9a5cff',
+    sat:'#ffb733', map:'#ffb733', clock:'#19ff9b', log:'#7dffb0', gauge:'#ffb733',
+    diamond:'#ff2de0', doc:'#19ff9b', default:'#0dff8c'
+  };
   document.querySelectorAll(".panel").forEach(function(p){
     if(p.querySelector(".pglyph")) return;
+    const key=mapKey(p);
     const div=document.createElement("div");
     div.className="pglyph";
-    div.innerHTML=G[mapKey(p)]||G.default;
+    div.style.color = ACCENT[key] || "#0dff8c";
+    div.innerHTML=G[key]||G.default;
     p.insertBefore(div, p.firstChild);
   });
 })();
