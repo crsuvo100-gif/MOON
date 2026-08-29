@@ -477,6 +477,40 @@ def _cmd_restore() -> int:
     return 0
 
 
+def _cmd_setup() -> int:
+    """First-run setup wizard (interactive config -> .env -> installer).
+
+    Native to MOON (mirrors the 'setup' step of agent installers) and shares
+    no code with any other project. Delegates to setup_wizard.py.
+    """
+    import importlib.util
+    import os
+
+    spec = importlib.util.spec_from_file_location(
+        "setup_wizard", str(Path("setup_wizard.py").resolve()))
+    if spec is None or spec.loader is None:
+        print("setup_wizard.py not found in project root")
+        return 2
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.main() or 0
+
+
+def _cmd_uninstall() -> int:
+    """Native MOON uninstaller (safe by default -- removes auto-start wiring)."""
+    import importlib.util
+    import os
+
+    spec = importlib.util.spec_from_file_location(
+        "uninstall_moon", str(Path("uninstall_moon.py").resolve()))
+    if spec is None or spec.loader is None:
+        print("uninstall_moon.py not found in project root")
+        return 2
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.main() or 0
+
+
 def _cmd_install() -> int:
     """Delegate to the existing Python bootstrap installer (install_moon.py)."""
     import importlib.util
@@ -526,6 +560,8 @@ def main() -> None:
     sub.add_parser("backup", help="Snapshot runtime data into backups/ (cross-platform)")
     sub.add_parser("restore", help="Restore a backups/moon_<timestamp> snapshot")
     sub.add_parser("install", help="Run the Python bootstrap installer (venv + deps + models)")
+    sub.add_parser("setup", help="First-run setup wizard (configure .env, then install)")
+    sub.add_parser("uninstall", help="Remove MOON auto-start wiring (launcher, services, desktop)")
     sub.add_parser("update", help="Safe update: git pull --ff-only + pip install -e . --upgrade")
     sub.add_parser("version", help="Print MOON version")
     sub.add_parser("monitor", help="Run health monitor + self-heal (backend, models, git sync)")
@@ -559,6 +595,10 @@ def main() -> None:
         raise SystemExit(_cmd_restore())
     elif args.cmd == "install":
         raise SystemExit(_cmd_install())
+    elif args.cmd == "setup":
+        raise SystemExit(_cmd_setup())
+    elif args.cmd == "uninstall":
+        raise SystemExit(_cmd_uninstall())
     elif args.cmd == "update":
         raise SystemExit(_cmd_update())
     elif args.cmd == "version":
