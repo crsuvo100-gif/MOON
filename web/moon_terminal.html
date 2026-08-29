@@ -6,15 +6,14 @@
 <title>MOON NEURAL CORE INTERFACE</title>
 <style>
 :root{
-  /* GORGEOUS OFFENSIVE-HACKER palette: emerald->cyan neon on deep gradient
-     blacks, magenta/violet glitch accents, amber + red alarm. Premium yet
-     dangerous. */
-  --bg:#03060a;--panel:rgba(7,22,16,.82);--surf:#07160f;--surf2:#04110b;
-  --green:#19ff9b;--hot:#9bffe0;--emerald:#00e676;--cyan:#34e6ff;
-  --red:#ff2d4d;--line:#0e6b46;--line2:#19ff9b;
-  --mag:#ff3df0;--violet:#a06bff;
-  --text:#b6ffe0;--muted:#7dffc4;
-  --amber:#ffc24a;--blue:#7ba7ff;
+  /* DEEP OFFENSIVE-HACKER palette: saturated emerald/cyan neon over near-black
+     void, violet + magenta glitch, amber + alarm red. Richer, deeper, immersive. */
+  --bg:#01040a;--panel:rgba(4,16,11,.9);--surf:#04110b;--surf2:#020a08;
+  --green:#0dff8c;--hot:#7dffe0;--emerald:#00ffa6;--cyan:#22e0ff;
+  --red:#ff1f3d;--line:#0a5a3a;--line2:#0dff8c;
+  --mag:#ff2de0;--violet:#9a5cff;
+  --text:#9bffd2;--muted:#5cffae;
+  --amber:#ffb733;--blue:#6fa0ff;
   --ff:'Share Tech Mono','Courier New',monospace;
   --ff-title:'Share Tech Mono','Courier New',monospace;
 }
@@ -23,11 +22,12 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#000;color:
 body{display:grid;place-items:center}
 #app{
   position:relative;width:100vw;height:100vh;overflow:hidden;background:
-  radial-gradient(circle at 22% 18%,rgba(25,255,155,.14),transparent 38%),
-  radial-gradient(circle at 82% 82%,rgba(52,230,255,.12),transparent 42%),
-  radial-gradient(circle at 50% 50%,rgba(160,107,255,.05),transparent 60%),
-  linear-gradient(135deg,#04120c 0%,#020a12 55%,#03060a 100%);border:1px solid #0e6b46;
-  box-shadow:0 0 60px rgba(25,255,155,.22),inset 0 0 90px rgba(25,255,155,.07),inset 0 0 200px rgba(52,230,255,.04);
+  radial-gradient(circle at 20% 14%,rgba(13,255,140,.20),transparent 40%),
+  radial-gradient(circle at 84% 86%,rgba(34,224,255,.16),transparent 44%),
+  radial-gradient(circle at 50% 52%,rgba(154,92,255,.07),transparent 62%),
+  radial-gradient(circle at 50% 50%,rgba(13,255,140,.05),transparent 70%),
+  linear-gradient(150deg,#020a08 0%,#01060f 55%,#01030a 100%);border:1px solid #0a5a3a;
+  box-shadow:0 0 80px rgba(13,255,140,.28),inset 0 0 120px rgba(13,255,140,.10),inset 0 0 260px rgba(34,224,255,.06);
   /* HD base: scale UI density with the viewport so a 1080p+ display fills richly.
      The .hd class bumps this further for a larger, more detailed look. */
   font-size:clamp(13px,1.02vw,19px);
@@ -202,18 +202,18 @@ h3,.nav,.metric strong,.btn,.title,.bcell h4,.logo,.aspectTitle,.ratio,.navcol .
 .BOOT-STEPS b{color:#5cff88}
 #boot .bcursor{display:inline-block;width:8px;height:13px;background:#ff5a3a;margin-left:3px;animation:blink 1s steps(2) infinite;vertical-align:-1px}
 @keyframes blink{50%{opacity:0}}
-.energy{box-shadow:inset 0 0 80px rgba(25,255,155,.16),0 0 50px rgba(52,230,255,.26)}
-.energy:before{border-top:2px solid rgba(155,255,224,.95);border-bottom:2px solid rgba(155,255,224,.35);box-shadow:0 0 12px #19ff9b}
-.appframe i{border-width:4px;filter:drop-shadow(0 0 14px #19ff9b)}
-.frame-tr,.frame-bl{border-width:3px;box-shadow:0 0 22px rgba(25,255,155,.8)}
-#app:before,#app:after{border-width:3px;box-shadow:0 0 22px rgba(25,255,155,.8)}
-.panel{border:1px solid var(--line2);box-shadow:inset 0 0 22px rgba(25,255,155,.10),0 0 18px rgba(25,255,155,.18)}
+.energy{box-shadow:inset 0 0 90px rgba(13,255,140,.20),0 0 60px rgba(34,224,255,.32)}
+.energy:before{border-top:2px solid rgba(125,255,224,.95);border-bottom:2px solid rgba(125,255,224,.35);box-shadow:0 0 14px #0dff8c}
+.appframe i{border-width:4px;filter:drop-shadow(0 0 16px #0dff8c)}
+.frame-tr,.frame-bl{border-width:3px;box-shadow:0 0 26px rgba(13,255,140,.9)}
+#app:before,#app:after{border-width:3px;box-shadow:0 0 26px rgba(13,255,140,.9)}
+.panel{border:1px solid var(--line2);box-shadow:inset 0 0 26px rgba(13,255,140,.12),0 0 20px rgba(13,255,140,.22)}
 .brainPanel{animation:corebreathe 5s ease-in-out infinite}
-@keyframes corebreathe{0%,100%{box-shadow:inset 0 0 60px rgba(0,255,102,.16)}50%{box-shadow:inset 0 0 60px rgba(0,255,102,.16)}}
-.title{background:linear-gradient(90deg,#19ff9b,#34e6ff 60%,#a06bff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 18px rgba(25,255,155,.35)}
-.logo{font-family:var(--ff-title);letter-spacing:.06em;background:linear-gradient(90deg,#19ff9b,#34e6ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+@keyframes corebreathe{0%,100%{box-shadow:inset 0 0 70px rgba(13,255,140,.20)}50%{box-shadow:inset 0 0 70px rgba(13,255,140,.20)}}
+.title{background:linear-gradient(90deg,#0dff8c,#22e0ff 60%,#9a5cff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 20px rgba(13,255,140,.45)}
+.logo{font-family:var(--ff-title);letter-spacing:.06em;background:linear-gradient(90deg,#0dff8c,#22e0ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 
-.panel{position:relative;background:linear-gradient(145deg,rgba(6,26,18,.92),rgba(3,10,14,.95));border:1px solid var(--line2);clip-path:polygon(0 3px,3px 0,calc(100% - 3px) 0,100% 3px,100% calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,0 calc(100% - 3px));box-shadow:inset 0 0 20px rgba(25,255,155,.06),0 0 12px rgba(25,255,155,.08);overflow:hidden;
+.panel{position:relative;background:linear-gradient(145deg,rgba(3,18,12,.94),rgba(2,8,12,.97));border:1px solid var(--line2);clip-path:polygon(0 3px,3px 0,calc(100% - 3px) 0,100% 3px,100% calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,0 calc(100% - 3px));box-shadow:inset 0 0 24px rgba(13,255,140,.08),0 0 14px rgba(13,255,140,.10);overflow:hidden;
   perspective:900px;transform-style:flat;transition:transform .4s,box-shadow .3s,border-color .3s}
 .panel:after{content:"";position:absolute;left:0;right:0;top:0;height:3px;pointer-events:none;z-index:6;
   background:linear-gradient(90deg,transparent,rgba(0,255,102,.25) 30%,rgba(255,120,120,.45) 50%,rgba(0,255,102,.25) 70%,transparent);
