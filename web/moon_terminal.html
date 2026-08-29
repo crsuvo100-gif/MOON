@@ -83,25 +83,21 @@ body{display:grid;place-items:center}
 /* MOON central fusion-reactor core (matches attached target interface) */
 .fusionCore{position:absolute;left:50%;top:44%;width:46%;height:46%;transform:translate(-50%,-50%) scale(calc(1 + var(--core-e,0)*0.16));transition:transform .3s ease;z-index:5;pointer-events:none}
 .fusionCore canvas{width:100%;height:100%;display:block}
-/* DOMINANT CORE: the attached animated core graphic IS MOON -- shown directly as
-   itself (no artificial orb casing). It reacts to MOON's brain (coreEnergy) via
-   --core-e for a real pulse on every workflow event. A soft glow follows its own
-   shape; the image's native alpha/animation is preserved (no border-radius clip,
-   no screen-blend wash). Red HUD stays canonical; the core is the living centerpiece.
-   The orb also breathes on its own (moonCoreBreath) so it is always alive, like the
-   original animated WebP; .thinking adds an intense glow burst while MOON works. */
-.fusionOrb{position:absolute;left:50%;top:50%;width:118%;height:118%;
+/* DOMINANT CORE: the attached animated 3D sphere IS MOON -- shown directly as
+   itself (no artificial orb casing). It plays its OWN native 3D animation (the
+   supplied animated WebP frames), so no synthetic CSS rotate is applied. It still
+   reacts to MOON's brain (coreEnergy) via --core-e for a real pulse on every
+   workflow event, and .thinking adds an intense glow burst while she works. A soft
+   glow follows its own shape; native alpha/animation preserved (no border-radius
+   clip, no screen-blend wash). Red HUD stays canonical; the core is the living
+   centerpiece. */
+.fusionOrb{position:absolute;left:50%;top:50%;width:118%;height:118%;transform:translate(-50%,-50%);
   object-fit:contain;opacity:calc(.9 + var(--core-e,0)*0.10);
   filter:saturate(1.05) brightness(calc(1 + var(--core-e,0)*0.40))
-         drop-shadow(0 0 calc(34px + var(--core-e,0)*46px) rgba(255,225,90,calc(.45 + var(--core-e,0)*.3)));
-  animation:moonCoreBreath 4.5s ease-in-out infinite;
+         drop-shadow(0 0 calc(34px + var(--core-e,0)*46px) rgba(255,200,80,calc(.45 + var(--core-e,0)*.3)));
   transition:filter .35s;pointer-events:none;z-index:-1}
 .fusionOrb.thinking{filter:saturate(1.15) brightness(calc(1.15 + var(--core-e,0)*0.5))
-         drop-shadow(0 0 calc(54px + var(--core-e,0)*60px) rgba(255,235,120,.95));animation:moonCoreBreath 1.6s ease-in-out infinite}
-@keyframes moonCoreBreath{
-  0%,100%{transform:translate(-50%,-50%) scale(1) rotate(-2.2deg)}
-  50%{transform:translate(-50%,-50%) scale(1.055) rotate(2.2deg)}
-}
+         drop-shadow(0 0 calc(54px + var(--core-e,0)*60px) rgba(255,220,110,.95))}
 .coreTitle{position:absolute;left:50%;top:8.5%;transform:translateX(-50%);z-index:7;color:#9dffc4;font-family:var(--ff-title);font-size:clamp(9px,1.1vw,21px);letter-spacing:.3em;font-weight:800;text-shadow:0 0 18px #0f8;pointer-events:none;white-space:nowrap}
 .coreSide{position:absolute;top:13%;width:25%;height:74%;z-index:6;display:flex;flex-direction:column;gap:2.2%;font-family:var(--ff);pointer-events:none}
 .coreSideL{left:3%}.coreSideR{right:3%}
