@@ -677,8 +677,8 @@ function applyStatus(s){
   const ramT = sys.ram_total_mb||0, ramU = sys.ram_used_mb||0;
   if(ramT){ setText("mTotal",(ramT/1e3).toFixed(1)+" GB"); setText("mUsed",(ramU/1e3).toFixed(1)+" GB"); setText("mFree",((ramT-ramU)/1e3).toFixed(1)+" GB"); }
   // integrity: real from backend, capped 0-100
-  const integ = mem.integrity!=null ? Math.min(100, Math.max(0, mem.integrity)) : 98.7;
-  setText("mInteg", integ.toFixed(1)+"%");
+  const integ2 = mem.integrity!=null ? Math.min(100, Math.max(0, mem.integrity)) : 98.7;
+  setText("mInteg", integ2.toFixed(1)+"%");
   setText("mRed", (mem.vector||0) > 0 ? (1 + (mem.vector||0)*0.005).toFixed(1)+"x" : "5.2x");
 
   // system monitor (CLI)
