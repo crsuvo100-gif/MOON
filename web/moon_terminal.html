@@ -81,7 +81,7 @@ body{display:grid;place-items:center}
 /* IDLE / ATTRACT STATE: MOON breathing calmly + slow radar sweep when no interaction */
 #center.idle .brainPanel{animation:corebreathe 6s ease-in-out infinite}
 /* MOON central fusion-reactor core (matches attached target interface) */
-.fusionCore{position:absolute;left:50%;top:44%;width:46%;height:46%;transform:translate(-50%,-50%) scale(calc(1 + var(--core-e,0)*0.16));transition:transform .3s ease;z-index:5;pointer-events:none}
+.fusionCore{position:absolute;left:50%;top:50%;width:94%;height:94%;transform:translate(-50%,-50%) scale(calc(1 + var(--core-e,0)*0.16));transition:transform .3s ease;z-index:5;pointer-events:none}
 .fusionCore canvas{width:100%;height:100%;display:block}
 /* DOMINANT CORE: the attached animated 3D sphere IS MOON -- shown directly as
    itself (no artificial orb casing). It plays its OWN native 3D animation (the
@@ -91,7 +91,7 @@ body{display:grid;place-items:center}
    glow follows its own shape; native alpha/animation preserved (no border-radius
    clip, no screen-blend wash). Red HUD stays canonical; the core is the living
    centerpiece. */
-.fusionOrb{position:absolute;left:50%;top:50%;width:118%;height:118%;transform:translate(-50%,-50%);
+.fusionOrb{position:absolute;left:50%;top:50%;width:100%;height:100%;transform:translate(-50%,-50%);
   object-fit:contain;opacity:calc(.9 + var(--core-e,0)*0.10);
   filter:saturate(1.05) brightness(calc(1 + var(--core-e,0)*0.40))
          drop-shadow(0 0 calc(34px + var(--core-e,0)*46px) rgba(255,200,80,calc(.45 + var(--core-e,0)*.3)));
