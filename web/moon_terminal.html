@@ -28,8 +28,6 @@ body{display:grid;place-items:center}
   radial-gradient(circle at 50% 50%,rgba(13,255,140,.05),transparent 70%),
   linear-gradient(150deg,#020a08 0%,#01060f 55%,#01030a 100%);border:1px solid #0a5a3a;
   box-shadow:0 0 80px rgba(13,255,140,.28),inset 0 0 120px rgba(13,255,140,.10),inset 0 0 260px rgba(34,224,255,.06);
-  /* HD base: scale UI density with the viewport so a 1080p+ display fills richly.
-     The .hd class bumps this further for a larger, more detailed look. */
   font-size:clamp(13px,1.02vw,19px);
 }
 #app.hd{font-size:clamp(18px,2.2vw,42px)}
@@ -191,9 +189,9 @@ h3,.nav,.metric strong,.btn,.title,.bcell h4,.logo,.aspectTitle,.ratio,.navcol .
 }
 
 /* ===== BOOT-UP SEQUENCE ===== */
-#boot{position:absolute;inset:0;z-index:200;background:#040000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+#boot{position:absolute;inset:0;z-index:200;background:#040000;display:none!important;flex-direction:column;align-items:center;justify-content:center;gap:14px;
   font-family:var(--ff-title);color:#36ff8a;text-align:center;transition:opacity .8s;overflow:hidden}
-#boot.gone{opacity:0;pointer-events:none}
+#boot.gone{opacity:0;pointer-events:none;display:none!important}
 #boot .blogo{font-size:clamp(22px,4vw,56px);letter-spacing:.16em;text-shadow:0 0 22px #ff5a3a;font-weight:900}
 #boot .bsub{color:#7dffb0;font-size:clamp(9px,1vw,14px);letter-spacing:.32em}
 #boot .bbar{width:min(60%,520px);height:8px;border:1px solid #6a1212;background:#0a0000;margin-top:6px}
@@ -412,6 +410,7 @@ footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;d
 .panel{position:relative}
 .panel .pglyph{position:absolute;left:50%;top:50%;width:min(56%,220px);height:min(56%,220px);
   transform:translate(-50%,-50%);z-index:0;opacity:.26;pointer-events:none;color:var(--emerald);
+  display:none; /* TEMP TEST: disabled to isolate black-screen cause */
   filter:drop-shadow(0 0 16px currentColor);mix-blend-mode:screen;
   background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.06),transparent 64%)}
 .panel .pglyph::before{content:"";position:absolute;inset:6%;border:1px dashed currentColor;opacity:.25;border-radius:50%;animation:pglyphspin 22s linear infinite}
@@ -427,14 +426,15 @@ footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;d
 @keyframes pglyphdash{to{stroke-dashoffset:-36}}
 @keyframes pglyphbreathe{0%,100%{transform:scale(.94)}50%{transform:scale(1.04)}}
 
-/* ===== Advanced polish: glass panels + CRT depth ===== */
-.panel{backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
-/* subtle scanline + vignette overlay (behind content, non-interactive) */
-.crt{position:absolute;inset:0;z-index:2;pointer-events:none;
+/* ===== Advanced polish: CRT depth + glass hint (no backdrop-filter: it can
+   render black on some X11/GPU compositors, so we keep panels solid) ===== */
+.panel{box-shadow:inset 0 0 24px rgba(13,255,140,.06),0 0 14px rgba(13,255,140,.10);}
+/* subtle scanline + vignette overlay (behind content, non-interactive, SAFE blend) */
+.crt{position:absolute;inset:0;z-index:2;pointer-events:none;display:none;
   background:
-    repeating-linear-gradient(0deg,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.16) 2px 3px),
-    radial-gradient(circle at 50% 50%,transparent 55%,rgba(0,0,0,.55) 100%);
-  mix-blend-mode:multiply;opacity:.5}
+    repeating-linear-gradient(0deg,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.12) 2px 3px),
+    radial-gradient(circle at 50% 50%,transparent 60%,rgba(0,0,0,.40) 100%);
+  opacity:.45}
 /* animated status ticker directly under the header (absolute, non-overlapping) */
 .ticker{position:absolute;left:.7%;right:.7%;top:9.4%;height:3.2%;z-index:6;
   display:flex;align-items:center;overflow:hidden;border:1px solid var(--line);
@@ -449,6 +449,7 @@ footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;d
 .ticker .tick.alert .dot{background:var(--red);box-shadow:0 0 9px var(--red)}
 @keyframes tickpulse{0%,100%{opacity:.45}50%{opacity:1}}
 @media(max-width:1000px){.ticker{height:5%}}
+</style>
 </head>
 <body>
 <div id="app">
@@ -468,8 +469,6 @@ footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;d
 <div class="edgeGlow" id="edgeGlow"></div>
 <div class="energy"></div><div class="appframe"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
 <div class="frame-tr"></div><div class="frame-bl"></div>
-<div class="crt"></div>
-<div class="ticker" id="ticker"><span class="tick"><span class="dot"></span>MOON NEURAL CORE<span id="tkStatus">INITIALIZING</span></span><span class="tick">AGENTS <b id="tkAgents">–</b></span><span class="tick">TOOLS <b id="tkTools">–</b></span><span class="tick">THREAT <b id="tkThreat">–</b></span><span class="tick">UPTIME <b id="tkUp">–</b></span><span class="tick">LATENCY <b id="tkLat">–</b></span></div>
 
 <header>
   <div class="panel hcell logo"><span>MOON</span></div>
@@ -666,6 +665,9 @@ footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;d
 </div>
 
 <script>
+/* TEMP DIAGNOSTIC: capture runtime errors into the DOM so headless dump-dom can read them */
+window.__errs=[];
+window.addEventListener('error',function(e){window.__errs.push((e.message||'err')+' @ '+(e.filename||'')+':'+(e.lineno||'?')+' '+((e.error&&e.error.stack)||''));var d=document.getElementById('errbox');if(!d){d=document.createElement('div');d.id='errbox';d.style.cssText='position:fixed;left:0;top:0;z-index:9999;background:#300;color:#fbb;font:12px monospace;white-space:pre-wrap;padding:8px;max-width:90vw';document.body.appendChild(d);}d.textContent='JS ERR:\n'+window.__errs.join('\n');});
 /* MOON AI-NEUTRAL BRIDGE (kept from attached folder — provider-neutral)
    UI accepts events from any AI/backend through window.MOON_UI.emit({...})
    Optional HTTP endpoint POST /api/moon/event  |  Optional WebSocket ws://<host>/ws/moon */
@@ -756,27 +758,6 @@ function applyStatus(s){
   }
   // convergence reflects live load
   setText("conv", load+"%"); const b=el("convBar"); if(b)b.style.width=load+"%";
-  updateTicker(s, agentN, load);
-}
-
-// Feed the live status ticker from real backend status (additive; no UI removed)
-function updateTicker(s, agentN, load){
-  const set=(id,v)=>{ const e=el(id); if(e) e.textContent=v; };
-  const tk=el("ticker"); if(!tk) return;
-  const locked = !!s.locked;
-  const st = tk.querySelector("#tkStatus");
-  if(st){ st.textContent = locked? "LOCKED" : "ONLINE"; st.parentElement.classList.toggle("alert", locked); }
-  set("tkAgents", agentN||0);
-  set("tkTools", s.n_tools!=null? s.n_tools : "–");
-  const th=tk.querySelector("#tkThreat");
-  if(th){
-    const lvl = locked? "LOCKED" : "MINIMAL";
-    th.textContent = lvl;
-    th.parentElement.classList.toggle("alert", locked);
-    th.parentElement.classList.toggle("warn", false);
-  }
-  set("tkUp", s.uptime_fmt || "–");
-  set("tkLat", (s.system&&s.system.net) || "–");
 }
 
 function addLog(t){
@@ -1303,20 +1284,7 @@ el("voiceBtn").onclick=()=>toggleVoice(true);
 el("toolsBtn").onclick=()=>toggleTools(true);
 el("funcBtn").onclick=()=>toggleFunc(true);
 el("send").onclick=doSend;
-// Command input: Enter sends, ArrowUp/Down recall history (additive terminal UX)
-const _cmdHist=[]; let _cmdIdx=_cmdHist.length;
-el("command").addEventListener("keydown",e=>{
-  if(e.key==="Enter"){ const v=el("command").value.trim(); if(v){ _cmdHist.push(v); _cmdIdx=_cmdHist.length; } el("send").click(); }
-  else if(e.key==="ArrowUp"){ if(_cmdHist.length && _cmdIdx>0){ _cmdIdx--; el("command").value=_cmdHist[_cmdIdx]; e.preventDefault(); } }
-  else if(e.key==="ArrowDown"){ if(_cmdIdx<_cmdHist.length-1){ _cmdIdx++; el("command").value=_cmdHist[_cmdIdx]; } else { _cmdIdx=_cmdHist.length; el("command").value=""; } e.preventDefault(); }
-});
-// Global shortcuts (non-intrusive: ignored while typing in inputs)
-document.addEventListener("keydown",e=>{
-  const tag=(e.target.tagName||"").toUpperCase();
-  const typing = tag==="INPUT"||tag==="TEXTAREA"||e.target.isContentEditable;
-  if(e.key==="/" && !typing){ e.preventDefault(); el("command").focus(); }
-  else if(e.key==="Escape"){ const t=el("terminal"); if(t && t.classList.contains("open")) t.classList.remove("open"); const ws=el("workspace"); if(ws) ws.classList.add("hidden"); }
-});
+el("command").addEventListener("keydown",e=>{if(e.key==="Enter")el("send").click();});
 $$(".nav").forEach(n=>n.onclick=()=>doNav(n));
 const avatarEl=document.querySelector(".avatar"); if(avatarEl) avatarEl.onclick=doCoreSync;
 
@@ -1552,6 +1520,23 @@ if(typeof window.MOON_UI!=="undefined"){
   }, 3000);
 })();
 connect();
+
+// HARD FALLBACK: guarantee the HUD is revealed even if the WS handshake /
+// runBoot sequence stalls (otherwise the opaque boot overlay leaves a black
+// screen). Force-clears #boot after a fixed grace period, unconditionally.
+(function bootFailsafe(){
+  let n=0;
+  const iv=setInterval(()=>{
+    n++;
+    const b=document.getElementById("boot");
+    if(!b || n>=2){ // 2 ticks (~1.6s) is enough grace for handshake
+      if(b){ b.classList.add("gone"); setTimeout(()=>b.remove(),900); }
+      clearInterval(iv);
+    }
+  }, 800);
+  // absolute last-resort: remove after 6s no matter what
+  setTimeout(()=>{ const b=document.getElementById("boot"); if(b){ b.remove(); } }, 6000);
+})();
 
 /* ===== Per-panel animated function glyphs =====
    Every .panel gets a centered, function-themed animated SVG emblem drawn
