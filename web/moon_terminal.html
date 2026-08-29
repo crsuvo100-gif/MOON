@@ -96,8 +96,21 @@ body{display:grid;place-items:center}
   filter:saturate(1.05) brightness(calc(1 + var(--core-e,0)*0.40))
          drop-shadow(0 0 calc(34px + var(--core-e,0)*46px) rgba(255,200,80,calc(.45 + var(--core-e,0)*.3)));
   transition:filter .35s;pointer-events:none;z-index:-1}
+/* Idle breathing: gentle scale pulse ONLY when MOON is idle (no .thinking). It
+   complements the orb's native 3D frames (does not replace them). */
+.fusionOrb.idle{animation:moonCoreBreath 6s ease-in-out infinite}
+@keyframes moonCoreBreath{
+  0%,100%{transform:translate(-50%,-50%) scale(1)}
+  50%{transform:translate(-50%,-50%) scale(1.045)}
+}
 .fusionOrb.thinking{filter:saturate(1.15) brightness(calc(1.15 + var(--core-e,0)*0.5))
          drop-shadow(0 0 calc(54px + var(--core-e,0)*60px) rgba(255,220,110,.95))}
+/* Small state label under the orb, tied to MOON's workflow state. */
+.coreState{position:absolute;left:50%;top:84%;transform:translateX(-50%);z-index:7;
+  font-family:var(--ff);font-size:clamp(8px,1vw,15px);letter-spacing:.34em;font-weight:800;
+  color:#9dffc4;text-shadow:0 0 14px #0f8;pointer-events:none;white-space:nowrap;opacity:.92}
+.coreState.thinking{color:#ffd86b;text-shadow:0 0 16px #fb4}
+.coreState.speaking{color:#7df9ff;text-shadow:0 0 16px #2cf}
 .coreTitle{position:absolute;left:50%;top:8.5%;transform:translateX(-50%);z-index:7;color:#9dffc4;font-family:var(--ff-title);font-size:clamp(9px,1.1vw,21px);letter-spacing:.3em;font-weight:800;text-shadow:0 0 18px #0f8;pointer-events:none;white-space:nowrap}
 .coreSide{position:absolute;top:13%;width:25%;height:74%;z-index:6;display:flex;flex-direction:column;gap:2.2%;font-family:var(--ff);pointer-events:none}
 .coreSideL{left:3%}.coreSideR{right:3%}
@@ -528,7 +541,7 @@ footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;d
         <div class="coreBox"><span class="lab">FIRING RATE</span><span class="val" id="cfRate">1.28/s</span><canvas class="spark" id="spR2"></canvas></div>
         <div class="coreBox"><span class="lab">SIGNAL STRENGTH</span><span class="val" id="cfSig">MAX</span><canvas class="spark" id="spR3"></canvas></div>
       </div>
-      <div class="fusionCore"><img class="fusionOrb" id="fusionOrb" src="/moon_core.webp" alt="MOON core" draggable="false"><canvas id="coreFx"></canvas><canvas id="neuralFx" style="display:none"></canvas></div>
+      <div class="fusionCore"><img class="fusionOrb" id="fusionOrb" src="/moon_core.webp" alt="MOON core" draggable="false"><canvas id="coreFx"></canvas><canvas id="neuralFx" style="display:none"></canvas><div id="coreState" class="coreState">IDLE</div></div>
       <div class="idleTag">◌ MOON IDLE — NEURAL CORE STANDBY ◌</div>
       <div class="idleTag">◌ MOON IDLE — NEURAL CORE STANDBY ◌</div>
       <div id="talkState">◌ LISTENING ◌</div>
@@ -871,7 +884,9 @@ let lastAction=null, toolBuf="";
 function wsSend(o){ if(ws && ws.readyState===1){ if(o.action) lastAction=o.action; ws.send(JSON.stringify(o)); } }
 // MOON's brain core reacts to her workflow: .thinking = intense glow burst while
 // she is actively working (reply/task/execution), removed when she goes idle.
-function setCoreThinking(on){ const o=el("fusionOrb"); if(o) o.classList.toggle("thinking", !!on); }
+// .idle = gentle breathing pulse when she is idle (complements native animation).
+function setCoreThinking(on){ const o=el("fusionOrb"); if(o){ o.classList.toggle("thinking", !!on); o.classList.toggle("idle", !on); } }
+function setCoreState(txt, cls){ const s=el("coreState"); if(!s) return; s.textContent=txt; s.classList.remove("thinking","speaking"); if(cls) s.classList.add(cls); }
 function connect(){
   const pr=location.protocol==="https:"?"wss":"ws";
   ws=new WebSocket(`${pr}://${location.host}/ws`);
@@ -884,8 +899,8 @@ function handle(m){
   switch(m.type){
     case "ready": case "status": applyStatus(m.status||m); addLog("[SYSTEM] status received."); if((m.status||m).load!=null) window.MOON_UI.onCorePulse && window.MOON_UI.onCorePulse((m.status||m).load/180); if(m.type==="ready" && typeof window.MOON_UI.onReady==="function") window.MOON_UI.onReady(m); break;
     case "assistant_start": setState("SPEAKING"); addLog("[MOON] thinking…"); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.9); if(typeof fireBurst==="function") fireBurst(14);
-      _moonSpeaking=true; if(_recog){ try{ _recog.stop(); }catch(_){} } if(_talkState) setTalkState("◌ MOON IS SPEAKING ◌", false); setCoreThinking(true); break;
-    case "workflow": setState((m.stage||"").toUpperCase(), {stage:m.stage}); addLog("[FLOW] "+(m.stage||"")+": "+(m.detail||"")); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.7); setCoreThinking(true); pushEvent("work","FLOW "+((m.stage||"")+": "+(m.detail||"")).replace(/[<>]/g,"")); break;
+      _moonSpeaking=true; if(_recog){ try{ _recog.stop(); }catch(_){} } if(_talkState) setTalkState("◌ MOON IS SPEAKING ◌", false); setCoreThinking(true); setCoreState("◌ SPEAKING ◌","speaking"); break;
+    case "workflow": setState((m.stage||"").toUpperCase(), {stage:m.stage}); addLog("[FLOW] "+(m.stage||"")+": "+(m.detail||"")); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.7); setCoreThinking(true); setCoreState("◌ THINKING ◌","thinking"); pushEvent("work","FLOW "+((m.stage||"")+": "+(m.detail||"")).replace(/[<>]/g,"")); break;
     case "assistant_chunk":
       addLog("[MOON] "+(m.content||""));
       if(lastAction==="list_tools"){ toolBuf += (m.content||""); }
@@ -905,7 +920,10 @@ function handle(m){
         wsCli((m.cmd||"")+"  →  exit "+(m.exit??0), (m.exit===0?"ok":"warn"));
         wsCli((m.output&&m.output.trim())?m.output:"(no output)","");
       })();
-      window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.4);
+      window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.6);
+      // brief execution flash on the core (stronger coupling to task execution)
+      const _orb=el("fusionOrb");
+      if(_orb && !_orb.classList.contains("thinking")){ setCoreThinking(true); setCoreState("◌ EXECUTING ◌","thinking"); setTimeout(()=>{ if(_orb.classList.contains("thinking") && !_moonSpeaking){ setCoreThinking(false); setCoreState("◌ IDLE ◌"); } }, 700); }
       break;
     case "log":
       // live backend log event -> System Logs panel + workspace timeline
@@ -915,7 +933,7 @@ function handle(m){
     case "assistant_done":
       setState("IDLE"); addLog("[MOON] done in "+(m.elapsed||0)+"s"+(m.locked?" [locked]":""));
       if(lastAction==="list_tools"){ renderToolGrid(toolBuf); toolBuf=""; }
-      _moonSpeaking=false; setCoreThinking(false); if(_talking && _recog){ try{ _recog.start(); }catch(_){} } if(_talkState && _talking) setTalkState("◌ LISTENING — SAY 'MOON' OR SPEAK ◌", true);
+      _moonSpeaking=false; setCoreThinking(false); setCoreState("◌ IDLE ◌"); if(_talking && _recog){ try{ _recog.start(); }catch(_){} } if(_talkState && _talking) setTalkState("◌ LISTENING — SAY 'MOON' OR SPEAK ◌", true);
       break;
     case "notice":
       addLog("[NOTICE] "+(m.message||""));
@@ -1092,6 +1110,7 @@ async function loadSettingsUI(){
   _coreBg = (s.core_bg||localStorage.getItem("moon-ui-corebg")||"auto");
   $$("#setCoreBg .ratio").forEach(b=>b.classList.toggle("sel", b.dataset.b===_coreBg));
   applyCoreBg();
+  setCoreThinking(false); setCoreState("◌ IDLE ◌"); // start idle (breathing)
   // aspect selection
   $$("#setAspect .ratio").forEach(b=>b.classList.toggle("sel", b.dataset.r===aspect));
   // avatar selection
@@ -1208,6 +1227,9 @@ function resetSettings(){
 }
 el("setBtn").onclick=()=>toggleSettings(true);
 el("wsBtn").onclick=()=>openWorkspace("agents");
+// Start the core in idle (breathing) immediately, without waiting for the async
+// settings fetch -- so the orb is alive from first paint.
+if(el("fusionOrb")){ setCoreThinking(false); setCoreState("◌ IDLE ◌"); }
 // CONFIGURATION nav also opens settings
 const _cfgNav=[...document.querySelectorAll(".nav")].find(n=>/CONFIGURATION/.test(n.textContent));
 if(_cfgNav) _cfgNav.onclick=()=>{ $$(".nav").forEach(x=>x.classList.remove("active")); _cfgNav.classList.add("active"); toggleSettings(true); };
