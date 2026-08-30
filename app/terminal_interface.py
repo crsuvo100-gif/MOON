@@ -50,7 +50,8 @@ _DEFAULT_SETTINGS = {
     "avatar_mode": "fusion",  # fusion | neural  (central core visual)
     "resolution": "hd",       # hd | compact  (UI density for large displays)
     "core_glow": 1.0,         # 0.2..2.0 (central core glow intensity)
-    "autostart": True,        # open HUD on MOON boot
+    "autostart": False,       # open HUD on MOON boot (now OFF; use `moon terminal` on-demand)
+    "auto_voice": True,       # auto-speak MOON's replies via TTS by default
     "idle_speed": 1.0,
 }
 
@@ -566,6 +567,7 @@ async def _moon_status(orch) -> dict:
         "voice": {
             "mode": "MUTED" if _voice_muted else "AUTO",
             "available": bool(_get_voice_engine()),
+            "auto_voice": _load_settings().get("auto_voice", True),
         },
         "sensors": {
             "voice": True,
@@ -592,7 +594,7 @@ async def api_post_settings(request: Request):
     cur = _load_settings()
     cur.update({k: body[k] for k in ("host", "port", "display", "browser",
                                      "aspect", "avatar_mode", "resolution", "core_glow",
-                                     "autostart", "idle_speed") if k in body})
+                                     "autostart", "auto_voice", "idle_speed") if k in body})
     try:
         with open(SETTINGS_JSON, "w") as fh:
             json.dump(cur, fh, indent=2)
@@ -1689,14 +1691,21 @@ async def ws_endpoint(ws: WebSocket):
                         "voice clone requires name + base64 sample (audio field)."
                 elif sub.startswith("female"):
                     out = eng.set_voice("default")
+                elif sub.startswith("mute"):
+                    _voice_muted = True
+                    out = "[voice] auto-speak MUTED. Replies will be text-only."
+                elif sub.startswith("unmute"):
+                    _voice_muted = False
+                    out = "[voice] auto-speak ON. MOON's voice is active (female, default)."
                 elif sub.startswith("status"):
                     st = eng.backend_status()
-                    out = (f"[voice] current={st['current']} | xtts={st['xtts']} "
+                    mode = "MUTED" if _voice_muted else "AUTO"
+                    out = (f"[voice] mode={mode} current={st['current']} | xtts={st['xtts']} "
                            f"openai={st['openai']} espeak={st['espeak']}\n"
                            f"cloned voices: {', '.join(st['cloned_voices']) or 'none'}")
                 else:
                     out = ("[voice] actions: list | set <name> | clone <name> <b64sample> | "
-                           "female | status")
+                           "female | mute | unmute | status")
                 for chunk in _stream_text(out):
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)

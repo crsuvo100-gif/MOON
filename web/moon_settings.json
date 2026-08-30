@@ -7,6 +7,7 @@
   "avatar_mode": "neural",
   "resolution": "hd",
   "core_glow": 2,
-  "autostart": true,
+  "autostart": false,
+  "auto_voice": true,
   "idle_speed": 0.25
 }

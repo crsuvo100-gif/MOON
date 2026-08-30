@@ -260,12 +260,14 @@ def _run_terminal() -> None:
         except Exception:
             pass
 
-    # NOTE: the visible HUD window is now owned exclusively by the dedicated
-    # moon-terminal.service (scripts/open_hud.py) so the backend launcher never
-    # competes for the display or double-spawns a Chrome window. The HUD opener
-    # logic below is intentionally NOT invoked here anymore.
-    # (The _auto_open_ui definition is retained for manual `python main.py start`
-    #  use when run outside systemd, but is disabled under the service path.)
+    # NOTE: the visible HUD window is NOT auto-opened on boot anymore.
+    # autostart=false in moon_settings.json + moon-hud.service disabled means:
+    # the backend (systemd moon-terminal.service) runs, but NO browser window
+    # appears until the operator explicitly runs `moon terminal` (or opens
+    # http://127.0.0.1:8777/ manually). The _auto_open_ui() definition below
+    # is retained for manual `python main.py start` use outside systemd.
+    if settings.get("autostart", False):
+        _auto_open_ui()
 
     # --- Guard against double-binding :PORT (root cause of the HUD "blink") ---
     # If another MOON backend already owns the port (e.g. moon.service is up),
