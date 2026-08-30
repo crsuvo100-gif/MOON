@@ -214,12 +214,13 @@ class MoonTUI(App):
     async def on_mount(self) -> None:
         self.title = "MOON NEURAL TERMINAL"
         self.sub_title = "live · real orchestrator"
-        # boot splash line
+        # Textual guarantees composed widgets exist once on_mount runs.
         chat = self.query_one(ChatPanel)
         chat.write(Text.from_markup(
             f"[b {MOON_RED}]MOON NEURAL TERMINAL[/b {MOON_RED}] — "
             f"say [b]{self.unlock}[/b] to unlock."))
-        # spin up the real orchestrator in the background
+        brain = self.query_one(BrainPanel)
+        brain.push_event("system", "orchestrator booting in background…")
         self.run_worker(self._boot_orchestrator(), exclusive=False)
 
     async def _boot_orchestrator(self) -> None:
@@ -228,10 +229,12 @@ class MoonTUI(App):
         try:
             self.orchestrator = Orchestrator(get_settings())
             await self.orchestrator.setup()
-            self.query_one(BrainPanel).push_event(
+            brain = self.query_one(BrainPanel)
+            brain.push_event(
                 "system", "orchestrator online — 39 agents / 43 tools ready")
         except Exception as exc:  # noqa: BLE001
-            self.query_one(BrainPanel).push_event("error", str(exc)[:80])
+            brain = self.query_one(BrainPanel)
+            brain.push_event("error", str(exc)[:80])
 
     # ---- input ----------------------------------------------------------
     async def on_input_submitted(self, event: Input.Submitted) -> None:
