@@ -1,26 +1,41 @@
-"""tui.py -- MOON's live NEURAL TERMINAL (Textual TUI).
+"""tui.py -- MOON's live NEURAL TERMINAL (Textual TUI) -- the TTS shell terminal.
 
 A gorgeous, Jarvis-style interactive terminal for MOON that mirrors the
 Hermes/agent-terminal-tui aesthetic: animated starfield + CRT scanline
-background, top status bar (clock / backend / lock), a LIVE MOON chat panel
-(markdown-rendered), a LIVE Brain/Cognition panel that streams MOON's REAL
-orchestrator events (intent routing, agent selection, tool calls, reflection,
-self-consistency), an Agents/Tools status strip, and a bottom input bar.
+background, top status bar (clock / backend / lock / voice), a LIVE MOON chat
+panel (markdown-rendered + TTS-spoken aloud), a LIVE Brain/Cognition panel that
+streams MOON's REAL orchestrator events, an Agents/Tools status strip, and a
+bottom input bar.
 
-Runs IN-PROCESS against the real Orchestrator -- no HTTP server needed, ideal
-for SSH/headless. The unlock phrase ("MOON love you 3000") is honored: until
-you send it she replies only with the lock notice.
+Speaks every MOON reply aloud via her real female voice (TTS, auto-on; mute with
+Ctrl+V or !voice mute). Runs REAL shell commands (!) and CLI operations (/) — all
+portable, no browser, no auto-start, no network needed.
 
 Usage:
-    moon tui
-    MOON_TUI_UNLOCK="MOON love you 3000" moon tui   # pre-supply unlock
+    moon shell        # open the TTS shell terminal (default shell entry)
+    moon tui          # same thing (backward-compatible alias)
+    MOON_TUI_UNLOCK="MOON love you 3000" moon shell
 
-Keys: type in the bottom bar and press Enter to send. Ctrl-C / Esc quits.
+Shell commands (!):
+    !status !ps !top !df !free !uname !uptime !netstat !ifconfig !ip
+    !ls !pwd !echo !date !whoami !env !nproc !cat
+
+CLI commands (/):
+    /help /clear /quit /lock /unlock /voice /shell /doctor /status
+    /models /version
+
+Keys: type in the bottom bar and press Enter to send. Esc quits. Ctrl+V toggles
+voice on/off.
 """
 from __future__ import annotations
 
 import asyncio
+import io
 import os
+import shlex
+import subprocess
+import sys
+import tempfile
 import time
 from datetime import datetime
 
@@ -44,6 +59,15 @@ MOON_RED = "#ff3b3b"
 MOON_DIM = "#7a1f1f"
 MOON_GLOW = "#ff6b6b"
 
+# Reuse the real shell allowlist + dispatcher from the web terminal backend
+# (same commands, same safety gate — portable, one source of truth).
+from app.terminal_interface import (  # noqa: E402
+    _speak,
+    _get_voice_engine,
+    _SHELL_ALLOW,
+    _shell_dispatch,
+)
+
 
 class Clock(Static):
     """Live clock for the header."""
@@ -57,7 +81,7 @@ class Clock(Static):
 
 
 class StatusBar(Static):
-    """Backend / lock status pill."""
+    """Backend / lock / voice status pill."""
 
     def __init__(self, **kw):
         super().__init__(**kw)
@@ -76,8 +100,9 @@ class StatusBar(Static):
             self.update(Text.from_markup(
                 f"[{MOON_RED}]● LOCKED[/{MOON_RED}]  say [b]{UNLOCK_PHRASE}[/b] to unlock"))
         else:
+            voice = "OFF" if getattr(self.app, "voice_muted", False) else "ON"
             self.update(Text.from_markup(
-                f"[{MOON_GLOW}]● UNLOCKED[/{MOON_GLOW}]  MOON core online"))
+                f"[{MOON_GLOW}]● UNLOCKED[/{MOON_GLOW}]  MOON core online · voice {voice}"))
 
 
 class BrainPanel(RichLog):
@@ -98,7 +123,7 @@ class BrainPanel(RichLog):
 
 
 class ChatPanel(RichLog):
-    """MOON conversation -- markdown rendered replies."""
+    """MOON conversation -- markdown rendered replies, TTS-spoken aloud."""
 
     def on_mount(self) -> None:
         self.border_title = "🌙  MOON  ·  neural link"
@@ -148,7 +173,7 @@ class StarField(Static):
 
 
 class MoonTUI(App):
-    """MOON NEURAL TERMINAL -- live, beautiful, real."""
+    """MOON NEURAL TERMINAL -- live, beautiful, real. TTS shell terminal."""
 
     CSS = """
     Screen { background: #040000; color: #ffd9d9; }
@@ -176,6 +201,7 @@ class MoonTUI(App):
     BINDINGS = [
         ("escape", "quit", "Quit"),
         ("ctrl+l", "clear_chat", "Clear"),
+        ("ctrl+v", "voice_toggle", "Voice"),
     ]
 
     def __init__(self, unlock: str = UNLOCK_PHRASE) -> None:
@@ -184,6 +210,9 @@ class MoonTUI(App):
         self.locked = True
         self.orchestrator = None
         self.busy = False
+        self.voice_muted = False
+        self._speech_task = None
+        self._speech_lock = asyncio.Lock()
 
     # ---- compose the layout -------------------------------------------
     def compose(self) -> ComposeResult:
@@ -200,11 +229,11 @@ class MoonTUI(App):
                 BrainPanel(id="brain"),
                 id="main",
             ),
-            Label("agents 39 · tools 43 · memory · knowledge · voice", id="agents"),
+            Label("agents 39 · tools 43 · memory · knowledge · voice · shell", id="agents"),
             Horizontal(
-                Input(placeholder="talk to MOON…  (say the unlock phrase first)",
+                Input(placeholder="talk, !cmd, or /cli…  (say the unlock phrase first)",
                       id="prompt"),
-                Label("Enter send · Esc quit", id="hint"),
+                Label("Enter send · Esc quit · Ctrl+V voice", id="hint"),
                 id="inputbar",
             ),
             Footer(),
@@ -213,8 +242,7 @@ class MoonTUI(App):
     # ---- lifecycle ------------------------------------------------------
     async def on_mount(self) -> None:
         self.title = "MOON NEURAL TERMINAL"
-        self.sub_title = "live · real orchestrator"
-        # Textual guarantees composed widgets exist once on_mount runs.
+        self.sub_title = "live · TTS · real orchestrator"
         chat = self.query_one(ChatPanel)
         chat.write(Text.from_markup(
             f"[b {MOON_RED}]MOON NEURAL TERMINAL[/b {MOON_RED}] — "
@@ -248,6 +276,19 @@ class MoonTUI(App):
         chat = self.query_one(ChatPanel)
         brain = self.query_one(BrainPanel)
         status = self.query_one(StatusBar)
+
+        # !voice control
+        if text.startswith("!voice"):
+            await self._handle_voice(text[len("!voice"):].strip(), chat, brain)
+            return
+        # !shell <cmd>
+        if text.startswith("!"):
+            await self._handle_shell(text[1:].strip(), chat, brain)
+            return
+        # /cli <command>
+        if text.startswith("/"):
+            await self._handle_cli(text[1:].strip(), chat, brain)
+            return
 
         # unlock handling
         if self.locked:
@@ -283,18 +324,233 @@ class MoonTUI(App):
             brain.push_event("error", str(exc)[:80])
         chat.add_moon(answer)
         self.busy = False
+        # TTS: speak every MOON reply aloud (when not muted) -- serialized so
+        # rapid messages don't play over each other.
+        if not self.voice_muted:
+            asyncio.create_task(self._say(answer))
 
-    # real orchestrator event -> live brain panel
-    async def _on_event(self, ev: dict) -> None:
-        stage = ev.get("stage") or ev.get("type") or ""
-        detail = ev.get("detail") or ""
-        self.query_one(BrainPanel).push_event(stage, str(detail)[:90])
+    # ---- TTS voice ------------------------------------------------------
+    async def _say(self, text: str) -> None:
+        """Speak MOON's reply aloud via the real female voice engine.
+
+        Serialized through _speech_lock so rapid messages don't play over each
+        other. Silently no-ops when TTS is unavailable (text is still shown).
+        """
+        wav_b64 = await _speak(text)
+        if not wav_b64:
+            return
+        import base64 as _b64
+
+        fd, path = tempfile.mkstemp(suffix=".wav")
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(_b64.b64decode(wav_b64))
+            for player in ("paplay", "pw-play", "aplay"):
+                try:
+                    proc = await asyncio.create_subprocess_exec(
+                        player, path,
+                        stdout=asyncio.subprocess.DEVNULL,
+                        stderr=asyncio.subprocess.DEVNULL,
+                    )
+                    await asyncio.wait_for(proc.wait(), timeout=30)
+                    return
+                except (FileNotFoundError,
+                        asyncio.TimeoutError,
+                        subprocess.TimeoutExpired):
+                    continue
+        finally:
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+
+    # ---- shell (!) ------------------------------------------------------
+    async def _handle_shell(self, cmd: str, chat: ChatPanel, brain: BrainPanel) -> None:
+        out, code = _shell_dispatch(cmd)
+        brain.push_event("shell", cmd[:40])
+        chat.write(Text.from_markup(f"[b green]❯[/b green] {cmd}"))
+        if code == 0:
+            chat.add_moon(out[:3000] or "(no output)")
+        else:
+            chat.add_moon(f"[b red]error[/b red] (exit {code}): {out[:800]}")
+
+    # ---- CLI ops (/) ----------------------------------------------------
+    async def _handle_cli(self, cmd: str, chat: ChatPanel, brain: BrainPanel) -> None:
+        parts = cmd.split(None, 1)
+        sub = (parts[0] or "").lower()
+        arg = parts[1] if len(parts) > 1 else ""
+        if sub in ("h", "help"):
+            await self._cli_help(chat)
+        elif sub in ("q", "quit", "exit"):
+            await self.action_quit()
+        elif sub in ("c", "clear"):
+            self.action_clear_chat()
+        elif sub == "lock":
+            self.locked = True
+            self.query_one(StatusBar).set_locked(True)
+            brain.push_event("lock", "operator locked the core")
+            chat.add_moon("Core locked. Say the unlock phrase to act.")
+        elif sub == "unlock":
+            chat.add_moon(f'Say "{self.unlock}" to unlock.')
+        elif sub == "voice":
+            await self._handle_voice(arg, chat, brain)
+        elif sub == "shell":
+            await self._handle_shell(arg, chat, brain)
+        elif sub == "doctor":
+            await self._cli_doctor(chat, brain)
+        elif sub == "status":
+            await self._cli_status(chat, brain)
+        elif sub == "models":
+            await self._cli_models(chat, brain)
+        elif sub == "version":
+            import importlib.metadata
+            try:
+                ver = importlib.metadata.version("moon-ai-agent")
+            except Exception:
+                ver = "0.1.0 (dev)"
+            chat.add_moon(f"MOON version: {ver}")
+        else:
+            chat.add_moon(f"Unknown CLI command: /{sub}. Try /help.")
+
+    async def _cli_help(self, chat: ChatPanel) -> None:
+        lines = [
+            "[b]MOON SHELL — CLI commands[/b]",
+            "  /help       this help",
+            "  /clear      clear chat",
+            "  /quit       exit MOON",
+            "  /lock       lock the core (no actions until unlock phrase)",
+            "  /unlock     remind unlock phrase",
+            "  /voice      voice control (list/set/clone/female/mute/unmute/status)",
+            "  /shell      run a shell command (!<cmd>)",
+            "  /doctor     run health check",
+            "  /status     check backend health",
+            "  /models     pre-pull agent models",
+            "  /version    MOON version",
+            "",
+            "[b]Shell commands (!)[/b]  (real, allowlisted, read-only)",
+            "  !<cmd>      run a shell command  (status ps top df free uname uptime",
+            "              netstat ip ls pwd echo date whoami env nproc cat)",
+            "",
+            "[b]Voice (!voice)[/b]",
+            "  !voice list        list available voices",
+            "  !voice set <name>  switch voice",
+            "  !voice clone <n> <b64>   clone from WAV",
+            "  !voice female      default female voice",
+            "  !voice mute        mute TTS",
+            "  !voice unmute      unmute TTS",
+            "  !voice status      voice engine status",
+            "",
+            "[b]Chat[/b]",
+            "  type anything to talk to MOON (unlock first)",
+        ]
+        for line in lines:
+            chat.write(Text(line))
+        chat.write("")
+
+    async def _cli_doctor(self, chat: ChatPanel, brain: BrainPanel) -> None:
+        brain.push_event("cli", "doctor")
+        old = sys.stdout
+        sys.stdout = io.StringIO()
+        try:
+            import main as _main
+            rc = _main._cmd_doctor()
+        except Exception as exc:  # noqa: BLE001
+            captured = f"[error] doctor failed: {exc}"
+        finally:
+            captured = sys.stdout.getvalue()
+            sys.stdout = old
+        chat.add_moon(captured.strip()[:3000])
+
+    async def _cli_status(self, chat: ChatPanel, brain: BrainPanel) -> None:
+        brain.push_event("cli", "status")
+        try:
+            import urllib.request, json
+            with urllib.request.urlopen("http://127.0.0.1:8777/api/health", timeout=5) as r:
+                d = json.load(r)
+            chat.add_moon(f"Backend: {d.get('status')} — {d.get('summary')}")
+        except Exception as e:
+            chat.add_moon(f"Backend unreachable: {e}")
+
+    async def _cli_models(self, chat: ChatPanel, brain: BrainPanel) -> None:
+        brain.push_event("cli", "models")
+        old = sys.stdout
+        sys.stdout = io.StringIO()
+        try:
+            import main as _main
+            await _main._prefetch_models()
+        except Exception as exc:  # noqa: BLE001
+            captured = f"[error] models failed: {exc}"
+        finally:
+            captured = sys.stdout.getvalue()
+            sys.stdout = old
+        chat.add_moon(captured.strip()[:3000])
+
+    async def _handle_voice(self, cmd: str, chat: ChatPanel, brain: BrainPanel) -> None:
+        eng = _get_voice_engine()
+        if eng is None:
+            chat.add_moon("[voice] engine unavailable.")
+            return
+        sub = (cmd or "status").strip().lower()
+        if sub.startswith("list"):
+            vs = eng.list_voices()
+            out = "MOON voices:\n" + "\n".join(
+                f"  - {v['name']} [{v['backend']}]{' (cloned)' if v.get('cloned') else ''} :: {v.get('desc', '')}"
+                for v in vs)
+            brain.push_event("voice", "list")
+            chat.add_moon(out)
+        elif sub.startswith("set"):
+            name = sub.split(None, 1)[1] if " " in sub else ""
+            ok = eng.set_voice(name) if name else False
+            brain.push_event("voice", f"set {name}")
+            chat.add_moon(f"[voice] {'set to ' + name if ok else 'unknown voice: ' + name}")
+        elif sub.startswith("clone"):
+            parts = sub.split(None, 2)
+            name = parts[1] if len(parts) > 1 else ""
+            sample = parts[2] if len(parts) > 2 else ""
+            out = eng.clone_voice(name, sample) if (name and sample) else \
+                "clone requires name + base64 sample"
+            brain.push_event("voice", f"clone {name}")
+            chat.add_moon(f"[voice] {out}")
+        elif sub.startswith("female"):
+            eng.set_voice("default")
+            chat.add_moon("[voice] default female voice")
+        elif sub.startswith("mute"):
+            self.voice_muted = True
+            self.query_one(StatusBar).render_status()
+            brain.push_event("voice", "mute")
+            chat.add_moon("[voice] MUTED — replies text-only")
+        elif sub.startswith("unmute"):
+            self.voice_muted = False
+            self.query_one(StatusBar).render_status()
+            brain.push_event("voice", "unmute")
+            chat.add_moon("[voice] ON — MOON's voice active")
+        elif sub.startswith("status"):
+            st = eng.backend_status()
+            mode = "MUTED" if self.voice_muted else "AUTO"
+            out = (f"[voice] mode={mode} current={st.get('current', '?')} | "
+                   f"xtts={st.get('xtts')} openai={st.get('openai')} "
+                   f"espeak={st.get('espeak')}\n"
+                   f"cloned: {', '.join(st.get('cloned_voices') or []) or 'none'}")
+            chat.add_moon(out)
+        else:
+            chat.add_moon("[voice] actions: list | set <name> | clone <name> <b64> | "
+                          "female | mute | unmute | status")
 
     # ---- actions --------------------------------------------------------
     def action_clear_chat(self) -> None:
         self.query_one(ChatPanel).clear()
 
+    def action_voice_toggle(self) -> None:
+        self.voice_muted = not self.voice_muted
+        self.query_one(StatusBar).render_status()
+        status = "MUTED" if self.voice_muted else "ON"
+        self.query_one(ChatPanel).write(
+            Text.from_markup(f"[{MOON_GLOW}]VOICE[/]: auto-speak {status}"))
+        self.query_one(BrainPanel).push_event("voice", f"toggle {status}")
+
     async def action_quit(self) -> None:
+        if self._speech_task is not None and not self._speech_task.done():
+            self._speech_task.cancel()
         if self.orchestrator is not None:
             asyncio.create_task(self.orchestrator.teardown())
         self.exit()

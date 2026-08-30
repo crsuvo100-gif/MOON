@@ -117,27 +117,7 @@ async def _run(task, agent):
     await o.teardown()
 
 
-async def _run_dashboard():
-    from app.dashboard import run_dashboard
-
-    o = Orchestrator(get_settings())
-    await o.setup()
-
-    async def run_fn(prompt: str) -> str:
-        from app.models.task import Task
-        res = await o.run_task(Task.create(prompt, agent_name="auto"))
-        return res.result or ""
-
-    run_dashboard(run_fn)
-    print("🌙 MOON dashboard running. Open http://127.0.0.1:5000  (Ctrl-C to stop)")
-    try:
-        while True:
-            await asyncio.sleep(3600)
-    except (KeyboardInterrupt, asyncio.CancelledError):
-        await o.teardown()
-
-
-def _run_terminal() -> None:
+async def _run_terminal() -> None:
     import json
     import os
     import shutil
@@ -315,7 +295,7 @@ def _run_terminal() -> None:
 
 # ---------------------------------------------------------------------------
 # Python-first operational commands (spec 9/10/25/26). All additive -- the
-# existing start/run/models/dashboard/terminal/tui/telegram subcommands and the
+# existing start/run/models/terminal/tui/shell subcommands and the
 # default-terminal behaviour are preserved untouched.
 # ---------------------------------------------------------------------------
 
@@ -552,10 +532,9 @@ def main() -> None:
     run_p.add_argument("task", nargs="?", default="Say hello.")
     run_p.add_argument("--agent", default="auto")
     sub.add_parser("models", help="Pre-pull all per-agent preferred models so agents are ready")
-    sub.add_parser("dashboard", help="Launch the MOON web dashboard (Flask+SocketIO UI)")
     sub.add_parser("terminal", help="Launch MOON's own terminal interface (animated avatar UI)")
     sub.add_parser("tui", help="Launch MOON's curses text-mode terminal UI (headless/SSH)")
-    sub.add_parser("telegram", help="Run MOON as a Telegram bot (polling listener)")
+    sub.add_parser("shell", help="Launch MOON's TTS/textual shell terminal (voice + shell + CLI)")
     # NEW Python-first operational commands (additive)
     sub.add_parser("doctor", help="Health check: Python/deps/config/DB/agents/tools/model/git")
     sub.add_parser("status", help="Check the running MOON backend health endpoint")
@@ -577,14 +556,12 @@ def main() -> None:
         asyncio.run(_run(args.task, args.agent))
     elif args.cmd == "models":
         asyncio.run(_prefetch_models())
-    elif args.cmd == "dashboard":
-        asyncio.run(_run_dashboard())
     elif args.cmd == "tui":
         from app.tui import main as tui_main
         raise SystemExit(tui_main())
-    elif args.cmd == "telegram":
-        from app.services.telegram_bot import main as tg_main
-        raise SystemExit(tg_main())
+    elif args.cmd == "shell":
+        from app.tui import main as tui_main
+        raise SystemExit(tui_main())
     elif args.cmd == "terminal":
         _run_terminal()
     elif args.cmd == "doctor":
