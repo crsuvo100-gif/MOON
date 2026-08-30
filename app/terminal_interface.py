@@ -845,6 +845,13 @@ async def api_brain_stats(request: Request):
         "dangerous": stats.get("dangerous", 0),
         "aggressive": stats.get("aggressive", 0),
         "maturity": stats.get("maturity", 0),
+        "agents": stats.get("agents", 0),
+        "skills": stats.get("skills", 0),
+        "memories": stats.get("memories", 0),
+        "capabilities": stats.get("capabilities", 0),
+        "verifications": stats.get("verifications", 0),
+        "errors": stats.get("errors", 0),
+        "by_agent": stats.get("by_agent", {}),
     })
 
 
@@ -1291,6 +1298,64 @@ def _classify_severity(stage: str, detail: str, risk_level=None) -> str:
     return "working"
 
 
+# ---------------------------------------------------------------------------
+# Full-brain orb mapping: every real subsystem MOON has becomes an orb signal.
+# The EventBus already publishes her entire brain activity (per-agent brains,
+# skill updates, memory writes, tool/capability use, the verification gate, agent
+# creation, errors). Here we map each event type to (severity tier, brain aspect)
+# so the orb literally reflects MOON's whole mind, not just chat pulses.
+# ---------------------------------------------------------------------------
+# Brain aspect = WHICH subsystem is firing (drives the orb's aura color).
+_ASPECT_FROM_EVENT = {
+    "AGENT_SELECTED": "agent", "AGENT_STARTED": "agent", "AGENT_COMPLETED": "agent",
+    "AGENT_CREATED": "agent", "AGENT_APPROVED": "agent", "AGENT_REJECTED": "agent",
+    "AGENT_TEST_FAILED": "agent",
+    "SKILL_UPDATED": "skill",
+    "MEMORY_UPDATED": "memory",
+    "TOOL_SELECTED": "capability", "TOOL_COMPLETED": "capability",
+    "VERIFICATION_STARTED": "verification", "VERIFICATION_PASSED": "verification",
+    "VERIFICATION_FAILED": "verification",
+    "TASK_CREATED": "cognition", "TASK_STARTED": "cognition",
+    "ERROR": "alert", "ROLLBACK_STARTED": "alert", "ROLLBACK_COMPLETED": "alert",
+}
+# Offensive/security agents -- their brain activity is inherently dangerous/aggressive.
+_AGENT_OFFENSIVE = {"red_team", "blue_team", "purple_team", "forensics", "reverse_eng",
+                    "threat_hunt", "siem", "offensive", "attack", "exploit", "recon"}
+_ASPECT_COLOR = {
+    "agent": "rgba(64,210,255,.95)",       # cyan  - an agent's brain firing
+    "skill": "rgba(180,120,255,.95)",      # violet - skill building/recall
+    "memory": "rgba(90,255,160,.95)",      # green  - memory consolidation
+    "capability": "rgba(255,190,60,.95)",  # amber  - tool/capability use
+    "verification": "rgba(220,235,255,.95)", # white - accuracy gate
+    "personality": "rgba(255,120,200,.95)", # pink  - companion/locked persona
+    "cognition": "rgba(120,200,255,.9)",   # soft blue - task cognition
+    "alert": "rgba(255,70,50,.95)",        # red    - error / rollback
+}
+
+
+def _classify_event(ev_type: str, detail: str, agent_id: str = "", risk_level=None):
+    """Map an EventBus event to (severity_tier, brain_aspect)."""
+    et = (ev_type or "").upper()
+    aspect = _ASPECT_FROM_EVENT.get(et, "cognition")
+    aid = (agent_id or "").lower()
+    # Offensive agent brains => dangerous/aggressive.
+    if aid in _AGENT_OFFENSIVE:
+        return ("aggressive" if aspect == "agent" else "dangerous", aspect)
+    if et in ("AGENT_SELECTED", "AGENT_STARTED", "AGENT_CREATED", "AGENT_APPROVED"):
+        return ("working", aspect)
+    if et in ("TOOL_SELECTED", "TOOL_COMPLETED"):
+        return ("working", "capability")
+    if et in ("VERIFICATION_PASSED",):
+        return ("normal", "verification")
+    if et in ("VERIFICATION_FAILED", "VERIFICATION_STARTED"):
+        return ("working", "verification")
+    if et in ("ERROR", "ROLLBACK_STARTED", "ROLLBACK_COMPLETED"):
+        return ("dangerous", "alert")
+    if et in ("SKILL_UPDATED", "MEMORY_UPDATED"):
+        return ("normal", aspect)
+    return ("working", aspect)
+
+
 def _load_brain_stats() -> dict:
     try:
         if _BRAIN_STATS_PATH.exists():
@@ -1298,7 +1363,9 @@ def _load_brain_stats() -> dict:
     except Exception:
         pass
     return {"total": 0, "normal": 0, "working": 0, "dangerous": 0,
-            "aggressive": 0, "peak_tier": "calm", "sessions": 0}
+            "aggressive": 0, "peak_tier": "calm", "sessions": 0,
+            "agents": 0, "skills": 0, "memories": 0, "capabilities": 0,
+            "verifications": 0, "errors": 0, "by_agent": {}}
 
 
 def _save_brain_stats(stats: dict):
@@ -1308,15 +1375,26 @@ def _save_brain_stats(stats: dict):
         pass
 
 
-def _bump_brain_stats(tier: str) -> dict:
-    """Increment the running brain-profile counters for one task; persist; return it."""
+def _bump_brain_stats(tier: str, aspect: str = None, agent_id: str = None) -> dict:
+    """Increment the running brain-profile counters for one event; persist; return it.
+
+    Tracks both the severity tier AND the brain aspect (which subsystem fired),
+    plus a per-agent brain activity count -- so MOON's orb 'learns/upgrades' from
+    her real, full workload across sessions (honest accumulation, not fabricated ML).
+    """
     stats = _load_brain_stats()
     stats["total"] = stats.get("total", 0) + 1
     stats[tier] = stats.get(tier, 0) + 1
-    # maturity: grows with total tasks, weighted toward harder tiers (real learning).
+    if aspect:
+        stats[aspect] = stats.get(aspect, 0) + 1
+    if agent_id:
+        ba = stats.setdefault("by_agent", {})
+        ba[agent_id] = ba.get(agent_id, 0) + 1
+    # maturity: grows with total events, weighted toward harder tiers + self-improvement
     hard = stats.get("dangerous", 0) + stats.get("aggressive", 0) * 1.5
+    growth = stats.get("agents", 0) + stats.get("skills", 0)
     stats["maturity"] = min(100, round(100 * (1 - 1 / (1 + stats["total"] / 50))
-                                       + min(20, hard / 5)))
+                                       + min(20, hard / 5) + min(15, growth)))
     _save_brain_stats(stats)
     return stats
 
@@ -1365,11 +1443,25 @@ async def ws_endpoint(ws: WebSocket):
         # Brain-core behavior: classify severity + accumulate the brain profile so
         # the HUD orb can react to MOON's real workload (calm/normal/working/
         # dangerous/aggressive) and "learn/upgrade" across sessions.
+        # Two event families feed the orb:
+        #   1) workflow/exec/reply  -> _classify_severity (stage/detail based)
+        #   2) EventBus events       -> _classify_event (which real subsystem fired,
+        #                               incl. per-agent brain activity + aspect hue)
         if _kind in ("workflow", "exec_output", "assistant_start"):
             sev = _classify_severity(msg.get("stage", ""), msg.get("detail", "") or str(msg.get("output", "")), msg.get("risk_level"))
             msg["severity"] = sev
-            if _kind in ("workflow", "exec_output", "assistant_start"):
-                _bump_brain_stats(sev)
+            _bump_brain_stats(sev)
+        elif _kind == "event":
+            # Real brain event from the EventBus (agent brain, skill, memory, tool,
+            # verification, error...). Surface it to the orb as a full-brain signal.
+            ev_type = msg.get("event_type", "")
+            agent_id = (msg.get("payload") or {}).get("agent_id") or msg.get("agent_id") or ""
+            sev, aspect = _classify_event(ev_type, msg.get("detail", ""), agent_id, msg.get("risk_level"))
+            msg["severity"] = sev
+            msg["aspect"] = aspect
+            if agent_id:
+                msg["agent_id"] = agent_id
+            _bump_brain_stats(sev, aspect, agent_id)
         async with _send_lock:
             try:
                 await ws.send_json(msg)

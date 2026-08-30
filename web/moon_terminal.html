@@ -94,7 +94,7 @@ body{display:grid;place-items:center}
 .fusionOrb{position:absolute;left:50%;top:50%;width:100%;height:100%;transform:translate(-50%,-50%);
   object-fit:contain;opacity:calc(.9 + var(--core-e,0)*0.10);
   filter:saturate(1.05) brightness(calc(1 + var(--core-e,0)*0.40))
-         drop-shadow(0 0 calc(34px + var(--core-e,0)*46px) rgba(255,200,80,calc(.45 + var(--core-e,0)*.3)));
+         drop-shadow(0 0 calc(34px + var(--core-e,0)*46px) var(--core-aura, rgba(255,200,80,calc(.45 + var(--core-e,0)*.3))));
   transition:filter .35s;pointer-events:none;z-index:-1}
 /* Idle breathing: gentle scale pulse ONLY when MOON is calm/idle (no .thinking). */
 .fusionOrb.idle{animation:moonCoreBreath calc(8s / var(--breath-speed,1)) ease-in-out infinite}
@@ -911,24 +911,58 @@ function wsSend(o){ if(ws && ws.readyState===1){ if(o.action) lastAction=o.actio
 // .sev-* = severity tier hue (calm/normal/working/dangerous/aggressive) driven by
 //   MOON's real workflow classification from the backend.
 function setCoreThinking(on){ const o=el("fusionOrb"); if(o){ o.classList.toggle("thinking", !!on); if(!on) o.classList.remove("sev-dangerous","sev-aggressive"); } }
-function setCoreState(txt, cls){ const s=el("coreState"); if(!s) return; s.textContent=txt; s.classList.remove("thinking","speaking"); if(cls) s.classList.add(cls); }
+function setCoreState(txt, cls){ const s=el("coreState"); if(!s) return; s.textContent=txt; s.classList.remove("thinking","speaking","sev-normal","sev-working","sev-dangerous","sev-aggressive"); if(cls) s.classList.add(cls); }
 // Severity tier: color + volatile flicker by how hard MOON's brain is working.
-let _coreSeverity="calm", _maturity=0;
+let _coreSeverity="calm", _maturity=0, _coreAspect="", _coreAgent="", _brainSettleTimer=null;
+const _ASPECT_COLOR = {agent:"rgba(64,210,255,.95)", skill:"rgba(180,120,255,.95)", memory:"rgba(90,255,160,.95)",
+  capability:"rgba(255,190,60,.95)", verification:"rgba(220,235,255,.95)", personality:"rgba(255,120,200,.95)",
+  cognition:"rgba(120,200,255,.9)", alert:"rgba(255,70,50,.95)"};
 function setCoreSeverity(tier){
   _coreSeverity = tier;
   const o=el("fusionOrb"); if(!o) return;
   o.classList.remove("sev-normal","sev-working","sev-dangerous","sev-aggressive");
   if(tier==="normal"||tier==="working"||tier==="dangerous"||tier==="aggressive") o.classList.add("sev-"+tier);
-  // breathing speed: calm slow, aggressive fast (maturity widens the envelope)
   const speed = {"calm":1,"normal":1.4,"working":2.2,"dangerous":3.4,"aggressive":4.5}[tier] || 1;
   document.documentElement.style.setProperty("--breath-speed", (speed*(1+_maturity/200)).toFixed(2));
+  _applyCoreAura();
+}
+// Brain aspect: WHICH subsystem of MOON is firing (agent/skill/memory/capability/
+// verification/personality/cognition/alert) -> tints the orb's aura + label class.
+function setCoreAspect(aspect){
+  _coreAspect = aspect || "";
+  _applyCoreAura();
+  const s=el("coreState"); if(s && aspect) s.dataset.aspect=aspect;
+}
+function _applyCoreAura(){
+  // Aura color = aspect hue (which subsystem) strongest; severity tier still drives
+  // brightness/flicker. Personality/locked overrides to the companion (pink) hue.
+  const col = _coreAspect ? (_ASPECT_COLOR[_coreAspect]||"") : "";
+  document.documentElement.style.setProperty("--core-aura", col || "rgba(255,200,80,.6)");
+}
+// Which agent's brain is currently firing (MOON has 39+ agents, each its own brain).
+// Drives a composite label so the orb literally names the active agent's mind.
+function setCoreAgent(agentId){
+  _coreAgent = agentId || "";
+  const s=el("coreState"); if(!s) return;
+  if(agentId) s.dataset.agent=agentId;
+}
+// Composite label: what part of MOON's brain is active right now.
+function coreCompositeLabel(){
+  if(_moonSpeaking) return "◌ MOON SPEAKING ◌";
+  if(_coreAgent) return "◌ "+_coreAgent.toUpperCase()+" BRAIN ◌";
+  if(_coreAspect==="skill") return "◌ SKILL FORGE ◌";
+  if(_coreAspect==="memory") return "◌ MEMORY WRITE ◌";
+  if(_coreAspect==="capability") return "◌ CAPABILITY ◌";
+  if(_coreAspect==="verification") return "◌ VERIFYING ◌";
+  if(_coreAspect==="alert") return "◌ ALERT ◌";
+  if(_coreAspect==="cognition") return "◌ COGNITION ◌";
+  return "◌ THINKING ◌";
 }
 // Brain maturity: accumulated from real task history (persisted by backend in
 // brain_stats.json). Higher maturity = stronger, steadier core reactions.
 function setCoreMaturity(m){
   _maturity = Math.max(0, Math.min(100, m|0));
   const e=el("coreMaturity"); if(e) e.textContent="MATURITY "+_maturity+"%";
-  // maturity slightly boosts idle breathing steadiness + base glow floor
   document.documentElement.style.setProperty("--core-mat", (_maturity/100).toFixed(3));
 }
 // Pull maturity from backend stats on connect (so learning persists across sessions)
@@ -947,8 +981,31 @@ function handle(m){
   switch(m.type){
     case "ready": case "status": applyStatus(m.status||m); addLog("[SYSTEM] status received."); if((m.status||m).load!=null) window.MOON_UI.onCorePulse && window.MOON_UI.onCorePulse((m.status||m).load/180); if(m.type==="ready" && typeof window.MOON_UI.onReady==="function") window.MOON_UI.onReady(m); break;
     case "assistant_start": setState("SPEAKING"); addLog("[MOON] thinking…"); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.9); if(typeof fireBurst==="function") fireBurst(14);
-      _moonSpeaking=true; if(_recog){ try{ _recog.stop(); }catch(_){} } if(_talkState) setTalkState("◌ MOON IS SPEAKING ◌", false); setCoreThinking(true); setCoreSeverity("normal"); setCoreState("◌ SPEAKING ◌","speaking"); break;
-    case "workflow": setState((m.stage||"").toUpperCase(), {stage:m.stage}); addLog("[FLOW] "+(m.stage||"")+": "+(m.detail||"")); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.7); setCoreThinking(true); setCoreSeverity(m.severity||"working"); setCoreState("◌ THINKING ◌","thinking"); pushEvent("work","FLOW "+((m.stage||"")+": "+(m.detail||"")).replace(/[<>]/g,"")); break;
+      _moonSpeaking=true; if(_recog){ try{ _recog.stop(); }catch(_){} } if(_talkState) setTalkState("◌ MOON IS SPEAKING ◌", false); setCoreThinking(true); setCoreSeverity("normal"); setCoreAspect(""); setCoreAgent(""); setCoreState("◌ SPEAKING ◌","speaking"); break;
+    case "workflow": setState((m.stage||"").toUpperCase(), {stage:m.stage}); addLog("[FLOW] "+(m.stage||"")+": "+(m.detail||"")); window.MOON_UI.onCorePulse&&window.MOON_UI.onCorePulse(0.7); setCoreThinking(true); setCoreSeverity(m.severity||"working"); setCoreAspect((m.stage||"")==="locked"?"personality":""); setCoreState(coreCompositeLabel(), m.severity==="aggressive"||m.severity==="dangerous"?"sev-"+m.severity:"thinking"); pushEvent("work","FLOW "+((m.stage||"")+": "+(m.detail||"")).replace(/[<>]/g,"")); break;
+    case "event": {
+      // Real brain event from MOON's EventBus -- reflects her WHOLE mind:
+      // per-agent brains firing, skill forging, memory writes, capability/tool use,
+      // the verification gate, errors, agent creation. Drive the orb with it.
+      const ev=m.event_type||"", sev=(m.severity||"working"), asp=(m.aspect||"cognition");
+      setCoreThinking(true); setCoreSeverity(sev); setCoreAspect(asp);
+      // Clear stale agent label if THIS event isn't from a specific agent brain
+      // (otherwise the previous agent's name would stick to unrelated events).
+      if(m.agent_id) setCoreAgent(m.agent_id); else setCoreAgent("");
+      window.MOON_UI.onCorePulse && window.MOON_UI.onCorePulse(sev==="dangerous"||sev==="aggressive"?0.95:0.7);
+      setCoreState(coreCompositeLabel(), sev==="dangerous"||sev==="aggressive"?"sev-"+sev:(asp==="alert"?"sev-dangerous":"thinking"));
+      addLog("[BRAIN] "+ev+(m.detail?": "+m.detail:""));
+      pushEvent("brain", (ev+(m.agent_id?" @ "+m.agent_id:"")+(m.detail?" — "+m.detail:"")).replace(/[<>]/g,""));
+      // Settle the orb back to calm after each brain burst (debounced), unless she
+      // is mid-reply. This keeps the label/aura truthful: each subsystem flashes,
+      // then the core returns to standby instead of staying stuck on the last event.
+      if(_brainSettleTimer) clearTimeout(_brainSettleTimer);
+      _brainSettleTimer = setTimeout(()=>{
+        if(_moonSpeaking) return;
+        setCoreThinking(false); setCoreSeverity("calm"); setCoreAspect(""); setCoreAgent(""); setCoreState("◌ IDLE ◌");
+      }, 1100);
+      break;
+    }
     case "assistant_chunk":
       addLog("[MOON] "+(m.content||""));
       if(lastAction==="list_tools"){ toolBuf += (m.content||""); }
