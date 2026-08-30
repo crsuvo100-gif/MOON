@@ -58,6 +58,12 @@ class EventBus:
     def subscribe(self, fn: Callable[[Event], None]) -> None:
         self._subscribers.append(fn)
 
+    def unsubscribe(self, fn: Callable[[Event], None]) -> None:
+        try:
+            self._subscribers.remove(fn)
+        except ValueError:
+            pass
+
     def publish(self, etype: str | EventType, *, execution_id: str = "",
                 agent_id: str = "", detail: str = "", payload: dict | None = None) -> Event:
         name = etype.value if isinstance(etype, EventType) else str(etype)

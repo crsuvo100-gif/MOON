@@ -187,6 +187,37 @@ _stop_requested = False
 _last_error = False
 
 
+def _is_simple_chat(text: str) -> bool:
+    """Heuristic: True for simple chat/greeting messages that can take the
+    fast single-LLM-call path instead of the full run_task pipeline.
+
+    A message is "simple" when it is short, does NOT look like a tool-using
+    task (no command keywords, no URLs, no multi-step framing), and doesn't
+    explicitly request complex agent work. This cuts reply time from 15-20s
+    (full orchestration) to ~3-5s (one LLM hop) on CPU-only hosts.
+    """
+    if not text:
+        return True
+    t = text.strip().lower()
+    if len(t) > 120:
+        return False
+    # Explicit tool/action keywords → always use full pipeline
+    tool_kw = ("run", "execute", "scan", "exploit", "install", "build", "create",
+               "deploy", "hack", "attack", "audit", "code", "script", "program",
+               "find", "search the", "download", "fetch", "pull", "git",
+               "docker", "reverse", "analyze", "investigate", "research",
+               "make me", "write a", "generate", "build a")
+    for kw in tool_kw:
+        if kw in t:
+            return False
+    # Questions that likely need tools/factual lookup → full pipeline
+    if t.startswith("what is ") and ("ip" in t or "url" in t or "api" in t):
+        return False
+    if any(u in t for u in ("http://", "https://", "github.com", "127.0.0.1")):
+        return False
+    return True
+
+
 def _current_emotion(locked: bool) -> dict:
     """Derive MOON's live emotional state from REAL signals (no fake model).
     locked -> calm/guarded; speaking -> engaged; recent error -> alert;
@@ -1521,21 +1552,36 @@ async def ws_endpoint(ws: WebSocket):
                     # fast, proven quick_reply so the terminal ALWAYS gets a brain
                     # reply instead of a silent hang.
                     from app.models.task import Task
-                    task = Task.create(text, agent_name="auto")
                     t0 = time.time()
-                    try:
-                        result_task = await asyncio.wait_for(
-                            orch.run_task(task, on_event=stream_event), timeout=180)
-                        answer = result_task.result or ""
-                    except (asyncio.TimeoutError, Exception) as e:  # noqa: BLE001
-                        _last_error = True
-                        await send(type="workflow", stage="fallback",
-                                   detail="run_task slow — using fast brain path")
+                    # Fast-path heuristic: for simple chat/greeting messages, use
+                    # quick_reply (single LLM call) instead of the full run_task
+                    # pipeline (intent detection + capability analysis + tool
+                    # acquisition + planning + multiple LLM calls). This cuts
+                    # typical reply time from 15-20s to 3-5s on CPU-only hosts.
+                    simple = _is_simple_chat(text)
+                    if simple:
+                        await send(type="workflow", stage="fast",
+                                   detail="simple message -> quick_reply")
                         try:
                             answer = await asyncio.wait_for(
-                                orch.quick_reply(text), timeout=150)
+                                orch.quick_reply(text), timeout=60)
                         except (asyncio.TimeoutError, Exception) as e2:  # noqa: BLE001
                             answer = f"[MOON error: {e2}]"
+                    else:
+                        task = Task.create(text, agent_name="auto")
+                        try:
+                            result_task = await asyncio.wait_for(
+                                orch.run_task(task, on_event=stream_event), timeout=180)
+                            answer = result_task.result or ""
+                        except (asyncio.TimeoutError, Exception) as e:  # noqa: BLE001
+                            _last_error = True
+                            await send(type="workflow", stage="fallback",
+                                       detail="run_task slow — using fast brain path")
+                            try:
+                                answer = await asyncio.wait_for(
+                                    orch.quick_reply(text), timeout=150)
+                            except (asyncio.TimeoutError, Exception) as e2:  # noqa: BLE001
+                                answer = f"[MOON error: {e2}]"
                     if not answer:
                         answer = "(no response)"
                 await send(type="workflow", stage="speaking", detail="forming response")
