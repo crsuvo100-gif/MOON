@@ -1423,12 +1423,12 @@ async def ws_endpoint(ws: WebSocket):
     _bus.subscribe(_on_event)
 
     async def _ws_event_push(ev):
-        try:
-            await ws.send_json({"type": "event", "event_type": ev.type,
-                                "detail": (ev.detail or "")[:300],
-                                "execution_id": ev.execution_id or ""})
-        except Exception:
-            pass
+        # Route EventBus brain events through send() so the orb gets the classified
+        # severity/aspect/agent_id (full-brain tinting) AND the stats profile is
+        # accumulated. send() attaches severity+aspect+agent_id from the real event.
+        await send(type="event", event_type=ev.type, detail=(ev.detail or "")[:300],
+                   agent_id=ev.agent_id or "", payload={"agent_id": ev.agent_id or ""},
+                   execution_id=ev.execution_id or "")
 
     async def send(**msg):
         # Capture real activity into the events ring buffer (for /api/events +

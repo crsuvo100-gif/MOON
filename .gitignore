@@ -72,3 +72,6 @@ skills/
 
 # Generated runtime backups (created by `python -m moon backup`)
 backups/
+
+# MOON runtime learning profile (regenerated on first run)
+app/data/brain_stats.json

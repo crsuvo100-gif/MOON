@@ -1234,8 +1234,29 @@ class Orchestrator:
                 args = {"code": code}
             elif chosen == "file_manager":
                 args = {"action": "list", "path": "."}
-            else:
-                args = {}
+            elif chosen == "terminal":
+                import re as _re
+                p = task.prompt or ""
+                cmd = ""
+                # 1) fenced code block (bash/sh/shell)
+                m = _re.search(r"```(?:bash|sh|shell)?\s*(.*?)```", p, _re.S | _re.I)
+                if m:
+                    cmd = m.group(1).strip()
+                else:
+                    # 2) explicit "command:" / "terminal tool:" marker
+                    m = _re.search(r"(?:command|terminal tool)\s*[:\-]\s*(.+)", p, _re.I)
+                    if m:
+                        cmd = m.group(1).strip()
+                    else:
+                        # 3) inline 'echo ...' / 'run: ...'
+                        m = _re.search(r"\b(?:echo|run|sh|bash|ls|cat|pwd|whoami|date|uname|python|curl|wget|git|pip|apt|systemctl|cat)\b[^\n]*", p, _re.I)
+                        if m:
+                            cmd = m.group(0).strip()
+                # Trim trailing prose (" and report ...", sentence end) so only the
+                # command is executed. The terminal tool itself refuses dangerous input.
+                if cmd:
+                    cmd = _re.split(r"\s+and (?:report|tell|show|print)|\.\s|[\n]", cmd, 1)[0].strip().rstrip(".")
+                    args = {"command": cmd}
         except Exception:  # noqa: BLE001
             args = {}
         try:
