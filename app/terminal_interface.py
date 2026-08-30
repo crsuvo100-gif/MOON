@@ -1708,7 +1708,7 @@ async def ws_endpoint(ws: WebSocket):
                 await send(type="assistant_start")
                 await send(type="workflow", stage="tools", detail="enumerating tools")
                 reg = getattr(orch._tools, "_registry", None)
-                names = list(reg.tool_names) if reg and hasattr(reg, "tool_names") else []
+                names = reg.tool_names if reg and hasattr(reg, "tool_names") else []
                 out = f"{len(names)} tools registered:\n" + ", ".join(names)
                 for chunk in _stream_text(out):
                     await send(type="assistant_chunk", content=chunk)
@@ -1773,7 +1773,7 @@ async def ws_endpoint(ws: WebSocket):
                             v = v.strip().strip("'\"")
                             args[k] = v
                     try:
-                        tool = orch._tools._registry.get(name) if orch._tools else None
+                        tool = orch._tools._registry.get(name) if orch._tools and hasattr(orch._tools._registry, "get") else None
                         if tool is None:
                             out = f"[tool] unknown tool '{name}'. Use 'list_tools'."
                         else:
@@ -1842,7 +1842,7 @@ async def ws_endpoint(ws: WebSocket):
                 await send(type="workflow", stage="tools", detail="global connector")
                 try:
                     tool = getattr(orch._tools, "_registry", None)
-                    conn_tool = tool.get("global_connector") if tool else None
+                    conn_tool = tool.get("global_connector") if tool and hasattr(tool, "get") else None
                     if conn_tool is None:
                         out = "[connect] Global Connector not registered."
                     else:
