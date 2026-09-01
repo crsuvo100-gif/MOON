@@ -289,11 +289,29 @@ async def _term_startup():
     _get_voice_engine()  # probe TTS availability at boot so MODE reflects truth
 
 
-def _stream_text(text: str):
-    """Yield words for a live typing effect (real content, not simulated)."""
-    for word in text.split(" "):
-        yield word + " "
-        time.sleep(0.02)
+def _stream_text(text: str, yield_every: int = 1):
+    """Yield words for a live typing effect (real content, not simulated).
+
+    Parameters
+    ----------
+    text : str
+        The text to stream, word by word.
+    yield_every : int
+        Only yield a frame every ``yield_every`` words.  ``1`` (the default)
+        is the live-typing effect used for chat replies; higher values (e.g.
+        ``9999``) are used for backend enumerations (list_tools, agents, skills,
+        audit, executions) so the whole result arrives in one or two frames
+        instead of one frame per word (which would take 20-40s for a 193-item
+        list).
+    """
+    words = text.split(" ")
+    for i, word in enumerate(words):
+        if i % yield_every == 0:
+            yield word + " "
+            if yield_every > 1:
+                time.sleep(0.01)
+        else:
+            time.sleep(0.001)
 
 
 @app.get("/")
@@ -1687,7 +1705,8 @@ async def ws_endpoint(ws: WebSocket):
                 names = [str(n) for n in names][:40]
                 out = (f"Connected {len(names)} agent brains to MOON's main cortex:\n"
                        + ", ".join(names))
-                for chunk in _stream_text(out):
+                _stream = _stream_text(out, yield_every=9999 if len(out) > 300 else 1)
+                for chunk in _stream:
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "stop":
@@ -1710,7 +1729,8 @@ async def ws_endpoint(ws: WebSocket):
                 reg = getattr(orch._tools, "_registry", None)
                 names = reg.tool_names if reg and hasattr(reg, "tool_names") else []
                 out = f"{len(names)} tools registered:\n" + ", ".join(names)
-                for chunk in _stream_text(out):
+                _stream = _stream_text(out, yield_every=9999 if len(out) > 300 else 1)
+                for chunk in _stream:
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "voice":
@@ -1833,9 +1853,10 @@ async def ws_endpoint(ws: WebSocket):
                                 f"  - {c.get('name','?')}: {c.get('description','')[:80]}" for c in caps[:40])) if caps else "no capabilities registered"
                 except Exception as e:  # noqa: BLE001
                     out = f"[{action}] error: {e}"
-                for chunk in _stream_text(out):
-                    await send(type="assistant_chunk", content=chunk)
-                await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
+                    _stream = _stream_text(out, yield_every=9999 if len(out) > 300 else 1)
+                    for chunk in _stream:
+                        await send(type="assistant_chunk", content=chunk)
+                    await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "connect":
                 # NEW: MOON's global connection layer (additive).
                 await send(type="assistant_start")
@@ -1856,16 +1877,21 @@ async def ws_endpoint(ws: WebSocket):
                         elif cmd == "connect" and len(parts) >= 3:
                             # moon> connect <name> <url> [kind]
                             out = await conn_tool.execute(action="connect", name=parts[1],
-                                                         url=parts[2], kind=(parts[3] if len(parts) > 3 else "service"))
+                                                             url=parts[2], kind=(parts[3] if len(parts) > 3 else "service"))
                         elif cmd == "call" and len(parts) >= 2:
                             out = await conn_tool.execute(action="call", name=parts[1],
-                                                         message=" ".join(parts[2:]))
+                                                             message=" ".join(parts[2:]))
                         else:
                             out = (await conn_tool.execute(action="list"))
                         out = out if isinstance(out, str) else str(out)
+                        # Batch large enumeration output into a single frame instead of
+                        # one WebSocket frame per word (which would take 20-40s for a
+                        # 193-agent list). Small responses still get the live-typing effect.
+                        _stream = _stream_text(out, yield_every=9999 if len(out) > 300 else 1)
                 except Exception as e:  # noqa: BLE001
                     out = f"[connect] error: {e}"
-                for chunk in _stream_text(out):
+                    _stream = _stream_text(out, yield_every=9999 if len(out) > 300 else 1)
+                for chunk in _stream:
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action in ("agents", "tools", "skills", "tasks", "executions", "audit"):
@@ -1970,7 +1996,8 @@ async def ws_endpoint(ws: WebSocket):
                         out = f"[unknown {action} command]"
                 except Exception as e:  # noqa: BLE001
                     out = f"[{action} error: {e}]"
-                for chunk in _stream_text(out):
+                _stream = _stream_text(out, yield_every=9999 if len(out) > 300 else 1)
+                for chunk in _stream:
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "factory":
@@ -2012,6 +2039,7 @@ async def ws_endpoint(ws: WebSocket):
                         out = "[factory] agents:\n" + "\n".join(
                             f"  - {a['name']} [{a['status']}] tools={a['required_tools']}" for a in ags
                         ) if ags else "[factory] no generated agents yet"
+                        _stream = _stream_text(out, yield_every=9999 if len(out) > 300 else 1)
                     elif cmd == "enable" and arg:
                         out = f"[factory] {lc.enable(arg).status} {arg}"
                     elif cmd == "disable" and arg:
@@ -2057,10 +2085,12 @@ async def ws_endpoint(ws: WebSocket):
                         + "\n- Mode: active offensive ops require authorized targets or "
                           "runtime operator confirmation. Defensive/passive analysis needs no auth."
                     )
+                    _stream = _stream_text(out, yield_every=9999 if len(out) > 300 else 1)
                 except Exception as e:  # noqa: BLE001
                     out = f"[security error: {e}]"
+                    _stream = _stream_text(out, yield_every=9999 if len(out) > 300 else 1)
                 await send(type="workflow", stage="speaking", detail="reporting")
-                for chunk in _stream_text(out):
+                for chunk in _stream:
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "automation":

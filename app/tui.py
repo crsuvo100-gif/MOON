@@ -327,7 +327,7 @@ class MoonTUI(App):
         # TTS: speak every MOON reply aloud (when not muted) -- serialized so
         # rapid messages don't play over each other.
         if not self.voice_muted:
-            asyncio.create_task(self._say(answer))
+            self._speech_task = asyncio.create_task(self._say(answer))
 
     # ---- TTS voice ------------------------------------------------------
     async def _say(self, text: str) -> None:
