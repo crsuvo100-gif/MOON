@@ -369,9 +369,12 @@ def _cmd_ui() -> int:
     try:
         sys.path.insert(0, project)
         from scripts.open_hud import open_hud
-        pid = open_hud()
-        if pid:
-            print(f"🌙 MOON web UI opened (chrome pid {pid}).")
+        result = open_hud()
+        if result == "already_open":
+            print(f"🌙 MOON web UI already open at {url} (HUD window is up).")
+            print(f"   Full avatar + function dock active.")
+        elif result is not None:
+            print(f"🌙 MOON web UI opened (chrome pid {result}).")
             print(f"   Full avatar + function dock at {url}")
         else:
             print(f"🌙 No display/browser detected -- open {url} manually in your browser.")

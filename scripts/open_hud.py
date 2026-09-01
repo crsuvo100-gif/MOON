@@ -53,6 +53,31 @@ def _detect_display():
     w = os.environ.get("WAYLAND_DISPLAY")
     if w:
         return None, w
+    # Fallback: if MOON's Chrome HUD is already running, reuse the display
+    # it was launched with (so `moon ui` works even in a headless session as
+    # long as the HUD window is already up on the real display).
+    try:
+        import psutil
+        for proc in psutil.process_iter(["pid", "cmdline"]):
+            try:
+                cmd = proc.info.get("cmdline") or []
+            except Exception:
+                continue
+            if not cmd:
+                continue
+            cmd_str = " ".join(cmd)
+            if "chrome" not in cmd_str.lower() and "chromium" not in cmd_str.lower():
+                continue
+            if "app=http" not in cmd_str and "moon" not in cmd_str.lower():
+                continue
+            for a in cmd:
+                if a.startswith("--display="):
+                    return a.split("=", 1)[1], None
+            for a in cmd:
+                if a.startswith("--wayland-display="):
+                    return None, a.split("=", 1)[1]
+    except Exception:
+        pass
     return None, None
 
 
@@ -117,13 +142,17 @@ def _display_size():
 
 
 def open_hud():
+    # Returns:
+    #   int pid  — newly opened Chrome HUD window
+    #   str "already_open" — a HUD window was already running (not an error)
+    #   None    — could not open (no display / no browser / headless)
     # Atomic single-instance guard: refuse to open a second window if one is
     # already recorded (or if a previous invocation is mid-launch). We create
     # the lockfile up-front (with a sentinel) BEFORE spawning Chrome so two
     # near-simultaneous callers cannot both pass the check and stack windows.
     try:
         if _hud_alive():
-            return None  # a HUD window already exists -- don't duplicate
+            return "already_open"  # a HUD window already exists -- not an error
         # claim the lock immediately so a concurrent caller sees it
         with open(LOCK, "w") as fh:
             fh.write("launching")
