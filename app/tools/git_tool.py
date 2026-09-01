@@ -19,7 +19,8 @@ class GitTool(BaseTool):
         path = Path(repo)
         try:
             if action in ("clone",):
-                r = subprocess.run(["git", "clone", *extra.split(), repo if False else extra.split()[0] if extra else repo], capture_output=True, text=True, timeout=120) if False else subprocess.run(["git", "-C", str(path), *([action] + (extra.split() if extra else []))], capture_output=True, text=True, timeout=120)
+                tgt = extra.split()[0] if extra else repo
+                r = subprocess.run(["git", "clone", tgt], capture_output=True, text=True, timeout=120)
             else:
                 r = subprocess.run(["git", "-C", str(path), action, *extra.split()], capture_output=True, text=True, timeout=120)
             return (r.stdout or r.stderr or "(ok)")[:2000]

@@ -67,7 +67,19 @@ class LongTermMemory:
         return matches[-limit:]
 
     async def all(self) -> list[MemoryEntry]:
-        return list(self._entries)
+        async with self._lock:
+            return list(self._entries)
 
-    async def teardown(self) -> None:
-        return
+    async def purge(self, n: int = 100) -> list[MemoryEntry]:
+        """Remove and return up to n oldest entries from LTM."""
+        async with self._lock:
+            popped = self._entries[:n]
+            self._entries = self._entries[n:]
+        return popped
+
+    async def wipe(self) -> None:
+        """Remove all LTM entries from memory and disk."""
+        async with self._lock:
+            self._entries.clear()
+        self._path.write_text("", encoding="utf-8")
+        logger.info("LTM wiped: all entries removed")
