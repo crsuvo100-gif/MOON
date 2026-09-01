@@ -1866,6 +1866,7 @@ async def ws_endpoint(ws: WebSocket):
                     conn_tool = tool.get("global_connector") if tool and hasattr(tool, "get") else None
                     if conn_tool is None:
                         out = "[connect] Global Connector not registered."
+                        _stream = _stream_text(out, yield_every=9999 if len(out) > 300 else 1)
                     else:
                         payload = (data.get("query") or data.get("text") or data.get("command") or "").strip()
                         parts = payload.split()
