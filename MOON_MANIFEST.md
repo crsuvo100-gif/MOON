@@ -10,8 +10,8 @@
 |---|---|
 | Project root | `/home/meow/Projects/MOON` |
 | Git remote | `git@github.com:crsuvo100-gif/MOON.git` (SSH, verified live) |
-| HEAD commit | `d273f97 feat(terminal): on-demand HUD launch + auto-voice by default` |
-| Branch | `master` (35 commits ahead of old `main`) |
+| HEAD commit | `b0b657e fix(terminal): harden connect WS handler — _stream always set` |
+| Branch | `master` (39 commits ahead of `origin/main`) |
 | Python | `.venv/bin/python` → 3.13.14 |
 | Venv | `.venv/` (2.8 GB — real ML deps: torch 725M, bitsandbytes 122M, transformers 110M, etc.) |
 | Entry | `main.py` + `moon/__main__.py`; also `run_moon.py` |
@@ -29,17 +29,13 @@
 
 | Entrypoint | Command | Wires to |
 |---|---|---|
-| Terminal/API server | `python main.py terminal` → uvicorn on :8777 | Orchestrator + WS `/ws` + HTTP `/api/*` |
-| Dashboard | `python main.py dashboard` | `run_dashboard` → `orch.run_task(...)` |
-| TUI (in-process) | `python main.py tui` | Orchestrator directly |
-| Telegram bot | `python main.py telegram` | `app/services/telegram_bot.py` |
-| Doctor (health) | `python main.py doctor` | 16 subsystems report |
-| CLI task | `python main.py run "<task>"` | `orch.run_task(...)` |
-| Launcher (desktop/CLI) | `moon` / `moon terminal` | `~/.local/bin/moon` → cd to project + venv python main.py |
-| Systemd terminal | `moon-terminal.service` | uvicorn :8777, auto-restart |
+| Terminal/API server | `python main.py terminal` / `moon` / `moon terminal` → uvicorn on :8777 | Orchestrator + WS `/ws` + HTTP `/api/*` |
+| Moon Shell (TUI) | `python main.py shell` / `moon shell` / `moon tui` | Orchestrator directly + TTS + `!shell` + `/cli` |
+| Doctor (health) | `python main.py doctor` / `moon doctor` | 16 subsystems report |
+| CLI task | `python main.py run "<task>"` / `moon run "<task>"` | `orch.run_task(...)` |
+| Launcher (desktop/CLI) | `moon` (no args) → Moon UI default | `~/.local/bin/moon` → cd to project + venv python main.py |
+| Systemd terminal | `moon-terminal.service` | uvicorn :8777, auto-restart (run `moon` to open; NOT auto-start) |
 | Systemd monitor | `moon-monitor.service` (oneshot, timer every 15m) | `scripts/moon_deep_monitor.py` → 8 health checks |
-| Systemd watchdog | `moon-watchdog.service` (oneshot, timer every 15m) | `scripts/moon_monitor.py` |
-| HUD window | opened on-demand by `moon terminal` | `scripts/open_hud.py` (no auto-start service) |
 
 ---
 
@@ -170,7 +166,7 @@ These are the files that should be copied to `~/.config/systemd/user/` on fresh 
 
 ```
 origin  git@github.com:crsuvo100-gif/MOON.git (fetch/push, SSH verified)
-Branch  master (local ahead of origin/main by 1 commit: d273f97)
+Branch  master (local == origin/master, 39 commits ahead of origin/main)
 
 Remote branches tracked:
   main                    (remote HEAD)
@@ -178,19 +174,38 @@ Remote branches tracked:
   moon/capability-system  (up to date)
 ```
 
-Dirty file (not committed): `app/terminal_interface.py` (modified).
+Current HEAD: `b0b657e fix(terminal): harden connect WS handler — _stream always set`
+
+Last 8 commits on master:
+```
+b0b657e fix(terminal): harden connect WS handler — _stream always set
+f569296 docs: add consolidation summary to MOON_MANIFEST.md
+4c68b76 fix(terminal): batch WS list actions + fix TUI speech task cleanup
+d720143 fix(terminal): harden Moon UI WS action handlers — list_tools, tool, connect
+ead6f6e refactor(terminal): consolidate five terminals into two — Moon UI + Moon Shell
+25f7d5e fix(terminal): make dashboard + TUI boot functional
+89c8dc5 fix(event_bus + terminal): add EventBus.unsubscribe + WS lifecycle cleanup
+d273f97 feat(terminal): on-demand HUD launch + auto-voice by default
+```
 
 ---
 
 ## 11. Entry points / how to open MOON
 
-Three ways, all point to the same running backend on :8777:
+Two terminals. No auto-start — open only when you run them.
 
+**Moon UI** — web AI voice assistant (`moon` / `moon terminal` / `python main.py terminal`):
 1. **Browser**: open `http://127.0.0.1:8777`
 2. **CLI launcher**: `moon terminal` (opens HUD chrome-free on demand)
 3. **Direct Python**: `cd /home/meow/Projects/MOON && .venv/bin/python main.py terminal`
 
-Unlock phrase: `MOON love you 3000`
+**Moon Shell** — Textual TTS + shell terminal (`moon shell` / `moon tui` / `python main.py shell`):
+1. **CLI**: `moon shell` (or `moon tui` — backward-compatible alias)
+2. **Direct Python**: `cd /home/meow/Projects/MOON && MOON_TUI_UNLOCK="MOON love you 3000" .venv/bin/python main.py shell`
+
+Unlock phrase (both): `MOON love you 3000`
+
+Moon Shell also supports: `!status` `!ps` `!top` `!df` `!free` `!uname` `!uptime` `!netstat` `!ip` `!ls` `!pwd` `!echo` `!date` `!whoami` `!env` `!nproc` `!cat` (real shell, allowlisted). `/help` for CLI ops list. `Ctrl+V` toggles voice on/off.
 
 ---
 
