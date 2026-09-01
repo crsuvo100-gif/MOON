@@ -294,6 +294,94 @@ async def _run_terminal() -> None:
 
 
 # ---------------------------------------------------------------------------
+# `moon ui` -- launch the WEB UI (full avatar + function dock) in the browser.
+#
+# Smart: if a backend is already serving :8777 (systemd moon-terminal.service),
+# just open Chrome to it. Otherwise start the backend, then open Chrome.
+# Uses scripts/open_hud.py (the idempotent HUD window keeper) so a second
+# `moon ui` never stacks duplicate Chrome windows.
+# ---------------------------------------------------------------------------
+def _cmd_ui() -> int:
+    import os
+    import json
+    import shutil
+    import subprocess
+    import sys
+    import time
+    import urllib.request
+    from pathlib import Path
+
+    # Project paths
+    project = str(Path(__file__).resolve().parent)
+    venv_py = os.path.join(project, ".venv", "bin", "python")
+    if not os.path.exists(venv_py):
+        venv_py = sys.executable
+
+    env = dict(os.environ)
+    env.pop("PYTHONPATH", None)
+
+    # Load settings for host/port
+    settings = {}
+    try:
+        sp = os.path.join(project, "web", "moon_settings.json")
+        if os.path.exists(sp):
+            settings = json.loads(Path(sp).read_text())
+    except Exception:
+        settings = {}
+    port = int(settings.get("port", 8777))
+    host = settings.get("host", "127.0.0.1")
+    url = f"http://{host}:{port}/"
+
+    # Check if backend already serving
+    def _backend_up():
+        try:
+            with urllib.request.urlopen(url, timeout=2) as r:
+                return r.status == 200
+        except Exception:
+            return False
+
+    if not _backend_up():
+        # Start the web backend (detached) and wait for it
+        print(f"🌙 Starting MOON web backend on :{port} ...")
+        proc = subprocess.Popen(
+            [venv_py, "-m", "uvicorn", "app.terminal_interface:app",
+             "--host", "0.0.0.0", "--port", str(port), "--log-level", "info"],
+            cwd=project,
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        # Wait up to ~30s for the backend to come up
+        for _ in range(30):
+            if _backend_up():
+                print(f"🌙 MOON web backend up at {url}")
+                break
+            time.sleep(1)
+        else:
+            print(f"⚠ MOON web backend did not come up on :{port} after 30s.")
+            print(f"   Open {url} manually, or start it with: moon terminal")
+            # Still try to open the browser — it may already be running
+    else:
+        print(f"🌙 MOON web backend already running at {url}")
+
+    # Open the HUD window (idempotent — one window per host)
+    try:
+        sys.path.insert(0, project)
+        from scripts.open_hud import open_hud
+        pid = open_hud()
+        if pid:
+            print(f"🌙 MOON web UI opened (chrome pid {pid}).")
+            print(f"   Full avatar + function dock at {url}")
+        else:
+            print(f"🌙 No display/browser detected -- open {url} manually in your browser.")
+    except Exception as e:
+        print(f"🌙 Could not auto-open HUD ({e}); open {url} manually.")
+
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # Python-first operational commands (spec 9/10/25/26). All additive -- the
 # existing start/run/models/terminal/tui/shell subcommands and the
 # default-terminal behaviour are preserved untouched.
@@ -532,7 +620,14 @@ def main() -> None:
     run_p.add_argument("task", nargs="?", default="Say hello.")
     run_p.add_argument("--agent", default="auto")
     sub.add_parser("models", help="Pre-pull all per-agent preferred models so agents are ready")
-    sub.add_parser("terminal", help="Launch MOON's own terminal interface (animated avatar UI)")
+    # Interactive surfaces:
+    #   moon            -> Jarvis-style TUI/shell (voice + shell + CLI)  [DEFAULT]
+    #   moon ui         -> web UI (full avatar + function dock) in browser
+    #   moon tui        -> same TUI, headless/SSH-safe
+    #   moon shell      -> same TUI (backward-compatible alias)
+    #   moon terminal   -> web backend + open HUD (backward-compatible)
+    sub.add_parser("ui", help="Launch MOON's web UI (full avatar + function dock) in the browser")
+    sub.add_parser("terminal", help="Launch MOON's web backend + open the HUD in the browser")
     sub.add_parser("tui", help="Launch MOON's curses text-mode terminal UI (headless/SSH)")
     sub.add_parser("shell", help="Launch MOON's TTS/textual shell terminal (voice + shell + CLI)")
     # NEW Python-first operational commands (additive)
@@ -556,10 +651,12 @@ def main() -> None:
         asyncio.run(_run(args.task, args.agent))
     elif args.cmd == "models":
         asyncio.run(_prefetch_models())
-    elif args.cmd == "tui":
+    elif args.cmd == "shell":
         from app.tui import main as tui_main
         raise SystemExit(tui_main())
-    elif args.cmd == "shell":
+    elif args.cmd == "ui":
+        _cmd_ui()
+    elif args.cmd == "tui":
         from app.tui import main as tui_main
         raise SystemExit(tui_main())
     elif args.cmd == "terminal":
@@ -583,8 +680,9 @@ def main() -> None:
     elif args.cmd == "version":
         _cmd_version()
     else:
-        # No subcommand (or unknown) -> Moon Terminal is the DEFAULT interface.
-        _run_terminal()
+        # No subcommand (bare `moon`) -> Jarvis-style TUI/shell is the DEFAULT.
+        from app.tui import main as tui_main
+        raise SystemExit(tui_main())
 
 
 if __name__ == "__main__":

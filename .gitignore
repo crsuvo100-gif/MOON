@@ -75,3 +75,4 @@ backups/
 
 # MOON runtime learning profile (regenerated on first run)
 app/data/brain_stats.json
+app/data/lock_state.json

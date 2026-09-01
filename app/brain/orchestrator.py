@@ -109,6 +109,13 @@ class Orchestrator:
         self._agent_brains: dict[str, Any] = {}
         self._agent_model_overrides: dict[str, str | None] = {}
         self._consolidator = None
+        # Shared lock state across CLI + web backend + WebSocket so an unlock
+        # in ANY surface (HUD, `moon run`, voice, TUI) persists for ALL others.
+        if lock_state_file is None:
+            lock_state_file = (
+                Path(__file__).resolve().parent.parent.parent
+                / "app" / "data" / "lock_state.json"
+            )
         self._lock = SessionLock(locked=True, state_file=lock_state_file)
         self._exec_mgr = None  # lazy ExecutionManager (spec 31); created on first task
 
