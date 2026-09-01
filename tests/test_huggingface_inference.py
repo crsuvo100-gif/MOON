@@ -64,6 +64,17 @@ def patched(monkeypatch):
     fake_mod = types.ModuleType("huggingface_hub")
     setattr(fake_mod, "InferenceClient", _fake_ctor)
     monkeypatch.setitem(sys.modules, "huggingface_hub", fake_mod)
+
+    # Also fake settings so HuggingFaceTool reads a non-empty api_key
+    # (the real .env has HUGGINGFACE_API_KEY= empty). The tool creates a
+    # HuggingFaceInference which reads get_settings from this module, so
+    # patch it at the point of use. Keeps the test honest (client still
+    # mocked, no network) while satisfying the api_key guard.
+    from app.config.settings import Settings
+    fake_settings = Settings()
+    monkeypatch.setattr(fake_settings, "huggingface_api_key", "hf_test_dummy_key")
+    monkeypatch.setattr(hfi, "get_settings", lambda: fake_settings)
+
     return captured
 
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -47,24 +48,68 @@ class SkillSystem:
         """Index the existing skills/ corpus into registered Skill records."""
         if not self.root.exists():
             return
-        for d in sorted(self.root.iterdir()):
-            if not d.is_dir():
-                continue
-            sid = d.name
+        # The corpus can be 1-level (category/SKILL.md) or 2-level
+        # (category/sub_skill/SKILL.md). Handle both so the full corpus is
+        # registered, matching the behavior of app.knowledge.skills_library.
+        seen: set[str] = set()
+        for skill_md in sorted(self.root.glob("*/SKILL.md")):
+            rel = skill_md.relative_to(self.root)
+            seen.add(str(rel.parent))
+        for skill_md in sorted(self.root.glob("*/*/SKILL.md")):
+            rel = skill_md.relative_to(self.root)
+            seen.add(str(rel.parent))
+        for sid in sorted(seen):
+            d = self.root / sid
             readme = d / "SKILL.md"
-            desc = ""
-            if readme.exists():
-                try:
-                    txt = readme.read_text(encoding="utf-8", errors="ignore")
-                    # first non-empty line as description
-                    for line in txt.splitlines():
-                        if line.strip():
-                            desc = line.strip().lstrip("#").strip()[:200]
-                            break
-                except Exception:  # noqa: BLE001
-                    pass
+            desc = self._skill_description(readme)
             if sid not in self._skills:
                 self._skills[sid] = Skill(skill_id=sid, description=desc or sid)
+
+    @staticmethod
+    def _skill_description(readme: Path) -> str:
+        """Extract a human description from a SKILL.md with optional YAML frontmatter."""
+        if not readme.exists():
+            return ""
+        try:
+            txt = readme.read_text(encoding="utf-8", errors="ignore")
+        except Exception:  # noqa: BLE001
+            return ""
+        # Try YAML frontmatter: between first and second '---' lines.
+        lines = txt.splitlines()
+        if lines and lines[0].strip() == "---":
+            meta_lines: list[str] = []
+            for ln in lines[1:]:
+                if ln.strip() == "---":
+                    break
+                meta_lines.append(ln)
+            else:
+                # no closing --- found; treat whole block as frontmatter-ish
+                pass
+            meta = "\n".join(meta_lines)
+            for key in ("description", "name"):
+                for m in re.finditer(rf"^{key}:\s*[\"']?(.*?)[\"']?\s*(#.*)?$", meta, re.MULTILINE):
+                    val = m.group(1).strip()
+                    if val:
+                        return val
+        # Fallback: first H1 heading
+        for ln in lines:
+            s = ln.strip()
+            if s.startswith("# "):
+                return s[2:].strip()
+            if s.startswith("## "):
+                return s[3:].strip()
+        # Fallback: first non-empty non-frontmatter line
+        in_front = False
+        for ln in lines:
+            s = ln.strip()
+            if s == "---":
+                in_front = not in_front
+                continue
+            if in_front:
+                continue
+            if s and not s.startswith("#"):
+                return s[:200]
+        return ""
 
     # -- registry ops ----------------------------------------------------
     def register(self, skill: Skill) -> None:
