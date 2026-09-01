@@ -298,17 +298,17 @@ class MoonTUI(App):
                 brain.push_event("unlock", "operator authorized")
                 chat.add_user(text)
                 chat.write(Text.from_markup(
-                    f"[{MOON_GLOW}]MOON[/]: I'm here, my love. The core is yours. "
-                    f"What shall we do?[/]"))
+                    f"[{MOON_GLOW}]MOON[/{MOON_GLOW}]: I'm here, my love. The core is yours. "
+                    f"What shall we do?"))
                 return
             chat.add_user(text)
             chat.write(Text.from_markup(
-                f"[{MOON_RED}]MOON[/]: [i]Locked.[/i] Say the phrase to let me act."))
+                f"[{MOON_RED}]MOON[/{MOON_RED}]: [i]Locked.[/i] Say the phrase to let me act."))
             return
 
         chat.add_user(text)
         if self.orchestrator is None:
-            chat.write(Text.from_markup(f"[{MOON_RED}]MOON[/]: core still warming up…"))
+            chat.write(Text.from_markup(f"[{MOON_RED}]MOON[/{MOON_RED}]: core still warming up…"))
             return
 
         self.busy = True
@@ -325,9 +325,13 @@ class MoonTUI(App):
         chat.add_moon(answer)
         self.busy = False
         # TTS: speak every MOON reply aloud (when not muted) -- serialized so
-        # rapid messages don't play over each other.
+        # rapid messages don't play over each other. Wrap in try/except so a TTS
+        # failure never kills the TUI after a successful reply.
         if not self.voice_muted:
-            self._speech_task = asyncio.create_task(self._say(answer))
+            try:
+                self._speech_task = asyncio.create_task(self._say(answer))
+            except Exception:  # noqa: BLE001
+                pass
 
     # ---- TTS voice ------------------------------------------------------
     async def _say(self, text: str) -> None:
@@ -555,6 +559,17 @@ class MoonTUI(App):
             asyncio.create_task(self.orchestrator.teardown())
         self.exit()
 
+    async def _on_event(self, ev: dict) -> None:
+        """Callback for run_task's on_event — streams real cognition stages into
+        the BrainPanel (same shape as the web HUD workflow events)."""
+        if not ev or not isinstance(ev, dict):
+            return
+        stage = ev.get("stage", "")
+        detail = ev.get("detail", "")
+        try:
+            self.query_one(BrainPanel).push_event(str(stage), str(detail)[:60])
+        except Exception:  # noqa: BLE001 — orphaned event after shutdown is fine
+            pass
 
 def main(unlock: str = UNLOCK_PHRASE) -> int:
     try:
