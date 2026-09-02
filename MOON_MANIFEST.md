@@ -1,6 +1,7 @@
 # MOON — Unified Machine Manifest
-> Generated 2026-08-30. Every MOON-related piece on this host, in one place.
-> Canonical checkout: `/home/meow/Projects/MOON` (only copy; stale duplicates removed).
+> Generated 2026-09-02. Every MOON-related piece on this host, in one place.
+> Canonical checkout: `/home/meow/Projects/MOON` (live dev tree; service + launcher point here).
+> Release bundle: `/home/meow/Downloads/MOON` (second clone — install-from-release template; kept in sync and GitHub-pushed).
 
 ---
 
@@ -10,8 +11,8 @@
 |---|---|
 | Project root | `/home/meow/Projects/MOON` |
 | Git remote | `git@github.com:crsuvo100-gif/MOON.git` (SSH, verified live) |
-| HEAD commit | `b0b657e fix(terminal): harden connect WS handler — _stream always set` |
-| Branch | `master` (39 commits ahead of `origin/main`) |
+| HEAD commit | `51d7ffb fix: audit+repair all MOON UI buttons A-to-Z` |
+| Branch | `main` (local == origin/main, in sync) |
 | Python | `.venv/bin/python` → 3.13.14 |
 | Venv | `.venv/` (2.8 GB — real ML deps: torch 725M, bitsandbytes 122M, transformers 110M, etc.) |
 | Entry | `main.py` + `moon/__main__.py`; also `run_moon.py` |
@@ -151,41 +152,39 @@ These are the files that should be copied to `~/.config/systemd/user/` on fresh 
 
 ---
 
-## 9. Removed (stale duplicates — cleaned up 2026-08-30)
+## 9. Copies on this host
 
-| What | Was at | Why gone |
-|---|---|---|
-| Desktop copy | `/home/meow/Desktop/MOON` | Stale clone (HEAD e8f971d), own dead venv, outdated .env — removed |
-| Home copy | `/home/meow/MOON` | Stale clone (HEAD b62415d), own dead venv, no .env — removed |
+| Copy | Path | Role | Sync state |
+|---|---|---|---|---|
+| Canonical (live) | `/home/meow/Projects/MOON` | Dev checkout — systemd units + launcher + running backend point here | HEAD `51d7ffb`, `main` == `origin/main`, pushed |
+| Release bundle | `/home/meow/Downloads/MOON` | Second clone (HTTPS→SSH migrated); kept in sync with canonical | HEAD `51d7ffb`, `main` == `origin/main` (identical files, no push needed) |
 
-`/home/meow/Projects/MOON` is now the ONLY MOON directory on this machine.
+Both clones carry the same committed UI+backend fixes; the live running service reads from the canonical copy.
 
 ---
 
-## 10. Git state (canonical checkout)
+## 10. Git state
 
 ```
 origin  git@github.com:crsuvo100-gif/MOON.git (fetch/push, SSH verified)
-Branch  master (local == origin/master, 39 commits ahead of origin/main)
+Branch  main (local == origin/main, in sync, 51d7ffb pushed to GitHub)
 
 Remote branches tracked:
-  main                    (remote HEAD)
-  master                  (up to date, pushes to master)
+  main                    (remote HEAD, local in sync)
   moon/capability-system  (up to date)
-```
 
-Current HEAD: `b0b657e fix(terminal): harden connect WS handler — _stream always set`
+Current HEAD: `51d7ffb fix: audit+repair all MOON UI buttons A-to-Z`
 
-Last 8 commits on master:
+Last 8 commits on main:
 ```
-b0b657e fix(terminal): harden connect WS handler — _stream always set
-f569296 docs: add consolidation summary to MOON_MANIFEST.md
-4c68b76 fix(terminal): batch WS list actions + fix TUI speech task cleanup
-d720143 fix(terminal): harden Moon UI WS action handlers — list_tools, tool, connect
-ead6f6e refactor(terminal): consolidate five terminals into two — Moon UI + Moon Shell
-25f7d5e fix(terminal): make dashboard + TUI boot functional
-89c8dc5 fix(event_bus + terminal): add EventBus.unsubscribe + WS lifecycle cleanup
-d273f97 feat(terminal): on-demand HUD launch + auto-voice by default
+51d7ffb fix: audit+repair all MOON UI buttons A-to-Z
+87e7184 fix: moon ui works in headless session + HUD already-open message
+4aa9371 feat: rewire moon CLI — bare `moon` launches TUI/shell; `moon ui` opens web HUD
+383d970 refactor(cli + tui): graceful CLI shutdown + Moon Shell unlock chain
+0b19de7 fix(main): `${MOON_TUI_UNLOCK}` env → free-text unlock phrase (was literal "MOON")
+06d7f2e fix(core): fix crash in mock mode — first 3 LLM replies now sample the real backend
+6ea8559 fix(main): fix duplicate module list in `moon` CLI
+873da3c feat(main): Moon Shell — dual GPT-oss mode + webpack-less browserless HUD boot
 ```
 
 ---
