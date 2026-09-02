@@ -11,16 +11,17 @@
 |---|---|
 | Project root | `/home/meow/Projects/MOON` |
 | Git remote | `git@github.com:crsuvo100-gif/MOON.git` (SSH, verified live) |
-| HEAD commit | `51d7ffb fix: audit+repair all MOON UI buttons A-to-Z` |
+| HEAD commit | `9cce2cd chore: add .gitignore patterns for installer temp files` |
 | Branch | `main` (local == origin/main, in sync) |
-| Python | `.venv/bin/python` → 3.13.14 |
-| Venv | `.venv/` (2.8 GB — real ML deps: torch 725M, bitsandbytes 122M, transformers 110M, etc.) |
-| Entry | `main.py` + `moon/__main__.py`; also `run_moon.py` |
+| Python | `.venv/bin/python` → 3.14.6 |
+| Venv | `.venv/` (installed deps: fastapi, uvicorn, pydantic, openai, torch, kokoro-onnx, textual, flask, flask-socketio, etc.) |
+| Entry | `main.py` + `moon/__main__.py` |
+| 100% installer | `install_moon.py` — single-file auto-installer (clone + venv + deps + ollama + kokoro + launcher + acceptance). Works on any machine. |
 
 ### Subsystems (all live per wiring map)
 - Main brain: `app/brain/orchestrator.py :: Orchestrator`
 - 39 agents, 43 tools, 24 skills, 2 connections
-- Voice: `app/voice_engine.py` (kokoro TTS primary, F5-TTS fallback)
+- Voice: `app/voice_engine.py` (kokoro TTS primary, F5-TTS fallback, espeak fallback)
 - Web HUD: `web/moon_terminal.html` → WS `ws://127.0.0.1:8777/ws`
 - Agent brains: `data/agents/`
 
@@ -30,6 +31,7 @@
 
 | Entrypoint | Command | Wires to |
 |---|---|---|
+| **Installer** | `python3 install_moon.py` (full) / `--verify` / `--no-ollama` / `--no-voice` / `--no-service` / `--repo` / `--branch` / `--dest` | git clone + venv + deps + ollama + kokoro + launcher + desktop + acceptance |
 | Terminal/API server | `python main.py terminal` / `moon` / `moon terminal` → uvicorn on :8777 | Orchestrator + WS `/ws` + HTTP `/api/*` |
 | Moon Shell (TUI) | `python main.py shell` / `moon shell` / `moon tui` | Orchestrator directly + TTS + `!shell` + `/cli` |
 | Doctor (health) | `python main.py doctor` / `moon doctor` | 16 subsystems report |
@@ -45,12 +47,12 @@
 ### `.env` (gitignored — NEVER commit)
 `/home/meow/Projects/MOON/.env`
 - `MODEL_BASE_URL=http://127.0.0.1:11434/v1`
-- `MODEL_NAME=qwen2.5:1.5b`
-- `STRONG_MODEL_NAME=qwen2.5:3b`
+- `MODEL_NAME=qwen3:0.6b`
+- `STRONG_MODEL_NAME=qwen3:1.7b`
 - `ENABLE_AUTO_LEARNING=true`
-- Tool toggles: `ENABLE_BROWSER_AUTOMATION=true`, `ENABLE_OCR=true`, `ENABLE_PDF=true`
-- Fallback backends: OpenAI, OpenRouter, HuggingFace keys (all present)
-- `GITHUB_REPO=https://github.com/crsuvo100-gif/MOON`
+- Tool toggles: `ENABLE_BROWSER_AUTOMATION`, `ENABLE_OCR`, `ENABLE_PDF`
+- Fallback backends: OpenAI, OpenRouter, HuggingFace keys (set as needed)
+- `GITHUB_REPO=` (optional, for capability auto-fetch)
 - `MOON_TERMINAL_TOKEN=` (blank = local-only)
 
 ### `.env.example` (template, committed)
@@ -66,7 +68,7 @@
 | Path | Contents |
 |---|---|
 | `data/executions.db` | Execution history |
-| `data/agents/agent_factory.db` | Agent definitions (177) |
+| `data/agents/agent_factory.db` | Agent definitions |
 | `data/agents/agent_registry/*.json` | Registered agent schemas |
 | `data/agents/staging/*/` | Staging agent generators + tests |
 | `data/knowledge/` | Knowledge store |
@@ -79,7 +81,7 @@
 | `capabilities/` | Capability cache + manifests + registry |
 | `connections/` | Connection registry |
 | `voices/` | Voice asset storage |
-| `backups/` | `moon_20260822_*` snapshot backups |
+| `backups/` | `moon_YYYYMMDD_HHMMSS` snapshot backups |
 
 ---
 
@@ -87,14 +89,14 @@
 
 | Unit | File | State | Points to |
 |---|---|---|---|
-| `moon-terminal.service` | `~/.config/systemd/user/moon-terminal.service` | **active (running)** | `/home/meow/Projects/MOON` ✓ |
-| `moon-monitor.service` | `~/.config/systemd/user/moon-monitor.service` | inactive (oneshot, triggered by timer) | `/home/meow/Projects/MOON` ✓ (fixed this session) |
-| `moon-watchdog.service` | `~/.config/systemd/user/moon-watchdog.service` | inactive (oneshot, triggered by timer) | `/home/meow/Projects/MOON` ✓ |
+| `moon-terminal.service` | `~/.config/systemd/user/moon-terminal.service` | active (running) | `/home/meow/Projects/MOON` |
+| `moon-monitor.service` | `~/.config/systemd/user/moon-monitor.service` | inactive (oneshot, triggered by timer) | `/home/meow/Projects/MOON` |
+| `moon-watchdog.service` | `~/.config/systemd/user/moon-watchdog.service` | inactive (oneshot, triggered by timer) | `/home/meow/Projects/MOON` |
 | `moon-hud.service` | `~/.config/systemd/user/moon-hud.service` | inactive (placeholder, no-op) | n/a (HUD opens on-demand) |
-| `moon-monitor.timer` | `~/.config/systemd/user/moon-monitor.timer` | **active** | every 15 min |
-| `moon-watchdog.timer` | `~/.config/systemd/user/moon-watchdog.timer` | **active** | every 15 min |
+| `moon-monitor.timer` | `~/.config/systemd/user/moon-monitor.timer` | active | every 15 min |
+| `moon-watchdog.timer` | `~/.config/systemd/user/moon-watchdog.timer` | active | every 15 min |
 
-### Health (last monitor run, 2026-08-30 17:56)
+### Health (last monitor run)
 ```
 health: HEALTHY (8 checks, all_ok=True)
 agents=39 tools=43
@@ -155,9 +157,9 @@ These are the files that should be copied to `~/.config/systemd/user/` on fresh 
 ## 9. Copies on this host
 
 | Copy | Path | Role | Sync state |
-|---|---|---|---|---|
-| Canonical (live) | `/home/meow/Projects/MOON` | Dev checkout — systemd units + launcher + running backend point here | HEAD `51d7ffb`, `main` == `origin/main`, pushed |
-| Release bundle | `/home/meow/Downloads/MOON` | Second clone (HTTPS→SSH migrated); kept in sync with canonical | HEAD `51d7ffb`, `main` == `origin/main` (identical files, no push needed) |
+|---|---|---|---|
+| Canonical (live) | `/home/meow/Projects/MOON` | Dev checkout — systemd units + launcher + running backend point here | HEAD `9cce2cd`, `main` == `origin/main`, pushed |
+| Release bundle | `/home/meow/Downloads/MOON` | Second clone; kept in sync with canonical | sync via `git pull` as needed |
 
 Both clones carry the same committed UI+backend fixes; the live running service reads from the canonical copy.
 
@@ -167,24 +169,23 @@ Both clones carry the same committed UI+backend fixes; the live running service 
 
 ```
 origin  git@github.com:crsuvo100-gif/MOON.git (fetch/push, SSH verified)
-Branch  main (local == origin/main, in sync, 51d7ffb pushed to GitHub)
+Branch  main (local == origin/main, in sync)
 
 Remote branches tracked:
   main                    (remote HEAD, local in sync)
   moon/capability-system  (up to date)
 
-Current HEAD: `51d7ffb fix: audit+repair all MOON UI buttons A-to-Z`
+Current HEAD: `9cce2cd chore: add .gitignore patterns for installer temp files`
 
-Last 8 commits on main:
+Last commits on main:
 ```
+9cce2cd chore: add .gitignore patterns for installer temp files
+00d96c1 feat: replace install_moon.py with single-file auto-installer
+5e7f8ce docs: refresh MOON_MANIFEST.md — correct HEAD 51d7ffb, branch main, both clones
 51d7ffb fix: audit+repair all MOON UI buttons A-to-Z
 87e7184 fix: moon ui works in headless session + HUD already-open message
 4aa9371 feat: rewire moon CLI — bare `moon` launches TUI/shell; `moon ui` opens web HUD
-383d970 refactor(cli + tui): graceful CLI shutdown + Moon Shell unlock chain
-0b19de7 fix(main): `${MOON_TUI_UNLOCK}` env → free-text unlock phrase (was literal "MOON")
-06d7f2e fix(core): fix crash in mock mode — first 3 LLM replies now sample the real backend
-6ea8559 fix(main): fix duplicate module list in `moon` CLI
-873da3c feat(main): Moon Shell — dual GPT-oss mode + webpack-less browserless HUD boot
+1b276fb fix: wire skill discovery + HF test fixture; add skills symlink
 ```
 
 ---
@@ -202,7 +203,14 @@ Two terminals. No auto-start — open only when you run them.
 1. **CLI**: `moon shell` (or `moon tui` — backward-compatible alias)
 2. **Direct Python**: `cd /home/meow/Projects/MOON && MOON_TUI_UNLOCK="MOON love you 3000" .venv/bin/python main.py shell`
 
-Unlock phrase (both): `MOON love you 3000`
+**100% installer** — fresh machine, one command:
+```
+python3 install_moon.py          # full install (git clone + venv + deps + ollama + voice + launcher + acceptance)
+python3 install_moon.py --verify # only run acceptance check
+```
+Repo: `https://github.com/crsuvo100-gif/MOON` (or SSH: `git@github.com:crsuvo100-gif/MOON.git`)
+
+Unlock phrase (both terminals): `MOON love you 3000`
 
 Moon Shell also supports: `!status` `!ps` `!top` `!df` `!free` `!uname` `!uptime` `!netstat` `!ip` `!ls` `!pwd` `!echo` `!date` `!whoami` `!env` `!nproc` `!cat` (real shell, allowlisted). `/help` for CLI ops list. `Ctrl+V` toggles voice on/off.
 
