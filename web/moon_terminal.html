@@ -352,7 +352,11 @@ header{grid-area:head;position:relative;left:0;right:0;top:0;height:auto;display
 .bcell{padding:6px 8px;display:flex;flex-direction:column;gap:4px;min-height:0;align-items:stretch;border:1px solid var(--line);background:var(--surf);border-radius:3px;box-shadow:inset 0 0 14px rgba(0,255,102,.05)}.bcell h4{margin:0 0 2px;font-size:clamp(9px,1vw,18px);font-weight:800;font-family:var(--ff-title);color:#ffb0b0;text-shadow:0 0 12px rgba(0,255,102,.7);letter-spacing:.04em}.bcell .spark{flex:1;min-height:0;position:relative;background:linear-gradient(90deg,transparent,#330505,transparent);overflow:hidden;border:1px solid #3a0e0e;border-radius:2px}.bcell .spark canvas{width:100%;height:100%}.bcell .effDisplay{display:flex;align-items:center;justify-content:center;flex:1;min-height:0;border:1px solid #3a0e0e;border-radius:2px;background:linear-gradient(135deg,rgba(20,0,0,.6),rgba(5,0,0,.8));font-family:var(--ff-title)}.bcell .effTxt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#0f9;font-size:clamp(10px,1.1vw,19px);text-shadow:0 0 10px #ff5a3a;font-weight:700}
 footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;display:grid;grid-template-columns:minmax(240px,30%) repeat(13,minmax(0,1fr));gap:.25%;z-index:20;background:linear-gradient(180deg,rgba(12,2,2,.95),rgba(4,0,0,.97));border-top:1px solid var(--line2);box-shadow:inset 0 0 30px rgba(0,255,102,.05);padding:.3% .7%;align-items:stretch}
 /* Command bar lives INSIDE the footer (no fixed positioning -> no overlap) */
-.cmd{grid-column:1;display:flex;align-items:center;gap:7px;padding:0 8px;border:1px solid #711010;background:#0a0202;border-radius:3px;font-size:clamp(11px,1.3vw,22px);font-weight:600;position:relative;left:auto;transform:none;bottom:auto;width:auto;height:100%;box-shadow:0 0 18px rgba(0,255,102,.30),inset 0 0 14px rgba(0,255,102,.08);z-index:1}.cmd:before{content:"";position:absolute;left:0;right:0;top:0;bottom:0;background:linear-gradient(90deg,rgba(0,255,102,.10),transparent 30%,transparent 70%,rgba(0,255,102,.08));pointer-events:none}.cmd b{color:#9dffc4;text-shadow:0 0 10px #f55;font-size:clamp(12px,1.3vw,23px)}.cmd input{flex:1;background:#0b0000;border:1px solid #4b0b0b;color:#fff;height:100%;outline:none;font-weight:600;font-size:clamp(11px,1.25vw,22px)}
+.cmd{grid-column:1;display:flex;align-items:center;gap:7px;padding:0 8px;border:1px solid #711010;background:#0a0202;border-radius:3px;font-size:clamp(11px,1.3vw,22px);font-weight:600;position:relative;left:auto;transform:none;bottom:auto;width:auto;height:100%;box-shadow:0 0 18px rgba(0,255,102,.30),inset 0 0 14px rgba(0,255,102,.08);z-index:1}.cmd:before{content:"";position:absolute;left:0;right:0;top:0;bottom:0;background:linear-gradient(90deg,rgba(0,255,102,.10),transparent 30%,transparent 70%,rgba(0,255,102,.08));pointer-events:none}.cmd b{color:#9dffc4;text-shadow:0 0 10px #f55;font-size:clamp(12px,1.3vw,23px)}
+.wsdot{font-size:.65em;color:#5cffae;margin:0 4px 0 2px;vertical-align:middle;line-height:1;transition:color .2s}
+.cmd input.offline::-webkit-text-fill-color:transparent!important;
+.cmd input.offline::placeholder{color:#ff5a5a!important;font-weight:700}
+.cmd input.offline{outline:1px solid #ff1f3d!important;background:#1a0202!important}.cmd input{flex:1;background:#0b0000;border:1px solid #4b0b0b;color:#fff;height:100%;outline:none;font-weight:600;font-size:clamp(11px,1.25vw,22px)}
 .btn{display:grid;place-items:center;border:1px solid #711010;background:#0a0202;color:#e06a6a;font-size:clamp(7px,.58vw,11px);font-weight:700;cursor:pointer;letter-spacing:.02em;padding:0 2px;overflow:hidden;white-space:nowrap;position:relative;min-height:100%;border-radius:3px}.btn:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,255,102,.06),transparent 60%);pointer-events:none}.btn:hover,.btn.active{background:#300606;color:#fff;box-shadow:0 0 14px rgba(0,255,102,.28)}.btn.active{border-color:#ff2d2d}.btn.on{border-color:#ff5a2a;background:#2a0a0a;color:#ffb06a}
 .btn.talking{background:#5a0a0a!important;color:#fff!important;box-shadow:0 0 20px rgba(0,255,102,.7);animation:talkpulse 1.1s ease-in-out infinite}
 @keyframes talkpulse{0%,100%{box-shadow:0 0 10px rgba(0,255,102,.45)}50%{box-shadow:0 0 26px rgba(0,255,102,.95)}}
@@ -709,7 +713,7 @@ footer{grid-area:foot;position:relative;left:0;right:0;bottom:auto;height:auto;d
 </div>
 
 <footer>
-  <div class="cmd"><b style="color:#36ff8a">MOON&gt;</b><input id="command" placeholder="Enter command or ask MOON…"><button id="send" class="btn">➤</button></div>
+  <div class="cmd"><b style="color:#36ff8a">MOON&gt;</b><input id="command" placeholder="Enter command or ask MOON…"><span id="wsStatus" style="font-size:.7em;color:#5cffae;margin:0 5px;letter-spacing:.5px">connecting…</span><button id="send" class="btn">➤</button></div>
   <div class="btn active" id="termBtn">▣ TERMINAL</div>
   <div class="btn" id="aiChat">◉ AI CHAT</div><div class="btn" id="shellBtn">▦ SHELL</div><div class="btn" id="tasks">☷ TASKS</div><div class="btn" id="updates">◌ UPDATES</div><div class="btn" id="diag">⚙ DIAGNOSTICS</div><div class="btn" id="help">? HELP</div><div class="btn" id="funcBtn">FUNCTIONS</div><div class="btn" id="voiceBtn">VOICE</div><div class="btn" id="toolsBtn">TOOLS</div><div class="btn on" id="audioBtn">🔊 AUDIO</div><div class="btn" id="talkBtn" title="JARVIS duplex voice — MOON listens via mic, replies in her real female voice (toggle)">🎙 TALK · JARVIS</div><div class="btn" id="aspectBtn">⛶ DISPLAY</div>
 </footer>
@@ -904,7 +908,23 @@ function wsCli(line, cls){ if(_wsCliOut && !wsEl.classList.contains("hidden")){ 
 /* ===== WebSocket to Moon's real backend (/ws) ===== */
 let ws=null, _muted=false;
 let lastAction=null, toolBuf="";
-function wsSend(o){ if(ws && ws.readyState===1){ if(o.action) lastAction=o.action; ws.send(JSON.stringify(o)); } }
+function wsSend(o){
+  if(ws && ws.readyState===1){
+    if(o.action) lastAction=o.action;
+    ws.send(JSON.stringify(o));
+  } else {
+    // Backend link not ready — drop the command visibly so the operator is never
+    // left wondering why nothing happened. The connect() retry (3s) will pick it
+    // up next time; for immediate re-submission the user can press Enter again.
+    const cmd = el("command");
+    if(cmd && o && o.action && o.action!=="status" && o.action!=="log_stream"){
+      cmd.placeholder = "⚠ MOON offline — type when the core is live";
+      cmd.classList.add("offline");
+      setTimeout(()=>{ if(cmd) cmd.classList.remove("offline"); }, 1800);
+    }
+    addLog("[NETWORK] MOON link not ready — command dropped");
+  }
+}
 // MOON's brain core reacts to her workflow: .thinking = intense glow burst while
 // she is actively working (reply/task/execution), removed when she goes idle.
 // .idle = gentle breathing pulse when she is idle (complements native animation).
@@ -969,13 +989,19 @@ function setCoreMaturity(m){
 async function loadBrainMaturity(){
   try{ const r=await fetch("/api/brain-stats"); if(r.ok){ const d=await r.json(); setCoreMaturity(d.maturity||0); } }catch(_){}
 }
+function setWsStatus(s){
+  const sp = el("wsStatus"); if(!sp) return;
+  if(s==="live"){ sp.textContent="●"; sp.style.color="#0dff8c"; }
+  else if(s==="offline"){ sp.textContent="○"; sp.style.color="#ff3b3b"; }
+  else { sp.textContent=s; sp.style.color="#5cffae"; }
+}
 function connect(){
   const pr=location.protocol==="https:"?"wss":"ws";
   ws=new WebSocket(`${pr}://${location.host}/ws`);
-  ws.onopen=()=>{ addLog("[CORE] Quantum link handshake complete."); wsSend({action:"status"}); wsSend({action:"log_stream"}); runBoot(); loadBrainMaturity(); };
+  ws.onopen=()=>{ setWsStatus("live"); addLog("[CORE] Quantum link handshake complete."); wsSend({action:"status"}); wsSend({action:"log_stream"}); runBoot(); loadBrainMaturity(); };
   ws.onmessage=e=>{ let m; try{m=JSON.parse(e.data);}catch(_){return;} handle(m); };
   ws.onerror=()=>addLog("[NETWORK] socket error");
-  ws.onclose=()=>{ addLog("[NETWORK] link closed — retrying…"); setTimeout(connect,3000); };
+  ws.onclose=()=>{ setWsStatus("offline"); addLog("[NETWORK] link closed — retrying…"); setTimeout(connect,3000); };
 }
 function handle(m){
   switch(m.type){
@@ -1397,7 +1423,15 @@ el("voiceBtn").onclick=()=>toggleVoice(true);
 el("toolsBtn").onclick=()=>toggleTools(true);
 el("funcBtn").onclick=()=>toggleFunc(true);
 el("send").onclick=doSend;
-el("command").addEventListener("keydown",e=>{if(e.key==="Enter")el("send").click();});
+el("command").addEventListener("keydown",e=>{
+  if(e.key==="Enter"){ el("send").click(); }
+  else if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="k"){
+    e.preventDefault();
+    el("command").focus();
+    el("command").select();
+    addLog("[COMMAND] palette opened (Ctrl/Cmd+K)");
+  }
+});
 $$(".nav").forEach(n=>n.onclick=()=>doNav(n));
 const avatarEl=document.querySelector(".avatar"); if(avatarEl) avatarEl.onclick=doCoreSync;
 
