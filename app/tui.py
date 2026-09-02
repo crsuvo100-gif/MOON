@@ -325,22 +325,27 @@ class MoonTUI(App):
         chat.add_moon(answer)
         self.busy = False
         # TTS: speak every MOON reply aloud (when not muted) -- serialized so
-        # rapid messages don't play over each other. Wrap in try/except so a TTS
-        # failure never kills the TUI after a successful reply.
+        # rapid messages don't play over each other. Detect the input language
+        # and speak the reply in kind so Moon converses in the user's language.
         if not self.voice_muted:
             try:
-                self._speech_task = asyncio.create_task(self._say(answer))
+                ve = _get_voice_engine()
+                detected = ve.detect_language(text) if ve is not None else "en"
+            except Exception:  # noqa: BLE001
+                detected = "en"
+            try:
+                self._speech_task = asyncio.create_task(self._say(answer, lang=detected))
             except Exception:  # noqa: BLE001
                 pass
 
     # ---- TTS voice ------------------------------------------------------
-    async def _say(self, text: str) -> None:
-        """Speak MOON's reply aloud via the real female voice engine.
+    async def _say(self, text: str, lang: str | None = None) -> None:
+        """Speak MOON's reply aloud via the real voice engine.
 
         Serialized through _speech_lock so rapid messages don't play over each
         other. Silently no-ops when TTS is unavailable (text is still shown).
         """
-        wav_b64 = await _speak(text)
+        wav_b64 = await _speak(text, lang=lang)
         if not wav_b64:
             return
         import base64 as _b64
@@ -522,7 +527,16 @@ class MoonTUI(App):
             self.voice_muted = True
             self.query_one(StatusBar).render_status()
             brain.push_event("voice", "mute")
-            chat.add_moon("[voice] MUTED — replies text-only")
+        elif sub.startswith("lang") or sub.startswith("language"):
+            rest = sub.split(None, 1)[1] if " " in sub else ""
+            if not rest:
+                cur = eng.language()
+                brain.push_event("voice", "lang status")
+                chat.add_moon(f"[voice] current language: {cur}  (use /voice lang <code> to change, e.g. /voice lang fr)")
+            else:
+                ok = eng.set_language(rest)
+                brain.push_event("voice", f"lang {rest}")
+                chat.add_moon(f"[voice] {ok}")
         elif sub.startswith("unmute"):
             self.voice_muted = False
             self.query_one(StatusBar).render_status()

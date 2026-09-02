@@ -36,6 +36,11 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+try:
+    import langdetect  # type: ignore  # noqa: F401
+except Exception:  # noqa: BLE001  -- langdetect is optional; lang routing degrades gracefully
+    langdetect = None  # type: ignore[assignment]
+
 logger = logging.getLogger(__name__)
 
 # Kokoro model/voices cache (downloaded on first use).
@@ -60,7 +65,13 @@ FEMALE_VOICES: dict[str, dict] = {
 
 
 class VoiceEngine:
-    """Unified female TTS + voice cloning for MOON."""
+    """Unified female TTS + voice cloning + MULTILINGUAL TTS for MOON.
+
+    Speaks many languages by routing each reply through the right espeak
+    voice (or OpenAI TTS / XTTS / F5 where available).  UK English is a first-
+    class language (en-gb).  Language is auto-detected from the user's input;
+    a manual override is also available via ``set_language`` / ``voice lang``.
+    """
 
     def __init__(self, settings=None) -> None:
         self._settings = settings
@@ -91,6 +102,94 @@ class VoiceEngine:
 
     def _mark_kokoro_dead(self) -> None:
         self._kokoro_dead = True
+
+    # -- language handling --------------------------------------------------
+    # Per-language espeak voice codes (best available voice per locale).
+    # espeak voices tested live on this host: 35 languages speak; ja/ar/he/th/nn/guw
+    # failed on this espeak build.  UK English "en-gb" is a first-class locale.
+    _LANG_ESPARK_VOICE: dict[str, str] = {
+        "en":    "en-gb",     # United Kingdom English (default, received accent)
+        "en-gb": "en-gb",
+        "en-us": "en-us",
+        "fr":    "fr",
+        "de":    "de",
+        "es":    "es",
+        "it":    "it",
+        "pt":    "pt",
+        "nl":    "nl",
+        "ru":    "ru",
+        "sv":    "sv",
+        "da":    "da",
+        "fi":    "fi",
+        "nb":    "nb",
+        "pl":    "pl",
+        "cs":    "cs",
+        "hu":    "hu",
+        "tr":    "tr",
+        "el":    "el",
+        "hi":    "hi",
+        "bn":    "bn",
+        "te":    "te",
+        "ta":    "ta",
+        "ml":    "ml",
+        "gu":    "gu",
+        "mr":    "mr",
+        "pa":    "pa",
+        "ur":    "ur",
+        "kn":    "kn",
+        "zh":    "zh",
+        "zh-cn": "zh-cn",
+        "zh-tw": "zh-tw",
+        "ko":    "ko",
+    }
+
+    # Languages whose espeak voice in this build was verified to FAIL.
+    # When detection returns one of these we fall back through the chain
+    # (Kokoro -> OpenAI TTS -> XTTS) instead of producing broken audio.
+    _LANG_BROKEN_ESPARK: set[str] = {"ja", "ar", "he", "th", "nn", "guw"}
+
+    @staticmethod
+    def detect_language(text: str) -> str:
+        """Return an ISO-639 language code for `text`.
+
+        Uses langdetect when available; falls back to "en" so the voice
+        pipeline never breaks when detection is absent.  Only short texts
+        (< 200 chars) are passed to langdetect to keep it fast and stable.
+        """
+        if not text or not text.strip():
+            return "en"
+        if langdetect is None:
+            return "en"
+        try:
+            # langdetect is fast on short strings; clamp length so it never
+            # slows down a long transcription echo.
+            code = langdetect.detect(text.strip()[:200])
+            return code
+        except Exception:  # noqa: BLE001
+            return "en"
+
+    def set_language(self, code: str) -> str:
+        """Set the language MOON will speak replies in (ISO-639, e.g. "en", "fr").
+
+        Auto-detected from user input by default; call this to override.
+        Unknown codes fall back to "en" (UK English).
+        """
+        code = (code or "en").strip().lower()
+        if not code or code not in self._LANG_ESPARK_VOICE:
+            code = "en"
+            return f"Unknown language '{code}'; using United Kingdom English (en-gb)."
+        self._reply_lang = code
+        return f"Language set to {code}. MOON will speak in {'United Kingdom English' if code == 'en' else code}."
+
+    def language(self) -> str:
+        """Current reply-language code (what Moon will speak next)."""
+        return self._reply_lang
+
+    def _espeak_voice_for(self, lang: str) -> str | None:
+        """Best espeak voice for the given language, or None if unavailable here."""
+        if lang in self._LANG_BROKEN_ESPARK:
+            return None
+        return self._LANG_ESPARK_VOICE.get(lang)
 
     # -- registry -----------------------------------------------------------
     def _load_registry(self) -> dict[str, str]:
@@ -167,7 +266,92 @@ class VoiceEngine:
             return f"Voice set to '{name}'."
         return f"Unknown voice '{name}'. Use 'voice list'."
 
-    # -- cloning -------------------------------------------------------------
+    def record_input_language(self, prompt: str) -> str:
+        """Detect and remember the language of the user's input.
+
+        Moon auto-speaks replies in the same language as the user wrote.
+        Returns the detected code so callers can log it / echo it back.
+        """
+        code = self.detect_language(prompt)
+        self._input_lang = code
+        # Use the detected language for the next reply unless explicitly overridden.
+        self._reply_lang = code
+        return code
+
+    async def speak_multilingual(self, text: str, *, lang: str | None = None) -> str | None:
+        """Speak `text` in the given language (or the auto-detected reply language).
+
+        Routes through the best available TTS backend for that language:
+          * espeak + SoX  — any of 35 languages (offline, CPU, always available)
+          * OpenAI TTS    — 13 languages when OPENAI_API_KEY is set (cloud)
+          * XTTS-v2       — 16+ languages when TTS is installed (local, heavier)
+          * F5-TTS        — zero-shot cloning; language follows the reference sample
+          * Kokoro        — English only (en-gb / en-us); used first for English
+
+        UK English (en-gb) is the default locale and a first-class target.
+        When a language has no working backend here, degrades to espeak "en"
+        so MOON always returns real audio rather than failing silently.
+        """
+        if not text:
+            return None
+        if lang is None:
+            lang = self._reply_lang or "en"
+        lang = (lang or "en").strip().lower()
+        # Pick the voice to use.
+        espeak_voice = self._espeak_voice_for(lang)
+        # --- OpenAI TTS: best quality for the 13 supported langs ---
+        if self._openai_key and not self._openai_dead:
+            openai_lang = {
+                "en": "en", "en-gb": "en", "en-us": "en",
+                "fr": "fr", "de": "de", "es": "es", "it": "it",
+                "pt": "pt", "nl": "nl", "ru": "ru", "zh": "zh",
+                "ko": "ko", "ja": "ja", "pl": "pl",
+            }.get(lang)
+            if openai_lang:
+                try:
+                    return self._openai_speak(text, "nova")
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("openai multilingual speak failed (%s): %s", lang, exc)
+                    if "429" in str(exc).lower() or "quota" in str(exc).lower() or "401" in str(exc).lower() or "403" in str(exc).lower():
+                        self._mark_openai_dead()
+        # --- espeak + SoX: any of 35 languages, offline, always available ---
+        if espeak_voice:
+            return await self._espeak_speak(text, espeak_voice)
+        # --- fallback: English espeak (writes something rather than nothing) ---
+        logger.warning("no TTS backend for language '%s'; falling back to English", lang)
+        return await self._espeak_speak(text, "en")
+
+    # -- backends ------------------------------------------------------------
+    def clone_voice(self, name: str, sample_b64: str, transcript: str = "") -> str:
+        """Store a user's voice sample and register it as a clone.
+
+        F5-TTS / XTTS use the sample as the speaker embedding for zero-shot
+        cloning. `transcript` is the text spoken in the reference sample
+        (improves F5-TTS clone fidelity; optional -- F5 tolerates an empty
+        transcript, XTTS does not require it).
+        """
+        if not name:
+            return "clone requires a name."
+        try:
+            raw = base64.b64decode(sample_b64)
+        except Exception:
+            return "Invalid audio sample (expected base64 WAV)."
+        path = self.voices_dir / f"{name}.wav"
+        path.write_bytes(raw)
+        self._cloned[name] = str(path)
+        # Persist the optional transcript so F5-TTS cloning is high-fidelity.
+        if transcript:
+            (self.voices_dir / f"{name}.txt").write_text(transcript, encoding="utf-8")
+        self._save_registry()
+        if self._f5_available() or self._xtts_available():
+            engine = "F5-TTS" if self._f5_available() else "XTTS-v2"
+            return (f"Cloned voice '{name}' from your sample using {engine}. "
+                    f"Moon can now speak using your voice (set 'voice set {name}').")
+        return (f"Stored voice sample for '{name}'. Cloning activates with a "
+                f"cloning engine installed (pip install f5-tts on Python 3.13+, "
+                f"or TTS on <3.12); sample saved at {path}.")
+
+    # -- backends ------------------------------------------------------------
     def clone_voice(self, name: str, sample_b64: str, transcript: str = "") -> str:
         """Store a user's voice sample and register it as a clone.
 

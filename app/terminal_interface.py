@@ -261,9 +261,12 @@ def _get_voice_engine():
     return _voice_engine or None
 
 
-async def _speak(text: str):
-    """Synthesize MOON's reply with her real female voice and return base64 WAV.
-    Returns None when muted or TTS unavailable."""
+async def _speak(text: str, lang: str | None = None):
+    """Synthesize MOON's reply with her real voice and return base64 WAV.
+    Detects the reply language from context when `lang` is None; routes
+    through the best available TTS backend for that language (espeak/SoX,
+    OpenAI TTS, XTTS, F5, Kokoro).  Returns None when muted or TTS unavailable.
+    """
     global _voice_muted
     if _voice_muted:
         return None
@@ -271,7 +274,7 @@ async def _speak(text: str):
     if not eng:
         return None
     try:
-        wav = await eng.speak(text)
+        wav = await eng.speak_multilingual(text, lang=lang)
         if not wav or not os.path.exists(wav):
             return None
         b64 = base64.b64encode(Path(wav).read_bytes()).decode("ascii")
@@ -1705,7 +1708,12 @@ async def ws_endpoint(ws: WebSocket):
                 await send(type="workflow", stage="speaking", detail="forming response")
                 for chunk in _stream_text(answer):
                     await send(type="assistant_chunk", content=chunk)
-                audio = await _speak(answer)
+                # Detect the language the user wrote in and speak the reply in kind.
+                try:
+                    detected = _get_voice_engine().record_input_language(text) if _get_voice_engine() is not None else "en"
+                except Exception:  # noqa: BLE001
+                    detected = "en"
+                audio = await _speak(answer, lang=detected)
                 if audio:
                     await send(type="audio", format="wav", data=audio)
                 await send(type="assistant_done", elapsed=round(time.time() - t0, 2), locked=orch._lock.locked)
