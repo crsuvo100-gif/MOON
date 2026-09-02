@@ -76,3 +76,6 @@ backups/
 # MOON runtime learning profile (regenerated on first run)
 app/data/brain_stats.json
 app/data/lock_state.json
+# Installer temp files (created at runtime, never commit)
+.install_verify_tmp.py
+.install_f5_tmp.py
