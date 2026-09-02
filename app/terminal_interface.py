@@ -1532,11 +1532,19 @@ async def ws_endpoint(ws: WebSocket):
         # other branch that reads orch at its final send. Declaring it nonlocal
         # keeps the single shared orchestrator reference stable.
         nonlocal orch
+        global _stop_requested
         action = data.get("action")
         try:
             if action == "send_message":
                 text = data.get("text", "").strip()
                 if not text:
+                    return
+                # Stop guard: if the STOP button was pressed, refuse to start any new
+                # task until the operator explicitly resumes. The STOP dock button now
+                # sets this flag; the flag is checked at the top of every task-starting
+                # path (send_message, run, wake-triggered actions).
+                if _stop_requested:
+                    await send(type="notice", message="[STOP] task start blocked — use the TERMINAL/chat freely, new tasks are paused until you tell me to resume.")
                     return
                 # The unlock phrase (e.g. "love you 3000 Moon") must actually
                 # unlock MOON through the terminal. observe() returns a notice if
@@ -1680,6 +1688,10 @@ async def ws_endpoint(ws: WebSocket):
                     await _handle({"action": "knowledge", "query": "summary"})
                     return
                 # default: run through MOON's real brain
+                if _stop_requested:
+                    await send(type="notice", message="[STOP] task start blocked — new tasks paused until you tell me to resume.")
+                    return
+                _stop_requested = False
                 await send(type="assistant_start")
                 from app.models.task import Task
                 task = Task.create(data.get("command") or "", agent_name="auto")
@@ -1715,7 +1727,6 @@ async def ws_endpoint(ws: WebSocket):
                 # Does NOT call the LLM -- a model call can hang on a locked/in-
                 # active model, which would leave the UI with no response. Send a
                 # direct, honest acknowledgment instead.
-                global _stop_requested
                 _stop_requested = True
                 await send(type="assistant_start")
                 await send(type="workflow", stage="input", detail="stopping")
@@ -1826,7 +1837,9 @@ async def ws_endpoint(ws: WebSocket):
                     parts = payload.split()
                     if action == "github":
                         q = payload or "video converter"
-                        res = mgr.search_github(q, limit=5)
+                        # Run the blocking GitHub HTTP search in a thread so it
+                        # doesn't stall the WebSocket event loop.
+                        res = await asyncio.to_thread(mgr.search_github, q, limit=5)
                         out = f"GITHUB search '{q}':\n" + "\n".join(
                             f"  - {c.get('name','?')}: {c.get('description','')[:80]}" for c in (res or [])[:10]) if res else "no GitHub results"
                     else:
@@ -1839,7 +1852,7 @@ async def ws_endpoint(ws: WebSocket):
                             else:
                                 out = "no capabilities registered"
                         elif cmd == "search" and len(parts) > 1:
-                            res = mgr.search_github(" ".join(parts[1:]), limit=5)
+                            res = await asyncio.to_thread(mgr.search_github, " ".join(parts[1:]), limit=5)
                             out = f"GITHUB search: " + ("\n".join(
                                 f"  - {c.get('name','?')}" for c in (res or [])[:10]) if res else "no results")
                         elif cmd == "install" and len(parts) > 1:

@@ -840,20 +840,20 @@ function command(cmd){
   const lc=v.toLowerCase();
   if(lc==="clear"){ out.innerHTML=""; return; }
   if(consoleMode==="shell"){
-    // Real operator shell — backend runs allowlisted command and streams output.
-    wsSend({action:"exec",cmd:v});
-    r.textContent="⏳ executing…";
+  // Real operator shell — backend runs allowlisted command and streams output.
+  wsSend({action:"exec",cmd:v});
+  r.textContent="⏳ executing…";
   } else { // chat (default)
-    if(lc==="status"){ wsSend({action:"status"}); r.textContent="MOON CORE ONLINE — live status requested."; }
-    else if(lc==="diagnostics"){ wsSend({action:"diagnostics"}); r.textContent="Running full self-diagnostics…"; }
-    else if(lc.startsWith("memory")){ const q=v.split(/\s+/).slice(1).join(" ")||"recent"; wsSend({action:"memory_search",query:q}); r.textContent="Recall from long-term memory: "+q; }
-    else if(lc.startsWith("knowledge")){ const q=v.split(/\s+/).slice(1).join(" ")||"moon"; wsSend({action:"knowledge",query:q}); r.textContent="Querying knowledge base: "+q; }
-    else if(lc==="scan"){ setState("EXECUTING"); r.textContent="NEURAL SCAN COMPLETE — 98.726% density."; }
-    else if(lc==="learn"||lc==="think"){ setState("THINKING"); r.textContent="LEARNING ENGINE ACTIVE — adaptive cycle started."; }
-    else if(lc==="speak"){ setState("SPEAKING"); r.textContent="SPEAKING…"; }
-    else if(lc==="execute"){ setState("EXECUTING"); r.textContent="EXECUTING…"; }
-    else if(lc==="help"){ r.textContent="Chat: just type — MOON replies.  Shell mode: switch to SHELL tab, then status · ps · df · free · uname · uptime · netstat · ls · pwd · echo · date · whoami · env · nproc · cat <file>"; }
-    else { wsSend({action:"send_message",text:v}); r.textContent="Forwarded to MOON workflow: "+v; }
+  if(lc==="status"){ wsSend({action:"status"}); r.textContent="MOON CORE ONLINE — live status requested."; }
+  else if(lc==="diagnostics"){ wsSend({action:"diagnostics"}); r.textContent="Running full self-diagnostics…"; }
+  else if(lc.startsWith("memory")){ const q=v.split(/\s+/).slice(1).join(" ")||"recent"; wsSend({action:"memory_search",query:q}); r.textContent="Recall from long-term memory: "+q; }
+  else if(lc.startsWith("knowledge")){ const q=v.split(/\s+/).slice(1).join(" ")||"moon"; wsSend({action:"knowledge",query:q}); r.textContent="Querying knowledge base: "+q; }
+  else if(lc==="scan"){ wsSend({action:"diagnostics"}); r.textContent="Running full system diagnostics…"; }
+  else if(lc==="learn"||lc==="think"){ wsSend({action:"send_message",text:v}); r.textContent="Forwarded to MOON learning engine: "+v; }
+  else if(lc==="speak"){ setState("SPEAKING"); r.textContent="SPEAKING…"; }
+  else if(lc==="execute"){ wsSend({action:"exec",cmd:v}); r.textContent="Executing: "+v; }
+  else if(lc==="help"){ wsSend({action:"help"}); r.textContent="Fetching MOON command reference…"; }
+  else { wsSend({action:"send_message",text:v}); r.textContent="Forwarded to MOON workflow: "+v; }
   }
   out.appendChild(r); out.scrollTop=out.scrollHeight;
 }
@@ -1249,6 +1249,9 @@ $$("#setCoreBg .ratio").forEach(b=>b.onclick=()=>{
 // core glow slider (live)
 const _glowEl=el("setGlow");
 if(_glowEl){ _glowEl.oninput=()=>{ coreGlow=parseFloat(_glowEl.value)||1; localStorage.setItem("moon-ui-glow",String(coreGlow)); }; }
+// idle-speed dropdown (live, mirrors the floating .ispd buttons)
+const _idleEl=el("setIdle");
+if(_idleEl){ _idleEl.oninput=()=>{ const s=parseFloat(_idleEl.value)||1; document.getElementById("app").style.setProperty("--idle-speed", s); const sweep=document.querySelector(".sweep"); if(sweep) sweep.style.animationDuration=(7/s)+"s"; localStorage.setItem("moon-ui-idle-speed", String(s)); }; }
 
 function setAspect(r){
   const app=el("app"); if(!app)return;
@@ -1369,11 +1372,11 @@ const savedSpd=parseFloat(localStorage.getItem("moon-ui-idle-speed")||"1")||1;
 
 /* ===== each function button gets its own dedicated, genuinely-wired handler ===== */
 function doTerminal(){ term.classList.toggle("open"); }
-function doAiChat(){ el("command").focus(); wsSend({action:"send_message",text:""}); addLog("[AI CHAT] neural link open — type your command and press ▶."); }
-function doTasks(){ wsSend({action:"status"}); addLog("[TASKS] querying task queue from MOON brain…"); }
+function doAiChat(){ el("command").focus(); addLog("[AI CHAT] neural link open — type your command and press ▶."); }
+function doTasks(){ wsSend({action:"tasks"}); addLog("[TASKS] querying task queue from MOON brain…"); }
 function doUpdates(){ wsSend({action:"dashboard"}); addLog("[UPDATES] pulling live build / runtime status…"); }
 function doDiagnostics(){ wsSend({action:"diagnostics"}); addLog("[DIAGNOSTICS] running full self-diagnostics…"); }
-function doHelp(){ command("help"); }
+function doHelp(){ command("help"); addLog("[HELP] MOON command reference requested."); }
 function doAudio(){ _muted=!_muted; const b=el("audioBtn"); if(b)b.classList.toggle("on",!_muted); wsSend({action:_muted?"mute":"unmute"}); addLog("[AUDIO] voice output "+( _muted?"MUTED":"ENABLED")); }
 function doAspect(){ el("aspect").classList.toggle("open"); }
 function doSend(){ const i=el("command"); command(i.value); i.value=""; }
@@ -1457,7 +1460,10 @@ function renderFuncGrid(){
 function doFunc(i){
   const f=MOON_FUNCTIONS[i]; if(!f) return;
   if(f.click){ window[f.click](true); toggleFunc(false); return; }
-  wsSend(f.a); addLog("[DOCK] "+f.n); toggleFunc(false);
+  if(f.a && f.a.action && f.a.action!=="send_message"){ wsSend(f.a); addLog("[DOCK] "+f.n); }
+  else if(f.a && f.a.action==="send_message" && f.a.text){ wsSend(f.a); addLog("[DOCK] "+f.n); }
+  else if(f.a && f.a.action==="send_message"){ addLog("[DOCK] "+f.n+" — type your message and press ▶ to send."); }
+  toggleFunc(false);
   if(el("terminal")&&!el("terminal").classList.contains("open")) el("terminal").classList.add("open");
 }
 // expose for provider-neutral bridge / external control
