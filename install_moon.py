@@ -459,8 +459,10 @@ def install_service(root: Path) -> None:
     svc_dest = Path.home() / ".config" / "systemd" / "user" / "moon-terminal.service"
     svc_dest.parent.mkdir(parents=True, exist_ok=True)
     content = svc_src.read_text(encoding="utf-8")
-    # __MOON_HOME__ is the installer's anchor — replace with the actual dest.
+    # __INSTALL_PATH__/MOON is the installer's anchor (used in deploy/template).
+    # __MOON_HOME__ is the legacy anchor — also replaced for backwards compat.
     # Fall back to ROOT if someone cloned elsewhere and re-ran the installer.
+    content = content.replace("__INSTALL_PATH__/MOON", str(root))
     content = content.replace("__MOON_HOME__", str(root))
     content = content.replace("/home/meow/Projects/MOON", str(root))
     svc_dest.write_text(content, encoding="utf-8")

@@ -45,6 +45,10 @@ torchaudio
 pytest>=8.0
 pytest-asyncio>=0.23
 
+# Multilingual TTS — auto-detect input language so Moon can speak reply in kind
+# (used by VoiceEngine.detect_language / speak_multilingual).
+langdetect>=1.0.0
+
 # NOTE: the primary terminal UI is the pure HTML/CSS/Canvas2D HUD served by
 # app.terminal_interface (no Python UI dep). A separate beautiful Textual TUI
 # is available via `moon tui` (optional dep: textual, see requirements-optional.txt).

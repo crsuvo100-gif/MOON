@@ -5,11 +5,11 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=__MOON_HOME__
+WorkingDirectory=__INSTALL_PATH__/MOON
 # Run uvicorn directly so systemd tracks the real long-running server process
 # (main.py start only spawns uvicorn as a child, leaving the parent in the
 # 'activating' state). This makes the unit report 'active' cleanly.
-ExecStart=__MOON_HOME__/.venv/bin/python -m uvicorn app.terminal_interface:app --host 0.0.0.0 --port 8777 --log-level info
+ExecStart=__INSTALL_PATH__/MOON/.venv/bin/python -m uvicorn app.terminal_interface:app --host 0.0.0.0 --port 8777 --log-level info
 # The visible NEURAL CORE HUD window is owned solely by moon-hud.service
 # (the keeper loop below), which opens exactly ONE window and reopens it if
 # closed. Do NOT also open it here -- running open_hud.py from ExecStartPost
