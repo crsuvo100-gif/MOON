@@ -1591,6 +1591,8 @@ async def ws_endpoint(ws: WebSocket):
                     if simple:
                         await send(type="workflow", stage="fast",
                                    detail="simple message -> quick_reply")
+                        await send(type="workflow", stage="thinking",
+                                   detail="generating reply (this may take a few seconds on CPU)")
                         try:
                             answer = await asyncio.wait_for(
                                 orch.quick_reply(text), timeout=60)
