@@ -137,6 +137,7 @@ class MoonCLIState:
         self.session_start: float = time.time()
         self.total_tokens: int = 0
         self.request_count: int = 0
+        self._scratch: dict[str, Any] = {}  # per-session scratch (goals, etc.)
 
     def add_message(self, role: str, content: str) -> None:
         self.messages.append((role, content))
@@ -528,7 +529,6 @@ def _cmd_clear(state: MoonCLIState, arg: str) -> bool:
 
 def cmd_quit(state: MoonCLIState, arg: str) -> bool:
     _panels("Goodbye", "MOON CLI exiting. 👋", style="cyan")
-    state.running = False  # type: ignore[attr-defined]
     return False
 
 
