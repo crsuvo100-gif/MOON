@@ -227,7 +227,14 @@ def _run_shell(cmd: str) -> str:
     return out
 
 
-# ── 8. Streaming response writer ──────────────────────────────────────────────
+# ── 8. Streaming chunk writer ─────────────────────────────────────────────────
+def _stream_chunk(chunk: str) -> None:
+    """Print one chunk of streaming response, flushing stdout immediately."""
+    _console.print(chunk, end="")
+    sys.stdout.flush()
+
+
+# ── 8b. Streaming response writer ────────────────────────────────────────────
 async def _stream_response(
     state: MoonCLIState,
     user_input: str,
@@ -235,7 +242,6 @@ async def _stream_response(
 ) -> str:
     """Query LLM and stream response chunks to the console as they arrive."""
     full = await _query_llm(state, user_input)
-    # Moon's LLMService returns full text; we display it as a panel
     if on_chunk:
         for i in range(0, len(full), 80):
             on_chunk(full[i : i + 80])
@@ -719,7 +725,7 @@ async def _run_repl(cli: MoonCLI, state: MoonCLIState) -> None:
         response = await _stream_response(
             state,
             line,
-            on_chunk=lambda chunk: _console.print(chunk, end="", flush=True),
+            on_chunk=_stream_chunk,
         )
         _console.print()  # newline
 
