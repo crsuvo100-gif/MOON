@@ -702,7 +702,7 @@ def _shell_dispatch(cmd: str) -> tuple[str, int]:
             return ("denied: cat target not permitted", 1)
         real = f"cat {shlex.quote(target)}"
     else:
-        real = _SHELL_ALLOW[base] + ("" if base in ("echo", "pwd", "date", "whoami", "nproc", "uname", "uptime") else "")
+        real = _SHELL_ALLOW[base] + (" " + " ".join(parts[1:]) if base == "echo" and len(parts) > 1 else "")
         # for ls/cat without args, allow but cap output
     try:
         _log(f"shell: {cmd}", "sys")
