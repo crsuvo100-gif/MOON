@@ -634,6 +634,7 @@ def main() -> None:
     sub.add_parser("tui", help="Launch MOON's curses text-mode terminal UI (headless/SSH)")
     sub.add_parser("shell", help="Launch MOON's TTS/textual shell terminal (voice + shell + CLI)")
     # NEW Python-first operational commands (additive)
+    sub.add_parser("cli", help="MOON's own interactive CLI terminal (Hermes-feature-rich, Moon-native)")
     sub.add_parser("doctor", help="Health check: Python/deps/config/DB/agents/tools/model/git")
     sub.add_parser("status", help="Check the running MOON backend health endpoint")
     sub.add_parser("backup", help="Snapshot runtime data into backups/ (cross-platform)")
