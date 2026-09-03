@@ -102,7 +102,7 @@ def cmd_chat(args: argparse.Namespace) -> None:
         asyncio.run(cli.run())
 
 
-def _build_state(model: str | None = None, agent: str | None = None) -> dict:
+def _build_state(model: str | None = None, agent: str | None = None) -> CLIState:
     from app.cli.commands import CLIState
     return CLIState(
         model_name=model or _settings.model_name,
