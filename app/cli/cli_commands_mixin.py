@@ -10,6 +10,7 @@ so they can access self.state and self.engine.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import sys
@@ -159,7 +160,11 @@ class CLICommandsMixin:
         """Handle /save — save session to file."""
         parts = command.split(maxsplit=1)
         fmt = parts[0].split()[0] if parts and parts[0] else "json"
-        rest = " ".join(parts[1].split()[1:]) if parts and len(parts[1].split()) > 1 else None
+        rest: str | None = None
+        if len(parts) > 1:
+            sub = parts[1].split()
+            if len(sub) > 1:
+                rest = " ".join(sub[1:])
 
         if fmt not in ("json", "md", "html"):
             print_error("Usage: /save <json|md|html> [filename]")
@@ -168,7 +173,7 @@ class CLICommandsMixin:
             print_info("  /save html [file]    — save as HTML")
             return
 
-        if not rest:
+        if rest is None:
             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
             rest = "moon_session_" + ts + "." + fmt
 
@@ -221,14 +226,31 @@ class CLICommandsMixin:
 
         print_info("Retrying: " + self.state.last_prompt)
         from app.cli.oneshot import run_oneshot
-        import asyncio
-        asyncio.run(
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop — use asyncio.run (fallback for non-async callers)
+            import asyncio as _asyncio
+            _asyncio.run(
+                run_oneshot(
+                    self.state.last_prompt,
+                    model=self.state.model_name,
+                    agent=self.state.agent_name,
+                )
+            )
+            return
+
+        # We're inside a running event loop — schedule on it without blocking
+        fut = loop.create_task(
             run_oneshot(
                 self.state.last_prompt,
                 model=self.state.model_name,
                 agent=self.state.agent_name,
             )
         )
+        # Fire-and-forget: the task runs in background, result printed by run_oneshot
+        # No await here — we're in a sync handler called from async dispatch
 
     # ── /undo ───────────────────────────────────────────────────────────────
 
@@ -346,10 +368,21 @@ class CLICommandsMixin:
         if query:
             print_info("Running one-shot on " + name + ": " + query)
             from app.cli.oneshot import run_oneshot
-            import asyncio
-            asyncio.run(
+
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                import asyncio as _asyncio
+                _asyncio.run(
+                    run_oneshot(query, model=name, agent=self.state.agent_name)
+                )
+                return
+
+            # Inside running event loop — schedule on it
+            loop.create_task(
                 run_oneshot(query, model=name, agent=self.state.agent_name)
             )
+            # Fire-and-forget; result printed by run_oneshot internally
 
     # ── /agent ──────────────────────────────────────────────────────────────
 
@@ -360,11 +393,12 @@ class CLICommandsMixin:
         s = Settings()
 
         if not command:
-            print_info("Current agent: " + str(s.agent or self.state.agent_name or "auto"))
+            print_info("Current agent: " + str(self.state.agent_name or "auto"))
+            print_info("Note: agent model config managed via Settings.enable_per_agent_models")
             return
 
         self.state.agent_name = command
-        print_success("Agent switched: " + command)
+        print_success("Agent set to: " + command)
 
     # ── /verbose ────────────────────────────────────────────────────────────
 
@@ -481,7 +515,7 @@ class CLICommandsMixin:
 
     def _handle_doctor(self, command: str = "") -> None:
         """Handle /doctor — check configuration and dependencies."""
-        from app.cli.subcommands.doctor import run as _run_doctor
+        from app.cli.subcommands.doctor import run_doctor as _run_doctor
         import argparse
 
         ns = argparse.Namespace(verbose=bool(command))

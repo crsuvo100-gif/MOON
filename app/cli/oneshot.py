@@ -68,7 +68,7 @@ async def run_oneshot(
         if content:
             print(f"Model: {content}")
             print()
-            rc = 0
+            return 0
         else:
             print("(no response)")
             return 1

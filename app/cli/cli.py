@@ -166,14 +166,17 @@ class MoonCLI(CLICommandsMixin):
         # Dispatch to handler method
         handler_name = f"_handle_{cmd_name.replace('-', '_')}"
         if hasattr(self, handler_name):
-            try:
-                if arg_text:
-                    await getattr(self, handler_name)(arg_text)
+            handler = getattr(self, handler_name)
+            if arg_text:
+                if asyncio.iscoroutinefunction(handler):
+                    await handler(arg_text)
                 else:
-                    await getattr(self, handler_name)("")
-            except TypeError:
-                # Handler doesn't accept args
-                await getattr(self, handler_name)()
+                    handler(arg_text)
+            else:
+                if asyncio.iscoroutinefunction(handler):
+                    await handler("")
+                else:
+                    handler("")
         else:
             # Fallback: try generic _handle_command
             await self._handle_command(cmd_name, arg_text)
@@ -187,16 +190,22 @@ class MoonCLI(CLICommandsMixin):
         await self._show_thinking_indicator()
 
         try:
-            result = await run_oneshot(
+            rc = await run_oneshot(
                 text,
                 model=self.state.model_name,
                 agent=self.state.agent_name,
             )
-            if result:
-                print_success(result)
+            # run_oneshot already printed the LLM content internally.
+            # rc=0 means success, rc=1 means error/no-response, rc=130 means
+            # keyboard interrupt. We just track the command count here.
+            if rc == 0:
                 self._command_counts["chat"] = self._command_counts.get("chat", 0) + 1
-            else:
+            elif rc == 1:
                 print_error("Empty response from LLM")
+            elif rc == 130:
+                print_warning("Interrupted.")
+            else:
+                print_error(f"Query failed (rc={rc})")
         except Exception as e:
             print_error(f"Query failed: {e}")
 

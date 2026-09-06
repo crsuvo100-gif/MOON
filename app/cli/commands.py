@@ -78,6 +78,18 @@ COMMAND_REGISTRY: list[CommandDef] = [
     CommandDef("compress", "Compress conversation context", "Session",
                aliases=("compact",), args_hint="[here [N] | focus topic | --preview]"),
 
+    # ── Display toggles (session UI state) ──────────────────────────────────────
+    CommandDef("indicator", "Show thinking indicator style", "Session",
+               args_hint="[style]", cli_only=True),
+    CommandDef("statusbar", "Toggle status bar", "Session",
+               args_hint="", cli_only=True),
+    CommandDef("timestamps", "Toggle timestamps on messages", "Session",
+               args_hint="", cli_only=True),
+    CommandDef("focus", "Toggle focus mode", "Session",
+               args_hint="", cli_only=True),
+    CommandDef("footer", "Toggle footer display", "Session",
+               args_hint="", cli_only=True),
+
     # ── Configuration ────────────────────────────────────────────────────────
     CommandDef("model", "Show or switch model; /model <name> --query runs one-shot", "Configuration",
                args_hint="[name] [--query <prompt>]",
