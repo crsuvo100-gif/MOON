@@ -176,11 +176,12 @@ def main() -> None:
 
     subparsers = parser.add_subparsers(dest="subtitle")
 
-    # ── chat / cli (interactive REPL — mirrors `hermes`) ───────────────
+    # ── chat (interactive REPL — mirrors `hermes`) ───────────────
     chat = subparsers.add_parser("chat", help="Interactive REPL (default)")
     chat.set_defaults(func=cmd_chat)
     _add_chat_args(chat)
 
+    # ── cli (interactive CLI terminal — mirrors hermes_cli) ────
     cli = subparsers.add_parser("cli", help="Interactive CLI terminal (default)")
     cli.set_defaults(func=cmd_chat)
     _add_chat_args(cli)

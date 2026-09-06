@@ -97,7 +97,7 @@ class MoonCLI(CLICommandsMixin):
 
     def _print_banner(self) -> None:
         """Print startup banner — mirrors hermes_cli:HermesCLI._print_banner()."""
-        from app.cli.console_engine import print_header
+        from app.cli.cli_output import print_header
 
         print()
         print_info("MOON CLI Terminal")

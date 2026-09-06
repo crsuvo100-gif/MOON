@@ -676,8 +676,15 @@ def main() -> None:
     elif args.cmd == "install":
         raise SystemExit(_cmd_install())
     elif args.cmd == "cli":
-        from app.cli.main import main as _cli_main
-        raise SystemExit(_cli_main())
+        import sys as _sys
+        # Strip the 'cli' token so app.cli.main sees ['moon','doctor','--verbose'].
+        _orig = _sys.argv[:]
+        _sys.argv = _orig[:1] + _orig[2:]
+        try:
+            from app.cli.main import main as _cli_main
+            raise SystemExit(_cli_main())
+        finally:
+            _sys.argv = _orig
     elif args.cmd == "setup":
         raise SystemExit(_cmd_setup())
     elif args.cmd == "uninstall":
