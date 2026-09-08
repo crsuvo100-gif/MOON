@@ -115,6 +115,10 @@ COMMAND_REGISTRY: list[CommandDef] = [
                cli_only=True, desktop="terminal"),
     CommandDef("doctor", "Check configuration and dependencies", "System",
                cli_only=True, desktop="terminal"),
+    CommandDef("chat", "Chat with the LLM (one message, non-interactive)", "Session",
+               args_hint="<message>", cli_only=True, desktop="terminal"),
+    CommandDef("oneshot", "Send a single message to the LLM and print response", "Session",
+               args_hint="<message>", cli_only=True, desktop="terminal"),
 
     # ── Quit ────────────────────────────────────────────────────────────────
     CommandDef("quit", "Exit the CLI", "Session",

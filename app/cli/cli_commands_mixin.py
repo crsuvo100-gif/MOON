@@ -328,6 +328,70 @@ class CLICommandsMixin:
         self.state.messages = msgs[-keep:]
         print_success("  After: " + str(len(self.state.messages)) + " messages (kept last " + str(keep) + ")")
 
+    # ── /chat (non-interactive one-message chat) ─────────────────────────────
+
+    def _handle_chat(self, command: str = "") -> None:
+        """Handle /chat — send a single message to the LLM (non-interactive)."""
+        if not command:
+            print_error("Usage: /chat <message>")
+            print_info("  Send a single message to the LLM and print the response")
+            return
+        from app.cli.oneshot import run_oneshot
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            import asyncio as _asyncio
+
+            _asyncio.run(
+                run_oneshot(
+                    command,
+                    model=self.state.model_name,
+                    agent=self.state.agent_name,
+                )
+            )
+            return
+
+        loop.create_task(
+            run_oneshot(
+                command,
+                model=self.state.model_name,
+                agent=self.state.agent_name,
+            )
+        )
+
+    # ── /oneshot (send a single message + print response) ────────────────────
+
+    def _handle_oneshot(self, command: str = "") -> None:
+        """Handle /oneshot — send a single message to the LLM and print response."""
+        if not command:
+            print_error("Usage: /oneshot <message>")
+            print_info("  Send a single message to the LLM and print the response")
+            return
+        from app.cli.oneshot import run_oneshot
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            import asyncio as _asyncio
+
+            _asyncio.run(
+                run_oneshot(
+                    command,
+                    model=self.state.model_name,
+                    agent=self.state.agent_name,
+                )
+            )
+            return
+
+        loop.create_task(
+            run_oneshot(
+                command,
+                model=self.state.model_name,
+                agent=self.state.agent_name,
+            )
+        )
+
     # ── /model ──────────────────────────────────────────────────────────────
 
     def _handle_model(self, command: str = "") -> None:
