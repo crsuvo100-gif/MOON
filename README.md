@@ -112,19 +112,16 @@ python -m moon install        # bootstrap venv + deps + (best-effort) models
 | Command | Purpose |
 |---------|---------|
 | `python -m moon` | Launch the default Terminal/Neural Command Center UI |
-| `python -m moon terminal` / `start` | Web Terminal / Neural Brain HUD at `http://127.0.0.1:8777` |
-| `python -m moon run "task"` | Run a single task and exit |
-| `python -m moon doctor` | Health check (Python/deps/config/DB/agents/tools/model/git) → PASS/WARN/FAIL |
-| `python -m moon status` | Check the live backend `/api/health` |
-| `python -m moon backup` | Snapshot runtime data into `backups/moon_<ts>/` (cross-platform) |
-| `python -m moon restore <snapshot>` | Restore a backup over live data |
-| `python -m moon install` | Python bootstrap installer (venv + deps + models) |
-| `python -m moon update` | Safe update: `git pull --ff-only` + `pip install -e . --upgrade` |
-| `python -m moon models` | Pre-pull per-agent preferred models |
-| `python -m moon dashboard` | Flask+SocketIO web dashboard |
-| `python -m moon tui` | Curses text-mode UI (headless/SSH) |
-| `python -m moon telegram` | Telegram bot listener |
-| `python -m moon version` | Print version |
+|| `python -m moon run "task"` | Run a single task and exit (or launch CLI terminal if no task) |
+|| `python -m moon doctor` | Health check (Python/deps/config/DB/agents/tools/model/git) → PASS/WARN/FAIL |
+|| `python -m moon status` | Check the live backend `/api/health` |
+|| `python -m moon backup` | Snapshot runtime data into `backups/moon_<ts>/` (cross-platform) |
+|| `python -m moon restore <snapshot>` | Restore a backup over live data |
+|| `python -m moon install` | Python bootstrap installer (venv + deps + models) |
+|| `python -m moon update` | Safe update: `git pull --ff-only` + `pip install -e . --upgrade` |
+|| `python -m moon models` | Pre-pull per-agent preferred models |
+|| `python -m moon telegram` | Telegram bot listener |
+|| `python -m moon version` | Print version |
 
 > The installed `moon` console script (`pyproject.toml [project.scripts]`) also
 > works after `pip install -e .`.

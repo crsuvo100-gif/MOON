@@ -1,14 +1,13 @@
-"""terminal_interface.py -- MOON's terminal interface backend (additive).
+"""terminal_interface.py -- MOON's terminal interface backend (API + WebSocket).
 
-Serves MOON's terminal over HTTP: a WebSocket (/ws) that streams MOON's real
-brain output to a front-end, plus /status (auth-gated when MOON_TERMINAL_TOKEN
-is set), /avatar.svg, and a root placeholder. The front-end frame
-(web/moon_terminal.html) was removed and is being rebuilt from scratch; this
-backend is the engine the new UI will connect to. Uses the existing
-Orchestrator (no modification of MOON core).
+Serves MOON's terminal backend over HTTP: a WebSocket (/ws) that streams MOON's
+real brain output to a front-end client, plus a REST API for health, agents,
+tools, memory, knowledge, voice, settings, telemetry, and more. The front-end
+is the Hermes-style CLI REPL (app/cli/main.py); this backend is the engine
+it connects to. Uses the existing Orchestrator (no modification of MOON core).
 
-Run:  python main.py terminal     (serves http://127.0.0.1:8777)
-Or:    uvicorn app.terminal_interface:app --port 8777
+Run:  uvicorn app.terminal_interface:app --port 8777
+Or:    moon / moon run / moon terminal / moon cli   (CLI REPL — no browser)
 """
 
 from __future__ import annotations
@@ -28,41 +27,23 @@ from collections import deque
 from pathlib import Path
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-WEB_DIR = Path(__file__).resolve().parent.parent / "web"
-TERMINAL_HTML = WEB_DIR / "moon_terminal.html"
-THEME_JSON = WEB_DIR / "theme.json"
-SETTINGS_JSON = WEB_DIR / "moon_settings.json"
-MOON_CORE_PNG = WEB_DIR / "moon_core.png"
-AVATAR_SVG = WEB_DIR / "avatar.svg"
-AVATAR_GIF = WEB_DIR / "avatar.gif"
-AVATAR_PNG = WEB_DIR / "avatar.png"
+SETTINGS_JSON = None  # web/ removed; settings persistence removed with it
 
-# Default, user-overridable terminal UI settings (persisted to moon_settings.json).
+# Default terminal behavior settings (no persistence — web/ removed).
 _DEFAULT_SETTINGS = {
     "host": "127.0.0.1",
     "port": 8777,
-    "display": "",            # auto-detected if blank
-    "browser": "",            # auto-detected if blank (google-chrome/chromium/...)
-    "aspect": "auto",         # auto | 16:9 | 21:9 | 32:9 | 16:10 | 4:3 | 1:1 | 9:16
-    "avatar_mode": "fusion",  # fusion | neural  (central core visual)
-    "resolution": "hd",       # hd | compact  (UI density for large displays)
-    "core_glow": 1.0,         # 0.2..2.0 (central core glow intensity)
-    "autostart": False,       # open HUD on MOON boot (now OFF; use `moon terminal` on-demand)
-    "auto_voice": True,       # auto-speak MOON's replies via TTS by default
+    "autostart": False,
+    "auto_voice": True,
     "idle_speed": 1.0,
 }
 
+
 def _load_settings() -> dict:
-    s = dict(_DEFAULT_SETTINGS)
-    try:
-        if SETTINGS_JSON.exists():
-            s.update(json.loads(SETTINGS_JSON.read_text()))
-    except Exception:
-        pass
-    return s
+    return dict(_DEFAULT_SETTINGS)
 
 app = FastAPI(title="MOON Terminal")
 
@@ -292,170 +273,6 @@ async def _term_startup():
     _get_voice_engine()  # probe TTS availability at boot so MODE reflects truth
 
 
-def _stream_text(text: str, yield_every: int = 1):
-    """Yield words for a live typing effect (real content, not simulated).
-
-    Parameters
-    ----------
-    text : str
-        The text to stream, word by word.
-    yield_every : int
-        Only yield a frame every ``yield_every`` words.  ``1`` (the default)
-        is the live-typing effect used for chat replies; higher values (e.g.
-        ``9999``) are used for backend enumerations (list_tools, agents, skills,
-        audit, executions) so the whole result arrives in one or two frames
-        instead of one frame per word (which would take 20-40s for a 193-item
-        list).
-    """
-    words = text.split(" ")
-    for i, word in enumerate(words):
-        if i % yield_every == 0:
-            yield word + " "
-            if yield_every > 1:
-                time.sleep(0.01)
-        else:
-            time.sleep(0.001)
-
-
-@app.get("/")
-async def terminal_page() -> HTMLResponse:
-    # Serves the rebuilt MOON NEURAL CORE INTERFACE (web/moon_terminal.html),
-    # a red/black HUD wired to the live /ws backend.
-    headers = {"Cache-Control": "no-store, no-cache, must-revalidate"}
-    if TERMINAL_HTML.exists():
-        return HTMLResponse(
-            TERMINAL_HTML.read_text(encoding="utf-8"), headers=headers
-        )
-    return HTMLResponse(
-        "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
-        "<title>MOON Terminal</title></head><body style='background:#050505;color:#ff4d4d;"
-        "font-family:monospace;display:grid;place-items:center;height:100vh;margin:0'>"
-        "<div style='text-align:center'><h1>MOON TERMINAL</h1>"
-        "<p>Interface offline. Backend WebSocket /ws is live.</p></div>"
-        "</body></html>"
-    )
-
-
-@app.get("/theme")
-async def theme_json():
-    if THEME_JSON.exists():
-        return FileResponse(str(THEME_JSON), media_type="application/json")
-    return HTMLResponse("{}", status_code=404)
-
-
-@app.get("/moon_core.png")
-async def moon_core_png():
-    if MOON_CORE_PNG.exists():
-        return FileResponse(str(MOON_CORE_PNG), media_type="image/png")
-    return HTMLResponse("<svg/>", status_code=404)
-
-
-@app.get("/moon_core_sphere.png")
-async def moon_core_sphere_png():
-    f = WEB_DIR / "assets" / "moon_core_sphere.png"
-    if f.exists():
-        return FileResponse(str(f), media_type="image/png")
-    return HTMLResponse("<svg/>", status_code=404)
-
-
-@app.get("/moon_brain.webp")
-async def moon_brain_webp():
-    f = WEB_DIR / "assets" / "moon_brain.webp"
-    if f.exists():
-        return FileResponse(str(f), media_type="image/webp")
-    return HTMLResponse("<svg/>", status_code=404)
-
-
-@app.get("/moon_core.webp")
-async def moon_core_webp():
-    # The user-supplied animated core graphic, made the living MOON fusion core
-    # AND neural core (integrated into the central panel, not a floating overlay).
-    f = WEB_DIR / "assets" / "moon_core.webp"
-    if f.exists():
-        return FileResponse(str(f), media_type="image/webp")
-    return HTMLResponse("<svg/>", status_code=404)
-
-
-@app.get("/moon_core_transparent.webp")
-async def moon_core_transparent_webp():
-    # Same 3D sphere with its violet/blue background chroma-keyed to transparent
-    # (orb only) -- used when Settings -> core_bg = transparent. Separate asset so
-    # the default full-background core is untouched.
-    f = WEB_DIR / "assets" / "moon_core_transparent.webp"
-    if f.exists():
-        return FileResponse(str(f), media_type="image/webp")
-    return HTMLResponse("<svg/>", status_code=404)
-
-
-@app.get("/moon_fiery.jpg")
-async def moon_fiery_jpg():
-    # Dim fiery holographic-sphere backdrop behind the red/black HUD.
-    f = WEB_DIR / "assets" / "moon_fiery.jpg"
-    if f.exists():
-        return FileResponse(str(f), media_type="image/jpeg")
-    return HTMLResponse("<svg/>", status_code=404)
-
-
-@app.get("/moon_orb.jpg")
-async def moon_orb_jpg():
-    # The attached fiery holographic-sphere image, as MOON's dominant central core.
-    f = WEB_DIR / "assets" / "moon_orb.jpg"
-    if f.exists():
-        return FileResponse(str(f), media_type="image/jpeg")
-    return HTMLResponse("<svg/>", status_code=404)
-
-
-@app.get("/core_ai.png")
-async def core_ai_png():
-    f = WEB_DIR / "core_ai.png"
-    if f.exists():
-        return FileResponse(str(f), media_type="image/png")
-    return HTMLResponse("<svg/>", status_code=404)
-
-
-@app.get("/avatar.svg")
-async def avatar_svg():
-    if AVATAR_SVG.exists():
-        return FileResponse(str(AVATAR_SVG), media_type="image/svg+xml")
-    return HTMLResponse("<svg/>", status_code=404)
-
-
-@app.get("/avatar.gif")
-async def avatar_gif():
-    if AVATAR_GIF.exists():
-        return FileResponse(str(AVATAR_GIF), media_type="image/gif")
-    # fallback to svg if no gif provided
-    if AVATAR_SVG.exists():
-        return FileResponse(str(AVATAR_SVG), media_type="image/svg+xml")
-    return HTMLResponse("<svg/>", status_code=404)
-
-
-@app.get("/avatar.png")
-async def avatar_png():
-    if AVATAR_PNG.exists():
-        return FileResponse(str(AVATAR_PNG), media_type="image/png")
-    # fallback to svg if no png provided
-    if AVATAR_SVG.exists():
-        return FileResponse(str(AVATAR_SVG), media_type="image/svg+xml")
-    return HTMLResponse("<svg/>", status_code=404)
-
-
-@app.get("/three.min.js")
-async def three_js():
-    p = WEB_DIR / "three.min.js"
-    if p.exists():
-        return FileResponse(str(p), media_type="application/javascript")
-    return HTMLResponse("/* not found */", status_code=404)
-
-
-@app.get("/panel3d.js")
-async def panel3d_js():
-    p = WEB_DIR / "panel3d.js"
-    if p.exists():
-        return FileResponse(str(p), media_type="application/javascript")
-    return HTMLResponse("/* panel3d.js not found */", status_code=404)
-
-
 def _proc_uptime() -> float:
     try:
         return float(open("/proc/uptime").read().split()[0])
@@ -521,7 +338,7 @@ def _system_metrics() -> dict:
     return out
 
 
-async def _moon_status(orch) -> dict:
+async def _moon_status_impl(orch) -> dict:
     """Real MOON status for the terminal HUD (no simulation)."""
     n_agents = 0
     agents = []
@@ -639,21 +456,9 @@ async def api_get_settings(request: Request):
 
 @app.post("/api/settings")
 async def api_post_settings(request: Request):
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-    cur = _load_settings()
-    cur.update({k: body[k] for k in ("host", "port", "display", "browser",
-                                     "aspect", "avatar_mode", "resolution", "core_glow",
-                                     "autostart", "auto_voice", "idle_speed") if k in body})
-    try:
-        with open(SETTINGS_JSON, "w") as fh:
-            json.dump(cur, fh, indent=2)
-        _log(f"settings saved: {cur.get('avatar_mode')}/{cur.get('aspect')}", "ok")
-    except Exception as e:  # noqa: BLE001
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
-    return JSONResponse({"ok": True, "settings": cur})
+    # Settings persistence removed with web/ (moon_settings.json gone).
+    # Return current defaults; ignore POST body (no writable store remains).
+    return JSONResponse({"ok": True, "settings": _load_settings(), "note": "settings persistence removed with web/ ui"})
 
 
 @app.get("/api/telemetry")
@@ -732,17 +537,6 @@ async def api_logs(request: Request, n: int = 100):
     orch = await _get_orchestrator()
     snap = _telemetry_snapshot(orch)
     return JSONResponse({"logs": snap["logs"][-n:], "telemetry": snap["series"][-n:]})
-
-
-
-@app.get("/status")
-async def status(request: Request):
-    # Authorization gate for remote exposure.
-    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
-        from fastapi import Response
-        return Response("Unauthorized", status_code=401)
-    orch = await _get_orchestrator()
-    return await _moon_status(orch)
 
 
 @app.get("/api/capabilities")
@@ -920,7 +714,7 @@ async def api_agents(request: Request):
         from fastapi import Response
         return Response("Unauthorized", status_code=401)
     orch = await _get_orchestrator()
-    st = await _moon_status(orch)
+    st = await _moon_status_impl(orch)
     agents = st.get("agents", 0)
     agent_list = st.get("agent_list", []) or []
     # Enrich with each agent's allowed-tool scope when available.
@@ -953,7 +747,7 @@ async def api_tools(request: Request):
         from fastapi import Response
         return Response("Unauthorized", status_code=401)
     orch = await _get_orchestrator()
-    st = await _moon_status(orch)
+    st = await _moon_status_impl(orch)
     tools = st.get("tools", []) or []
     # Surface each tool's callable status from the registry when available.
     detailed = []
@@ -1283,7 +1077,7 @@ def _moon_status_sync(orch) -> dict:
 
 async def _run_diagnostics(orch) -> dict:
     """Real self-check: ping each subsystem and report pass/fail + numbers."""
-    st = await _moon_status(orch)
+    st = await _moon_status_impl(orch)
     checks = []
     # agents
     checks.append(("Agent brains", "OK" if st["agents"] > 0 else "FAIL", f"{st['agents']} connected"))
@@ -1630,14 +1424,6 @@ async def ws_endpoint(ws: WebSocket):
                 out, code = _shell_dispatch(cmd)
                 _log(f"exec[{code}] {cmd}", "ok" if code == 0 else "err")
                 await send(type="exec_output", cmd=cmd, exit=code, output=out)
-            elif action == "log_stream":
-                # Subscribe this connection to live backend log events.
-                if send not in _LOG_SUBSCRIBERS:
-                    _LOG_SUBSCRIBERS.append(send)
-                    # replay last few so the console isn't empty
-                    for ln in list(_LOG_BUF)[-30:]:
-                        await send(type="log", t=ln["t"], sev=ln["sev"], msg=ln["msg"])
-                    await send(type="notice", message="[LOG] live stream connected")
             elif action == "diagnostics":
                 await send(type="assistant_start")
                 await send(type="workflow", stage="tools", detail="running diagnostics")
@@ -2147,7 +1933,7 @@ async def ws_endpoint(ws: WebSocket):
             elif action == "dashboard":
                 # Real aggregated HUD summary (same source as the live panels).
                 await send(type="assistant_start")
-                st = await _moon_status(orch)
+                st = await _moon_status_impl(orch)
                 mem = st.get("memory", {})
                 sys_ = st.get("system", {})
                 out = (

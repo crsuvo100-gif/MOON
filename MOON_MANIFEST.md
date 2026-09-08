@@ -190,27 +190,22 @@ eeb2865 fix(cli): _build_state return CLIState not dict (type annotation fix)
 
 ## 11. Entry points / how to open MOON
 
-Two terminals. No auto-start — open only when you run them.
+One terminal. No auto-start — open only when you run it.
 
-**Moon UI** — web AI voice assistant (`moon` / `moon terminal` / `python main.py terminal`):
-1. **Browser**: open `http://127.0.0.1:8777`
-2. **CLI launcher**: `moon terminal` (opens HUD chrome-free on demand)
-3. **Direct Python**: `cd /home/meow/Projects/MOON && .venv/bin/python main.py terminal`
+**MOON** — Hermes-style CLI terminal (`moon` / `moon run` / `moon terminal` / `moon cli` / `python main.py`):
 
-**Moon Shell** — Textual TTS + shell terminal (`moon shell` / `moon tui` / `python main.py shell`):
-1. **CLI**: `moon shell` (or `moon tui` — backward-compatible alias)
-2. **Direct Python**: `cd /home/meow/Projects/MOON && MOON_TUI_UNLOCK="MOON love you 3000" .venv/bin/python main.py shell`
+1. **CLI**: `moon` (bare) or `moon run` — launches the Hermes-style CLI REPL (default)
+2. **One-shot task**: `moon run "your task here"` or `moon run --task "..." --agent auto`
+3. **Direct Python**: `cd /home/meow/Projects/MOON && .venv/bin/python main.py` or `python main.py run "task"`
 
-**Moon CLI Terminal** — Hermes-style text REPL (`moon cli` / `python main.py cli` / `python -m app.cli.main`):
-1. **CLI**: `moon cli` — interactive REPL with 28 slash commands
-2. **Direct Python**: `cd /home/meow/Projects/MOON && .venv/bin/python main.py cli`
-3. **Subcommands**: `moon cli doctor`, `moon cli status`, `moon cli model`, `moon cli oneshot`, `moon cli setup`
+Subcommands (all via the CLI terminal package):
+- `moon doctor` — health check (Python/deps/config/DB/agents/tools/model/git)
+- `moon status` — live backend health
+- `moon cli doctor` / `moon cli status` / `moon cli model` / `moon cli oneshot` / `moon cli setup` — CLI subcommands
 
-Unlock phrase (both UI + Shell): `MOON love you 3000`
+REPL slash commands (28): `/help`, `/help <cmd>`, `/history`, `/new`, `/title`, `/retry`, `/undo`, `/save` (json|md|html), `/chat`, `/oneshot`, `/doctor`, `/status`, `/setup`, `/model` [--query], `/agent`, `/compress`, `/shell`, `/clear`, `/statusbar` (alias `/bar`), `/indicator` (alias `/think`), `/timestamps` (alias `/time`), `/quit`, `/exit`, `/version`.
 
-Moon Shell also supports: `!status` `!ps` `!top` `!df` `!free` `!uname` `!uptime` `!netstat` `!ip` `!ls` `!pwd` `!echo` `!date` `!whoami` `!env` `!nproc` `!cat` (real shell, allowlisted). `/help` for CLI ops list. `Ctrl+V` toggles voice on/off.
-
-MOON CLI Terminal slash commands (28): `/help`, `/help <cmd>`, `/history`, `/new`, `/title`, `/retry`, `/undo`, `/save` (json|md|html), `/chat`, `/oneshot`, `/doctor`, `/status`, `/setup`, `/model` [--query], `/agent`, `/compress`, `/shell`, `/clear`, `/statusbar` (alias `/bar`), `/indicator` (alias `/think`), `/timestamps` (alias `/time`), `/quit`, `/exit`, `/version`.
+Unlock phrase: `MOON love you 3000`
 
 ---
 

@@ -1,11 +1,8 @@
-"""Tests for the new MOON interfaces: TUI, Telegram channel, and the Terminal
-authz gate. All mock external deps (curses/telegram/network) -- no real I/O.
+"""Tests for the new MOON interfaces: Telegram channel and the Terminal authz gate.
 
-Coverage:
-  * TUI module imports and the MoonTUI class is constructible (curses importable).
-  * TelegramBot routes an incoming message through the orchestrator and replies,
-    and ignores chats that are not the authorized chat id.
-  * _token_ok enforces Bearer auth when TERMINAL_TOKEN is set, and is open when not.
+The TUI (Textual NEURAL TERMINAL) was removed — MOON now has a single terminal
+type: the Hermes-style CLI REPL (moon / moon run / moon terminal / moon cli).
+Telegram + terminal authz tests remain.
 """
 
 from __future__ import annotations
@@ -16,30 +13,6 @@ import os
 import types
 
 import pytest
-
-
-# --------------------------------------------------------------------------- #
-# TUI  (live Textual NEURAL TERMINAL)
-# --------------------------------------------------------------------------- #
-def test_tui_module_importable_and_class_present():
-    m = importlib.import_module("app.tui")
-    assert hasattr(m, "MoonTUI")
-    assert callable(getattr(m, "main"))
-
-
-def test_tui_construct_without_terminal():
-    # The Textual TUI must be constructible off a real terminal (headless),
-    # mirroring the old curses TUI's "constructible without drawing" contract.
-    from app.tui import MoonTUI
-    tui = MoonTUI(unlock="MOON love you 3000")
-    assert tui.unlock == "MOON love you 3000"
-    assert tui.locked is True
-    # compose() must yield real widgets without raising (off-TTY safe).
-    widgets = list(tui.compose())
-    assert len(widgets) >= 1
-    # The chat/brain panels exist as queryable attributes after mount would,
-    # but at minimum the app object is coherent.
-    assert tui.orchestrator is None  # not booted until mount
 
 
 # --------------------------------------------------------------------------- #

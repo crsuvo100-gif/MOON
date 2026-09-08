@@ -117,271 +117,23 @@ async def _run(task, agent):
     await o.teardown()
 
 
-async def _run_terminal() -> None:
-    import json
-    import os
-    import shutil
-    import subprocess
-    import sys
-    import tempfile
-    import threading
-    import time
-    import urllib.request
-
-    # Phase 26 startup readiness: make sure the local model backend is up before
-    # the API starts, so the Orchestrator has a model to bind to. Best-effort and
-    # non-destructive -- safe when Ollama is already running or unavailable.
-    _ensure_ollama()
-
-    # The project venv is 3.13, but a global PYTHONPATH may point at an
-    # incompatible (3.11) site-packages and shadow pydantic_core at import time.
-    # Drop PYTHONPATH for the child so MOON's own dependencies win. (Non-destructive:
-    # only affects this subprocess, never mutates the parent environment.)
-    env = dict(os.environ)
-    env.pop("PYTHONPATH", None)
-
-    # --- Load persisted UI settings (host/port/display/browser/aspect/avatar) ---
-    settings = {}
-    try:
-        sp = os.path.join(os.path.dirname(__file__), "..", "web", "moon_settings.json")
-        if os.path.exists(sp):
-            settings = json.load(open(sp))
-    except Exception:
-        settings = {}
-    PORT = int(settings.get("port", 8777))
-    HOST = settings.get("host", "127.0.0.1")
-    URL = f"http://{HOST}:{PORT}/"
-
-    def _which(name):
-        return shutil.which(name)
-
-    def _detect_browser():
-        # 1) explicit override from settings
-        b = settings.get("browser", "")
-        if b and os.path.exists(b):
-            return b
-        # 2) common names, in preference order
-        for cand in ("google-chrome", "google-chrome-stable", "chromium",
-                     "chromium-browser", "chrome", "microsoft-edge",
-                     "microsoft-edge-stable"):
-            p = _which(cand)
-            if p:
-                return p
-        # 3) well-known absolute paths
-        for p in ("/opt/google/chrome/chrome", "/usr/bin/google-chrome",
-                  "/usr/bin/chromium", "/snap/bin/chromium"):
-            if os.path.exists(p):
-                return p
-        return None
-
-    def _detect_display():
-        d = settings.get("display", "")
-        if d:
-            return d, None
-        if os.environ.get("WAYLAND_DISPLAY"):
-            return None, os.environ["WAYLAND_DISPLAY"]
-        if os.environ.get("DISPLAY"):
-            return os.environ["DISPLAY"], None
-        return None, None
-
-    # --- Auto-open the MOON HUD on MOON's own boot (any display) ---
-    # Detects X11 / Wayland / headless and picks a suitable browser; on
-    # headless/SSH sessions with no display it simply skips (never crashes).
-    def _auto_open_ui():
-        if not settings.get("autostart", True):
-            return
-        # Idempotency guard: only ever open ONE MOON HUD window per host.
-        # A lockfile records the last-open PID/window so restarts/relaunches
-        # never stack duplicate Chrome windows.
-        lock = os.path.join(tempfile.gettempdir(), "moon_hud_open.lock")
-        try:
-            if os.path.exists(lock):
-                # a window was already opened recently for this host -> skip
-                try:
-                    with open(lock) as fh:
-                        data = fh.read().strip()
-                    # if the recorded pid is still alive, assume its window is up
-                    if data and os.path.exists(f"/proc/{data}"):
-                        return
-                except Exception:
-                    pass
-        except Exception:
-            pass
-        for _ in range(30):                      # wait for backend (max ~30s)
-            try:
-                with urllib.request.urlopen(URL, timeout=2):
-                    break
-            except Exception:
-                time.sleep(1)
-        else:
-            return
-        disp, wayland = _detect_display()
-        if not (disp or wayland):
-            return                          # no graphical display -> skip quietly
-        chrome = _detect_browser()
-        if not chrome:
-            return
-        args = [chrome, "--disable-setuid-sandbox", "--disable-gpu",
-                f"--app={URL}", "--window-size=1920,1080", "--start-maximized",
-                "--disable-infobars", "--no-first-run", "--no-default-browser-check"]
-        if wayland:
-            args += ["--ozone-platform=wayland", f"--wayland-display={wayland}"]
-        if disp:
-            args += [f"--display={disp}"]
-        try:
-            proc = subprocess.Popen(args, env={**os.environ, "PYTHONPATH": ""},
-                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            # record this opener's pid so a second invocation won't duplicate
-            try:
-                with open(lock, "w") as fh:
-                    fh.write(str(proc.pid))
-            except Exception:
-                pass
-        except Exception:
-            pass
-
-    # NOTE: the visible HUD window is NOT auto-opened on boot anymore.
-    # autostart=false in moon_settings.json + moon-hud.service disabled means:
-    # the backend (systemd moon-terminal.service) runs, but NO browser window
-    # appears until the operator explicitly runs `moon terminal` (or opens
-    # http://127.0.0.1:8777/ manually). The _auto_open_ui() definition below
-    # is retained for manual `python main.py start` use outside systemd.
-    if settings.get("autostart", False):
-        _auto_open_ui()
-
-    # --- Guard against double-binding :PORT (root cause of the HUD "blink") ---
-    # If another MOON backend already owns the port (e.g. moon.service is up),
-    # launching a 2nd uvicorn fails to bind and systemd restarts us in a tight
-    # crash-loop. That makes the HUD WebSocket drop/reconnect every few seconds
-    # and the whole terminal appears to blink. So: if the port is taken, just
-    # attach the HUD to the existing backend and exit cleanly (no loop).
-    def _port_busy(port):
-        import socket
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            s.settimeout(1)
-            return s.connect_ex(("127.0.0.1", port)) == 0
-        finally:
-            s.close()
-
-    if _port_busy(PORT):
-        print(f"\U0001F319 MOON backend already listening on :{PORT} "
-              f"-- attaching HUD only (not spawning a 2nd backend).")
-        # The backend is already up: open (or focus) the visible HUD window
-        # instead of just exiting. open_hud() is idempotent (one window, GPU
-        # accelerated) and never touches :8777, so it's safe to call here.
-        try:
-            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-            from scripts.open_hud import open_hud
-            pid = open_hud()
-            if pid:
-                print(f"\U0001F319 HUD window opened (chrome pid {pid}). "
-                      f"Open http://{HOST}:{PORT}/ if no window appears.")
-            else:
-                print(f"\U0001F319 No display/browser detected -- open "
-                      f"http://{HOST}:{PORT}/ manually in your browser.")
-        except Exception as e:  # noqa: BLE001
-            print(f"\U0001F319 Could not auto-open HUD ({e}); "
-                  f"open http://{HOST}:{PORT}/ manually.")
-        return 0
-
-    print(f"🌙 MOON Terminal starting at http://0.0.0.0:{PORT}  (LAN: http://<this-host-ip>:{PORT})")
-    subprocess.run([
-        sys.executable, "-m", "uvicorn", "app.terminal_interface:app",
-        "--host", "0.0.0.0", "--port", str(PORT), "--log-level", "info",
-    ], env=env)
-    return 0
+# ---------------------------------------------------------------------------
+# `moon terminal` -- launch the Hermes-style CLI terminal (REPL, voice, shell).
+# This is the single user-facing surface: a readline-driven interactive session
+# with integrated voice (espeak-ng + Kokoro/F5-TTS), shell commands, and the
+# full MOON brain behind it. No browser or web UI involved.
+# ---------------------------------------------------------------------------
+def _cmd_terminal() -> int:
+    from app.cli.main import main as _cli_main
+    raise SystemExit(_cli_main())
 
 
 # ---------------------------------------------------------------------------
-# `moon ui` -- launch the WEB UI (full avatar + function dock) in the browser.
-#
-# Smart: if a backend is already serving :8777 (systemd moon-terminal.service),
-# just open Chrome to it. Otherwise start the backend, then open Chrome.
-# Uses scripts/open_hud.py (the idempotent HUD window keeper) so a second
-# `moon ui` never stacks duplicate Chrome windows.
+# `_cmd_ui()` removed: the web UI (moon_terminal.html / Three.js 3D brain orb /
+# avatar images / theme.json) has been stripped from app/terminal_interface.py.
+# `moon ui` no longer exists as a subcommand -- use `moon` or `moon terminal`
+# for the Hermes-style CLI REPL, or hit the REST+WebSocket API directly.
 # ---------------------------------------------------------------------------
-def _cmd_ui() -> int:
-    import os
-    import json
-    import shutil
-    import subprocess
-    import sys
-    import time
-    import urllib.request
-    from pathlib import Path
-
-    # Project paths
-    project = str(Path(__file__).resolve().parent)
-    venv_py = os.path.join(project, ".venv", "bin", "python")
-    if not os.path.exists(venv_py):
-        venv_py = sys.executable
-
-    env = dict(os.environ)
-    env.pop("PYTHONPATH", None)
-
-    # Load settings for host/port
-    settings = {}
-    try:
-        sp = os.path.join(project, "web", "moon_settings.json")
-        if os.path.exists(sp):
-            settings = json.loads(Path(sp).read_text())
-    except Exception:
-        settings = {}
-    port = int(settings.get("port", 8777))
-    host = settings.get("host", "127.0.0.1")
-    url = f"http://{host}:{port}/"
-
-    # Check if backend already serving
-    def _backend_up():
-        try:
-            with urllib.request.urlopen(url, timeout=2) as r:
-                return r.status == 200
-        except Exception:
-            return False
-
-    if not _backend_up():
-        # Start the web backend (detached) and wait for it
-        print(f"🌙 Starting MOON web backend on :{port} ...")
-        proc = subprocess.Popen(
-            [venv_py, "-m", "uvicorn", "app.terminal_interface:app",
-             "--host", "0.0.0.0", "--port", str(port), "--log-level", "info"],
-            cwd=project,
-            env=env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
-        # Wait up to ~30s for the backend to come up
-        for _ in range(30):
-            if _backend_up():
-                print(f"🌙 MOON web backend up at {url}")
-                break
-            time.sleep(1)
-        else:
-            print(f"⚠ MOON web backend did not come up on :{port} after 30s.")
-            print(f"   Open {url} manually, or start it with: moon terminal")
-            # Still try to open the browser — it may already be running
-    else:
-        print(f"🌙 MOON web backend already running at {url}")
-
-    # Open the HUD window (idempotent — one window per host)
-    try:
-        sys.path.insert(0, project)
-        from scripts.open_hud import open_hud
-        result = open_hud()
-        if result == "already_open":
-            print(f"🌙 MOON web UI already open at {url} (HUD window is up).")
-            print(f"   Full avatar + function dock active.")
-        elif result is not None:
-            print(f"🌙 MOON web UI opened (chrome pid {result}).")
-            print(f"   Full avatar + function dock at {url}")
-        else:
-            print(f"🌙 No display/browser detected -- open {url} manually in your browser.")
-    except Exception as e:
-        print(f"🌙 Could not auto-open HUD ({e}); open {url} manually.")
-
-    return 0
 
 
 # ---------------------------------------------------------------------------
@@ -618,22 +370,14 @@ def _cmd_update() -> int:
 def main() -> None:
     ap = argparse.ArgumentParser(prog="moon", description="Standalone AI Agent")
     sub = ap.add_subparsers(dest="cmd")
-    sub.add_parser("start", help="Launch MOON's terminal interface (animated avatar UI)")
-    run_p = sub.add_parser("run", help="Run a single task")
-    run_p.add_argument("task", nargs="?", default="Say hello.")
-    run_p.add_argument("--agent", default="auto")
+    run_p = sub.add_parser("run", help="Run a single task, or launch the Hermes CLI terminal if no task given")
+    run_p.add_argument("task", nargs="?", default=None, help="Task to run (omit to launch the terminal)")
+    run_p.add_argument("--task", dest="task_flag", default=None, help="Task to run (omit to launch the terminal)")
+    run_p.add_argument("--agent", default=None, help="Agent name to run the task with")
     sub.add_parser("models", help="Pre-pull all per-agent preferred models so agents are ready")
-    # Interactive surfaces:
-    #   moon            -> Jarvis-style TUI/shell (voice + shell + CLI)  [DEFAULT]
-    #   moon ui         -> web UI (full avatar + function dock) in browser
-    #   moon tui        -> same TUI, headless/SSH-safe
-    #   moon shell      -> same TUI (backward-compatible alias)
-    #   moon terminal   -> web backend + open HUD (backward-compatible)
-    sub.add_parser("ui", help="Launch MOON's web UI (full avatar + function dock) in the browser")
-    sub.add_parser("terminal", help="Launch MOON's web backend + open the HUD in the browser")
-    sub.add_parser("tui", help="Launch MOON's curses text-mode terminal UI (headless/SSH)")
-    sub.add_parser("shell", help="Launch MOON's TTS/textual shell terminal (voice + shell + CLI)")
-    # NEW Python-first operational commands (additive)
+    # Single terminal interface: Hermes-style CLI REPL (voice + shell + CLI).
+    #   moon / moon terminal / moon cli / moon run  ->  Hermes-style REPL
+    sub.add_parser("terminal", help="Launch MOON's Hermes-style CLI terminal (voice + shell + CLI)")
     sub.add_parser("cli", help="MOON's own interactive CLI terminal (Hermes-feature-rich, Moon-native)")
     sub.add_parser("doctor", help="Health check: Python/deps/config/DB/agents/tools/model/git")
     sub.add_parser("status", help="Check the running MOON backend health endpoint")
@@ -647,26 +391,39 @@ def main() -> None:
     sub.add_parser("monitor", help="Run health monitor + self-heal (backend, models, git sync)")
     args, remaining = ap.parse_known_args()
     _ensure_default_peer()
-    if args.cmd == "monitor":
-        raise SystemExit(_cmd_monitor())
-    elif args.cmd == "start":
-        _run_terminal()
-    elif args.cmd == "run":
-        asyncio.run(_run(args.task, args.agent))
+    if args.cmd == "run":
+        task = args.task or args.task_flag
+        if task:
+            asyncio.run(_run(task, args.agent))
+        else:
+            import sys as _sys
+            _orig = _sys.argv[:]
+            _sys.argv = _orig[:1] + _orig[2:]
+            try:
+                from app.cli.main import main as _cli_main
+                raise SystemExit(_cli_main())
+            finally:
+                _sys.argv = _orig
     elif args.cmd == "models":
         asyncio.run(_prefetch_models())
-    elif args.cmd == "shell":
-        from app.tui import main as tui_main
-        raise SystemExit(tui_main())
-    elif args.cmd == "ui":
-        _cmd_ui()
-    elif args.cmd == "tui":
-        from app.tui import main as tui_main
-        raise SystemExit(tui_main())
     elif args.cmd == "terminal":
-        _run_terminal()
-    elif args.cmd == "doctor":
-        raise SystemExit(_cmd_doctor())
+        import sys as _sys
+        _orig = _sys.argv[:]
+        _sys.argv = _orig[:1] + _orig[2:]
+        try:
+            from app.cli.main import main as _cli_main
+            raise SystemExit(_cli_main())
+        finally:
+            _sys.argv = _orig
+    elif args.cmd == "cli":
+        import sys as _sys
+        _orig = _sys.argv[:]
+        _sys.argv = _orig[:1] + _orig[2:]
+        try:
+            from app.cli.main import main as _cli_main
+            raise SystemExit(_cli_main())
+        finally:
+            _sys.argv = _orig
     elif args.cmd == "status":
         raise SystemExit(_cmd_status())
     elif args.cmd == "backup":
@@ -677,7 +434,6 @@ def main() -> None:
         raise SystemExit(_cmd_install())
     elif args.cmd == "cli":
         import sys as _sys
-        # Strip the 'cli' token so app.cli.main sees ['moon','doctor','--verbose'].
         _orig = _sys.argv[:]
         _sys.argv = _orig[:1] + _orig[2:]
         try:
@@ -694,9 +450,9 @@ def main() -> None:
     elif args.cmd == "version":
         _cmd_version()
     else:
-        # No subcommand (bare `moon`) -> Jarvis-style TUI/shell is the DEFAULT.
-        from app.tui import main as tui_main
-        raise SystemExit(tui_main())
+        # No subcommand (bare `moon`) -> Hermes-style CLI terminal (default).
+        from app.cli.main import main as _cli_main
+        raise SystemExit(_cli_main())
 
 
 if __name__ == "__main__":

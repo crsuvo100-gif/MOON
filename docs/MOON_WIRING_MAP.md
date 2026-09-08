@@ -8,12 +8,12 @@ code-existence claims.
 
 | Entrypoint | Command | Wires to brain |
 |---|---|---|
-| Terminal/API server | `python main.py` / `python main.py terminal` → `uvicorn app.terminal_interface:app` (systemd: `moon-terminal.service`) | Serves `app.terminal_interface`, which holds the live `Orchestrator` (`orch`) and the WebSocket `/ws` + HTTP `/api/*` |
-| Dashboard | `python main.py dashboard` | `run_dashboard(run_fn)` where `run_fn` calls `orch.run_task(...)` |
-| TUI (in-process) | `python main.py tui` | `Orchestrator` directly (no HTTP) |
-| Telegram bot | `app/services/telegram_bot.py` | `Orchestrator.run_task(task, on_event=...)` |
-| Doctor (health) | `python main.py doctor` | imports `Orchestrator`, runs `setup()`, reports 16 subsystems |
-| CLI task | `python main.py run "<task>"` | `orch.run_task(Task.create(...))` |
+|| Terminal/API server | `python main.py` / `python main.py terminal` → `uvicorn app.terminal_interface:app` (systemd: `moon-terminal.service`) | Serves `app.terminal_interface`, which holds the live `Orchestrator` (`orch`) and the WebSocket `/ws` + HTTP `/api/*` |
+|| Dashboard | `python main.py dashboard` | `run_dashboard(run_fn)` where `run_fn` calls `orch.run_task(...)` |
+|| CLI terminal (Hermes REPL) | `python main.py run` / `python main.py` / `python main.py cli` / `python main.py terminal` | Hermes-style CLI REPL (voice + shell + slash commands) via `app.cli.main` |
+|| Telegram bot | `app/services/telegram_bot.py` | `Orchestrator.run_task(task, on_event=...)` |
+|| Doctor (health) | `python main.py doctor` | imports `Orchestrator`, runs `setup()`, reports 16 subsystems |
+|| CLI task | `python main.py run "<task>"` | `orch.run_task(Task.create(...))` |
 
 The **main brain** is `app/brain/orchestrator.py :: Orchestrator`. `run_task()` is
 the full cognition loop; `quick_reply()` is the fast single-call path used by chat/
