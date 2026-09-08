@@ -22,6 +22,7 @@ import subprocess
 import shlex
 import threading
 from datetime import datetime
+from dataclasses import dataclass
 
 _START_TIME = time.time()
 from collections import deque
@@ -462,10 +463,80 @@ async def api_post_settings(request: Request):
     return JSONResponse({"ok": True, "settings": _load_settings(), "note": "settings persistence removed with web/ ui"})
 
 
-@app.get("/api/telemetry")
-async def api_telemetry(request: Request):
+@dataclass
+class BrainStatusRequest(BaseModel):
+    """Request body for POST /api/brain-status (optional filters)."""
+    include_pipeline: bool = True
+    include_agents: bool = True
+    include_tools: bool = True
+    include_memory: bool = True
+    include_knowledge: bool = True
+    include_system: bool = True
+    include_voice: bool = True
+    include_sensors: bool = True
+    include_emotion: bool = True
+
+
+@app.get(
+    "/api/brain-status",
+    summary="Full MOON brain-core status (model, pipeline, agents, tools, memory, knowledge, system, voice, sensors, emotion)",
+    description="Returns the real MOON brain-core status computed by _moon_status_impl. "
+                "Public endpoint — no auth required when TERMINAL_TOKEN is unset; "
+                "requires Bearer token when set (same gate as /ws).",
+)
+async def api_brain_status(request: Request):
+    """Serve the full brain-core status to HUD clients (moonscope TUI, etc.)."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
     orch = await _get_orchestrator()
-    return JSONResponse(_telemetry_snapshot(orch))
+    st = await _moon_status_impl(orch)
+    return JSONResponse(st)
+
+
+@app.post(
+    "/api/brain-status",
+    summary="Filtered brain-core status (POST, optional field filters)",
+    description="Same data as GET /api/brain-status but with optional field filtering "
+                "via BrainStatusRequest body. Useful for clients that only need a subset.",
+)
+async def api_brain_status_post(request: Request):
+    """Serve filtered brain-core status."""
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    body = await request.json()
+    req = BrainStatusRequest(**body)
+    orch = await _get_orchestrator()
+    st = await _moon_status_impl(orch)
+    # Apply filters
+    out = {}
+    if req.include_pipeline:
+        out["pipeline"] = st.get("pipeline")
+    if req.include_agents:
+        out["agents"] = st.get("agents")
+        out["agent_list"] = st.get("agent_list")
+    if req.include_tools:
+        out["tools"] = st.get("tools")
+        out["n_tools"] = st.get("n_tools")
+    if req.include_memory:
+        out["memory"] = st.get("memory")
+    if req.include_knowledge:
+        out["knowledge"] = st.get("knowledge")
+    if req.include_system:
+        out["system"] = st.get("system")
+        out["uptime"] = st.get("uptime")
+        out["uptime_fmt"] = st.get("uptime_fmt")
+    if req.include_voice:
+        out["voice"] = st.get("voice")
+    if req.include_sensors:
+        out["sensors"] = st.get("sensors")
+    if req.include_emotion:
+        out["emotion"] = st.get("emotion")
+    out["model"] = st.get("model")
+    out["version"] = st.get("version")
+    out["locked"] = st.get("locked")
+    return JSONResponse(out)
 
 
 # Restricted shell allowlist: the HUD "SHELL" tab runs REAL commands, but only
