@@ -109,12 +109,28 @@ async def _prefetch_models():
 
 
 async def _run(task, agent):
-    o = Orchestrator(get_settings())
-    await o.setup()
-    from app.models.task import Task
-    res = await o.run_task(Task.create(task, agent_name=agent))
-    print(res.result)
-    await o.teardown()
+    from app.services.llm_service import LLMService, ChatMessage
+    from app.config.settings import get_settings as _gs
+    import asyncio as _asyncio
+
+    settings = _gs()
+    llm = LLMService(
+        base_url=settings.model_base_url,
+        model_name=settings.model_name,
+        timeout=settings.model_timeout,
+    )
+    messages = [ChatMessage(role="user", content=task)]
+    try:
+        result = await llm.complete(messages=messages)
+        content = getattr(result, "content", None) or ""
+        if content:
+            print(f"RESULT: {content}")
+        else:
+            print("(no response from model)")
+    except _asyncio.TimeoutError:
+        print("[MOON: LLM timed out]")
+    except Exception as exc:
+        print(f"[MOON: task failed: {exc}]")
 
 
 # ---------------------------------------------------------------------------
