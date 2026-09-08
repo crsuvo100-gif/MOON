@@ -7,7 +7,8 @@ is the Hermes-style CLI REPL (app/cli/main.py); this backend is the engine
 it connects to. Uses the existing Orchestrator (no modification of MOON core).
 
 Run:  uvicorn app.terminal_interface:app --port 8777
-Or:    moon / moon run / moon terminal / moon cli   (CLI REPL — no browser)
+Or:    moon / moon run / moon terminal   (moonscope TUI)
+Or:    moon cli                          (readline REPL - fallback)
 """
 
 from __future__ import annotations

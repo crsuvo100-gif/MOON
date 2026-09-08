@@ -386,15 +386,16 @@ def _cmd_update() -> int:
 def main() -> None:
     ap = argparse.ArgumentParser(prog="moon", description="Standalone AI Agent")
     sub = ap.add_subparsers(dest="cmd")
-    run_p = sub.add_parser("run", help="Run a single task, or launch the Hermes CLI terminal if no task given")
-    run_p.add_argument("task", nargs="?", default=None, help="Task to run (omit to launch the terminal)")
+    run_p = sub.add_parser("run", help="Run a single task via LLM, or launch moonscope TUI if no task given")
+    run_p.add_argument("task", nargs="?", default=None, help="Task to run (omit to launch moonscope TUI)")
     run_p.add_argument("--task", dest="task_flag", default=None, help="Task to run (omit to launch the terminal)")
     run_p.add_argument("--agent", default=None, help="Agent name to run the task with")
     sub.add_parser("models", help="Pre-pull all per-agent preferred models so agents are ready")
-    # Single terminal interface: Hermes-style CLI REPL (voice + shell + CLI).
-    #   moon / moon terminal / moon cli / moon run  ->  Hermes-style REPL
-    sub.add_parser("terminal", help="Launch MOON's Hermes-style CLI terminal (voice + shell + CLI)")
-    sub.add_parser("cli", help="MOON's own interactive CLI terminal (Hermes-feature-rich, Moon-native)")
+    # Single terminal interface: Hermes-style Textual TUI (moonscope).
+    #   moon / moon terminal / moon run  ->  Hermes-style TUI (moonscope)
+    #   moon cli  ->  readline REPL (fallback, Hermes-feature-rich)
+    sub.add_parser("terminal", help="Launch MOON's Hermes-style Textual TUI (moonscope)")
+    sub.add_parser("cli", help="MOON's readline REPL (Hermes-feature-rich, fallback)")
     sub.add_parser("doctor", help="Health check: Python/deps/config/DB/agents/tools/model/git")
     sub.add_parser("status", help="Check the running MOON backend health endpoint")
     sub.add_parser("backup", help="Snapshot runtime data into backups/ (cross-platform)")
@@ -412,25 +413,13 @@ def main() -> None:
         if task:
             asyncio.run(_run(task, args.agent))
         else:
-            import sys as _sys
-            _orig = _sys.argv[:]
-            _sys.argv = _orig[:1] + _orig[2:]
-            try:
-                from app.cli.main import main as _cli_main
-                raise SystemExit(_cli_main())
-            finally:
-                _sys.argv = _orig
+            from app.tui import main as tui_main
+            raise SystemExit(tui_main())
     elif args.cmd == "models":
         asyncio.run(_prefetch_models())
     elif args.cmd == "terminal":
-        import sys as _sys
-        _orig = _sys.argv[:]
-        _sys.argv = _orig[:1] + _orig[2:]
-        try:
-            from app.cli.main import main as _cli_main
-            raise SystemExit(_cli_main())
-        finally:
-            _sys.argv = _orig
+        from app.tui import main as tui_main
+        raise SystemExit(tui_main())
     elif args.cmd == "cli":
         import sys as _sys
         _orig = _sys.argv[:]
@@ -448,15 +437,6 @@ def main() -> None:
         raise SystemExit(_cmd_restore())
     elif args.cmd == "install":
         raise SystemExit(_cmd_install())
-    elif args.cmd == "cli":
-        import sys as _sys
-        _orig = _sys.argv[:]
-        _sys.argv = _orig[:1] + _orig[2:]
-        try:
-            from app.cli.main import main as _cli_main
-            raise SystemExit(_cli_main())
-        finally:
-            _sys.argv = _orig
     elif args.cmd == "setup":
         raise SystemExit(_cmd_setup())
     elif args.cmd == "uninstall":
@@ -466,9 +446,9 @@ def main() -> None:
     elif args.cmd == "version":
         _cmd_version()
     else:
-        # No subcommand (bare `moon`) -> Hermes-style CLI terminal (default).
-        from app.cli.main import main as _cli_main
-        raise SystemExit(_cli_main())
+        # No subcommand (bare `moon`) -> moonscope TUI (default terminal).
+        from app.tui import main as tui_main
+        raise SystemExit(tui_main())
 
 
 if __name__ == "__main__":
