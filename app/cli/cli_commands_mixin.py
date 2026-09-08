@@ -330,7 +330,7 @@ class CLICommandsMixin:
 
     # ── /chat (non-interactive one-message chat) ─────────────────────────────
 
-    def _handle_chat(self, command: str = "") -> None:
+    async def _handle_chat(self, command: str = "") -> None:
         """Handle /chat — send a single message to the LLM (non-interactive)."""
         if not command:
             print_error("Usage: /chat <message>")
@@ -352,17 +352,18 @@ class CLICommandsMixin:
             )
             return
 
-        loop.create_task(
-            run_oneshot(
-                command,
-                model=self.state.model_name,
-                agent=self.state.agent_name,
-            )
+        # Inside running event loop — block-await the LLM response so the
+        # user sees the result before the next prompt (matches /model --query
+        # behavior, not fire-and-forget).
+        await run_oneshot(
+            command,
+            model=self.state.model_name,
+            agent=self.state.agent_name,
         )
 
     # ── /oneshot (send a single message + print response) ────────────────────
 
-    def _handle_oneshot(self, command: str = "") -> None:
+    async def _handle_oneshot(self, command: str = "") -> None:
         """Handle /oneshot — send a single message to the LLM and print response."""
         if not command:
             print_error("Usage: /oneshot <message>")
@@ -384,17 +385,33 @@ class CLICommandsMixin:
             )
             return
 
-        loop.create_task(
-            run_oneshot(
-                command,
-                model=self.state.model_name,
-                agent=self.state.agent_name,
-            )
+        # Inside running event loop — block-await the LLM response so the
+        # user sees the result before the next prompt (matches /model --query
+        # behavior, not fire-and-forget).
+        await run_oneshot(
+            command,
+            model=self.state.model_name,
+            agent=self.state.agent_name,
         )
 
-    # ── /model ──────────────────────────────────────────────────────────────
+    # ── /setup (show CLI setup info — REPL-side, mirrors hermes `hermes setup`)
 
-    def _handle_model(self, command: str = "") -> None:
+    def _handle_setup(self, command: str = "") -> None:
+        """Handle /setup — show MOON CLI setup and configuration summary."""
+        from app.config.settings import Settings
+
+        s = Settings()
+        print_info("MOON CLI Setup")
+        print_info("  Model:  " + str(s.model_name))
+        print_info("  Base:   " + str(s.model_base_url))
+        print_info("  Agent:  " + str(self.state.agent_name))
+        print_info("  System: http://127.0.0.1:8777 (backend)")
+        print()
+        print_info("Run /doctor for full dependency check.")
+        print_info("Run /status for live backend health.")
+        print_info("Run /model <name> to switch model.")
+
+    # ── /model ──────────────────────────────────────────────────────────────
         """Handle /model — show or switch model.
 
         Syntax:

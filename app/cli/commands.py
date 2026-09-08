@@ -119,6 +119,8 @@ COMMAND_REGISTRY: list[CommandDef] = [
                args_hint="<message>", cli_only=True, desktop="terminal"),
     CommandDef("oneshot", "Send a single message to the LLM and print response", "Session",
                args_hint="<message>", cli_only=True, desktop="terminal"),
+    CommandDef("setup", "Show MOON CLI setup and configuration summary", "System",
+               cli_only=True, desktop="terminal"),
 
     # ── Quit ────────────────────────────────────────────────────────────────
     CommandDef("quit", "Exit the CLI", "Session",
