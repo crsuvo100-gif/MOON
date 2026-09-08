@@ -183,7 +183,7 @@ class CLICommandsMixin:
 
         try:
             if fmt == "json":
-                path.write_text(json.dumps(self.state.messages, indent=2))
+                path.write_text(json.dumps(self.state.messages, indent=2) + "\n")
             elif fmt == "md":
                 self._save_as_markdown(path)
             elif fmt == "html":
@@ -201,7 +201,7 @@ class CLICommandsMixin:
             lines.append("")
             lines.append(content)
             lines.append("")
-        path.write_text("\n".join(lines))
+        path.write_text("\n".join(lines) + "\n")
 
     def _save_as_html(self, path: Path) -> None:
         html = [
@@ -214,7 +214,7 @@ class CLICommandsMixin:
             content = msg.get("content", "")
             html.append("<div class='" + role + "'><h2>" + role.capitalize() + "</h2><p>" + content + "</p></div>")
         html.append("</body></html>")
-        path.write_text("\n".join(html))
+        path.write_text("\n".join(html) + "\n")
 
     # ── /retry ──────────────────────────────────────────────────────────────
 

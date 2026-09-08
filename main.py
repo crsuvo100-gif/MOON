@@ -645,7 +645,7 @@ def main() -> None:
     sub.add_parser("update", help="Safe update: git pull --ff-only + pip install -e . --upgrade")
     sub.add_parser("version", help="Print MOON version")
     sub.add_parser("monitor", help="Run health monitor + self-heal (backend, models, git sync)")
-    args = ap.parse_args()
+    args, remaining = ap.parse_known_args()
     _ensure_default_peer()
     if args.cmd == "monitor":
         raise SystemExit(_cmd_monitor())

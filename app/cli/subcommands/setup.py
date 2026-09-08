@@ -39,7 +39,7 @@ def run_setup(args: argparse.Namespace) -> None:
         print("Creating .env from template...")
         example = root / ".env.example"
         if example.exists():
-            env.write_text(example.read_text())
+            env.write_text(example.read_text() + "\n")
             print(f"  Wrote {env}")
         else:
             print("  WARNING: .env.example not found")
