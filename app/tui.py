@@ -110,114 +110,117 @@ class StatusHUD(Static):
         uptime = int(elapsed)
         mins, secs = divmod(uptime, 60)
         hours, mins = divmod(mins, 60)
-        uptime_str = f"{hours}h {mins}m" if hours else f"{mins}m {secs}s"
 
-        mem_str = f"{self.memory_mb:.0f}M" if self.memory_mb else "--"
-        cpu_str = f"{self.cpu_pct:.1f}%" if self.cpu_pct else "--"
-        tps_str = f"{self.tokens_per_sec:.0f} t/s" if self.tokens_per_sec else "--"
-        lat_str = f"{self.latency_ms:.1f}s" if self.latency_ms else "--"
+        mem_str = f"{self.memory_mb:.1f} MB" if self.memory_mb > 0 else "—"
+        cpu_str = f"{self.cpu_pct:.1f}%" if self.cpu_pct > 0 else "—"
+        tps = (self.tokens_per_sec or 0)
+        tps_str = f"{tps:.1f}" if tps > 0 else "—"
+        lat_str = f"{self.latency_ms:.0f} ms" if self.latency_ms > 0 else "—"
 
-        lock_text = "🔒 awaiting 'MOON love you 3000' to unlock" if self.locked else "🔓 unlocked"
-        lock_style = "yellow" if self.locked else "green"
+        lock_icon = "🔒" if self.locked else "🔓"
+        lock_color = "yellow" if self.locked else "green"
 
-        hud_text = (
-            f"  model {self.model_name}  "
-            f"agent {self.agent_name}  "
-            f"session {self.session_id}  |  "
-            f"mem {mem_str}  cpu {cpu_str}  |  "
-            f"↑ {tps_str}  lat {lat_str}  |  "
-            f"{uptime_str}"
-        )
+        left = f"model {self.model_name}"
+        mid = f"agent {self.agent_name} session {self.session_id}"
+        right = f"mem {mem_str} cpu {cpu_str} ↑ {tps_str} lat {lat_str} uptime {hours:02d}:{mins:02d}:{secs:02d}"
+        lock = f"{lock_icon} {'locked' if self.locked else 'unlocked'}"
 
-        # Use rich Text for mixed styling
         from rich.text import Text
         t = Text()
-        t.append("  ", "")
-        t.append("model ", "dim")
-        t.append(f"{self.model_name}  ", "green")
-        t.append("agent ", "dim")
-        t.append(f"{self.agent_name}  ", "yellow")
-        t.append("session ", "dim")
-        t.append(f"{self.session_id}  |  ", "white")
-        t.append("mem ", "dim")
-        t.append(f"{mem_str}  ", "white")
-        t.append("cpu ", "dim")
-        t.append(f"{cpu_str}  |  ", "white")
-        t.append("↑ ", "dim")
-        t.append(f"{tps_str}  ", "green")
-        t.append("lat ", "dim")
-        t.append(f"{lat_str}  |  ", "white")
-        t.append(f"{uptime_str}  ", "dim")
-        t.append(lock_text, lock_style)
+        t.append(left, "yellow")
+        t.append(" │ ", "dim")
+        t.append(mid, "white")
+        t.append(" │ ", "dim")
+        t.append(right, "dim")
+        t.append(" │ ", "dim")
+        t.append(lock, lock_color)
         self.update(t)
 
-    def set_tokens(self, count: int) -> None:
-        """Track token count for tps calculation."""
+    def set_tokens(self, n: int) -> None:
+        """Record token count for tps calculation."""
         now = time.time()
-        elapsed = now - self._token_timestamp
-        if elapsed > 0 and self._last_tokens:
-            delta = count - self._last_tokens
-            self.tokens_per_sec = delta / elapsed if elapsed > 0 else 0
-        self._last_tokens = count
+        dt = now - self._token_timestamp
+        if dt > 0.5 and self._last_tokens > 0:
+            self.tokens_per_sec = (n - self._last_tokens) / dt
+        self._last_tokens = n
         self._token_timestamp = now
-        self.refresh_hud()
 
-    def reset_tokens(self) -> None:
-        self._last_tokens = 0
-        self._token_timestamp = time.time()
-        self.tokens_per_sec = 0
+
+# ── Status panel widget (Hermes-style scoped sections) — cosmetic reuse of
+# Hermes CLI status.py visual language: box-drawing borders, cyan ◆ headers,
+# ✓/✗ checkmarks. Not wired into moonscope TUI yet; kept for future /status
+# command integration when the TUI supports a full status display.
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _box_top(title: str, width: int = 70) -> str:
+    """Return a box-drawing top border with a centered title."""
+    left = "┌" + "─" * ((width - len(title)) // 2)
+    right = "─" * (width - len(left) - len(title) - 2) + "┐"
+    return f"{left} {title} {right}"
+
+
+def _box_bottom(width: int = 70) -> str:
+    """Return a box-drawing bottom border."""
+    return "└" + "─" * (width - 2) + "┘"
+
+
+def _section_header(name: str, width: int = 70) -> str:
+    """Return a cyan ◆ section header banner."""
+    pad = width - len(name) - 2
+    left = "├" + "─" * (pad // 2)
+    right = "─" * (pad - pad // 2 - 1) + "┤"
+    return f"{left} ◆ {name} {right}"
+
+
+def _status_line(label: str, value: str, width: int = 70) -> str:
+    """Return a status line: │ label     value."""
+    pad = width - len(label) - len(value) - 5
+    if pad < 2:
+        pad = 2
+    return f"│ {label:<{12}} {value:<{pad}}"
+
+
+def _status_line_check(ok: bool, label: str, detail: str, width: int = 70) -> str:
+    """Return a status line with ✓/✗ indicator: │ ✓ label     detail."""
+    icon = "✓" if ok else "✗"
+    ok_color = "green" if ok else "red"
+    rest = f"{detail}"
+    pad = max(width - 4 - 12 - len(label) - len(rest) - 1, 2)
+    return f"│ {ok_color}{icon}{'dim'} ✓ {label:<12} {rest:<{pad}}"
 
 
 # ── Chat panel widget ─────────────────────────────────────────────────────────
 class ChatPanel(Static):
-    """Conversation/chat panel — top-to-bottom message history."""
+    """Conversation/chat panel widget — top-to-bottom message history."""
 
     messages = reactive([], init=list)
 
-    def watch_messages(self, messages: list) -> None:
-        self.update_panel(messages)
+    def watch_messages(self, old: list, new: list) -> None:
+        self._render_messages(new)
 
-    def update_panel(self, messages: list) -> None:
-        """Re-render chat panel from message list."""
+    def _render_messages(self, messages: list[dict]) -> None:
         from rich.text import Text
 
-        line_ts: list[Text] = []
+        if not messages:
+            t = Text()
+            t.append("No messages yet. Type below and press Enter.", "dim")
+            self.update(t)
+            return
+
+        parts: list[str] = []
         for msg in messages:
-            role = msg.get("role", "unknown")
+            role = msg.get("role", "system")
             content = msg.get("content", "")
             if role == "user":
-                t = Text()
-                t.append("\n", "")
-                t.append(content, "white")
-                t.append(f"\n  — user —", "yellow dim")
-                line_ts.append(t)
+                parts.append(f"\n[bold white]You:[/bold white] {content}")
             elif role == "agent":
-                t = Text()
-                t.append("\n", "")
-                t.append("  △△", "yellow")
-                t.append(f"\n  {content}", "green")
-                t.append(f"\n  — AI —", "yellow dim")
-                line_ts.append(t)
+                parts.append(f"\n[bold green]MOON:[/bold green] {content}")
             elif role == "system":
-                t = Text()
-                t.append("\n", "")
-                t.append(f"  {content}", "dim")
-                line_ts.append(t)
+                parts.append(f"\n[dim]{content}[/dim]")
             else:
-                t = Text()
-                t.append("\n", "")
-                t.append(f"  {content}", "dim")
-                line_ts.append(t)
+                parts.append(f"\n[dim]{content}[/dim]")
 
-        if not line_ts:
-            t = Text()
-            t.append("  [dim]No messages yet. Type below and press Enter.[/dim]", "dim")
-            line_ts.append(t)
-
-        # Combine into one Text object
-        combined = Text()
-        for lt in line_ts:
-            combined.append(lt.plain, lt.style if lt.style else "")
+        combined = "\n".join(parts).strip()
         self.update(combined)
 
 
@@ -228,7 +231,6 @@ class Moonscope(App):
     Layout (top-to-bottom):
         * Header (minimal, just clock)
         * Chat panel (conversation history, scrolls)
-        * Horizontal divider (yellow line)
         * Status HUD (live metrics bar)
         * Input bar (> prompt, Enter to send)
 
@@ -271,14 +273,6 @@ class Moonscope(App):
         height: 3;
         padding: 0 2;
     }}
-    InputBar {{
-        background: transparent;
-        color: {MOONSCAPE["orange"]};
-        border: none;
-    }}
-    InputBar:focus {{
-        color: {MOONSCAPE["yellow"]};
-    }}
     """
 
     TITLE = "MOON — moonscope"
@@ -302,6 +296,7 @@ class Moonscope(App):
         yield Input(id="input-bar", placeholder="> ")
 
     def on_mount(self) -> None:
+        """Initialise state, wire HUD, start timer, focus input."""
 
         # Build CLI state from settings
         from app.config.settings import Settings
@@ -326,16 +321,20 @@ class Moonscope(App):
         self._hud_timer = self.set_interval(2, self._tick_hud)
 
         # Focus the input
-        self.query_one("Input").focus()
+        self.query_one("#input-bar").focus()
 
         # Push welcome message
-        welcome = f"MOON moonscope — Hermes-style TUI. Model: {s.model_name}. Type /help for commands. Unlock: '{UNLOCK_PHRASE}'"
+        welcome = (
+            f"MOON moonscope — Hermes-style TUI. "
+            f"Model: {s.model_name}. "
+            f"Type /help for commands. "
+            f"Unlock: '{UNLOCK_PHRASE}'"
+        )
         self._chat_messages.append({"role": "system", "content": welcome})
         self.query_one(ChatPanel).messages = self._chat_messages
 
     def _tick_hud(self) -> None:
         """Update HUD stats from system info."""
-        from app.cli.console_engine import get_console
         hud = self.query_one(StatusHUD)
         try:
             import resource
@@ -343,11 +342,7 @@ class Moonscope(App):
             hud.memory_mb = rss_kb / 1024
         except Exception:
             hud.memory_mb = 0
-        try:
-            import psutil
-            hud.cpu_pct = psutil.cpu_percent(interval=0)
-        except Exception:
-            hud.cpu_pct = 0
+
         hud.refresh_hud()
 
     async def _handle_input(self, text: str) -> None:
@@ -397,7 +392,9 @@ class Moonscope(App):
 
     async def _dispatch_command(self, cmd_name: str, args: str) -> None:
         """Dispatch a slash command using CLICommandsMixin, capturing output to chat."""
-        from app.cli.cli_output import print_info, print_success, print_warning, print_error
+        from app.cli.cli_output import (
+            print_info, print_success, print_warning, print_error,
+        )
         from rich.console import Console as RichConsole
 
         cmd = resolve_command(cmd_name)
@@ -420,7 +417,9 @@ class Moonscope(App):
             return
 
         # Capture console output to string
-        capture_console = RichConsole(file=io.StringIO(), force_terminal=True, width=80)
+        capture_console = RichConsole(
+            file=io.StringIO(), force_terminal=True, width=80,
+        )
         import app.cli.console_engine as ce
         old_console = ce._console
         ce._console = capture_console
@@ -455,11 +454,8 @@ class Moonscope(App):
         )
         messages = [ChatMessage(role="user", content=prompt_text)]
 
-        self._chat_messages.append({
-            "role": "system",
-            "content": "[dim]thinking...[/dim]"
-        })
-        self.query_one(ChatPanel).messages = self._chat_messages
+        self._chat_messages.append({"role": "system", "content": "thinking..."})
+        self.query_one(ChatPanel).messages = list(self._chat_messages)
         self.query_one(StatusHUD).set_tokens(len(prompt_text.split()))
 
         try:
