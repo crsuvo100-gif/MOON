@@ -315,18 +315,86 @@ class CLICommandsMixin:
     # ── /compress ───────────────────────────────────────────────────────────
 
     def _handle_compress(self, command: str = "") -> None:
-        """Handle /compress — compress conversation context."""
-        print_info("Compressing conversation context...")
-        print_info("  Before: " + str(len(self.state.messages)) + " messages")
+        """Handle /compress — compress conversation context.
 
-        keep = 10
-        msgs = self.state.messages
-        if len(msgs) <= keep:
-            print_info("  Already compact (<= " + str(keep) + " messages)")
+        Syntax:
+            /compress                  — compress to last 10 messages
+            /compress here [N]        — collapse messages near the end
+            /compress focus <topic>   — keep messages mentioning <topic>
+            /compress --preview       — show what would change, don't apply
+        """
+        print_info("Compressing conversation context...")
+
+        if not command or command.strip() == "":
+            # No args — compress to last 10 messages (default behavior)
+            keep = 10
+            msgs = self.state.messages
+            before = len(msgs)
+            print_info("  Before: " + str(before) + " messages")
+            if before <= keep:
+                print_info("  Already compact (<= " + str(keep) + " messages)")
+                return
+            self.state.messages = msgs[-keep:]
+            print_success("  After: " + str(len(self.state.messages)) + " messages (kept last " + str(keep) + ")")
             return
 
-        self.state.messages = msgs[-keep:]
-        print_success("  After: " + str(len(self.state.messages)) + " messages (kept last " + str(keep) + ")")
+        parts = command.strip().split()
+        first = parts[0].lower()
+
+        if first == "here":
+            # /compress here [N] — collapse the tail
+            n = 10
+            if len(parts) > 1:
+                try:
+                    n = int(parts[1])
+                except ValueError:
+                    print_error("Usage: /compress here [N] — N must be a number")
+                    return
+            msgs = self.state.messages
+            before = len(msgs)
+            print_info("  Before: " + str(before) + " messages")
+            if before <= n:
+                print_info("  Already compact (<= " + str(n) + " messages)")
+                return
+            self.state.messages = msgs[-n:]
+            print_success("  After: " + str(len(self.state.messages)) + " messages (kept last " + str(n) + ")")
+
+        elif first == "focus":
+            # /compress focus <topic> — keep messages mentioning the topic
+            if len(parts) < 2:
+                print_error("Usage: /compress focus <topic>")
+                return
+            topic = " ".join(parts[1:])
+            msgs = self.state.messages
+            before = len(msgs)
+            print_info("  Before: " + str(before) + " messages")
+            kept = [m for m in msgs if topic.lower() in m.get("content", "").lower()]
+            if not kept:
+                print_warning("  No messages mention '" + topic + "' — keeping all")
+                return
+            print_info("  Kept " + str(len(kept)) + " messages mentioning '" + topic + "'")
+            if len(kept) < keep:
+                print_info("  After: " + str(len(kept)) + " messages (focus: " + topic + ")")
+            self.state.messages = kept
+
+        elif first == "--preview":
+            # /compress --preview — show what would change, don't apply
+            keep = 10
+            msgs = self.state.messages
+            before = len(msgs)
+            print_info("  Current: " + str(before) + " messages")
+            kept = msgs[-keep:] if before > keep else msgs
+            print_info("  Would keep: " + str(len(kept)) + " messages (last " + str(keep) + ")")
+            print_info("  Would drop: " + str(before - len(kept)) + " messages")
+            if len(kept) < keep:
+                print_info("  Focus mode: " + str(len(kept)) + " matching messages")
+
+        else:
+            print_error("Unknown compress mode: " + first)
+            print_info("  /compress              — compress to last 10 messages")
+            print_info("  /compress here [N]     — collapse tail to N messages")
+            print_info("  /compress focus <t>    — keep messages mentioning <t>")
+            print_info("  /compress --preview    — preview without applying")
 
     # ── /chat (non-interactive one-message chat) ─────────────────────────────
 
