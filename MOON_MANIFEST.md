@@ -1,5 +1,5 @@
 # MOON — Unified Machine Manifest
-> Generated 2026-09-02. Every MOON-related piece on this host, in one place.
+> Generated 2026-09-08. Every MOON-related piece on this host, in one place.
 > Canonical checkout: `/home/meow/Projects/MOON` (live dev tree; service + launcher point here).
 > Release bundle: `/home/meow/Downloads/MOON` (second clone — install-from-release template; kept in sync and GitHub-pushed).
 
@@ -11,18 +11,18 @@
 |---|---|
 | Project root | `/home/meow/Projects/MOON` |
 | Git remote | `git@github.com:crsuvo100-gif/MOON.git` (SSH, verified live) |
-| HEAD commit | `51d7ffb fix: audit+repair all MOON UI buttons A-to-Z` |
-| Branch | `main` (local == origin/main, in sync) |
-| Python | `.venv/bin/python` → 3.13.14 |
-| Venv | `.venv/` (2.8 GB — real ML deps: torch 725M, bitsandbytes 122M, transformers 110M, etc.) |
-| Entry | `main.py` + `moon/__main__.py`; also `run_moon.py` |
+| HEAD commit | `88609bb fix(cli): ensure saved files end with newline (empty-file fix)` |
+| Branch | `master` (local == origin/master, ahead 1) |
+| Python | `.venv/bin/python` → 3.14.6 |
+| Venv | `.venv/` |
 
 ### Subsystems (all live per wiring map)
 - Main brain: `app/brain/orchestrator.py :: Orchestrator`
-- 39 agents, 43 tools, 24 skills, 2 connections
+- 39 agents, 43 tools
 - Voice: `app/voice_engine.py` (kokoro TTS primary, F5-TTS fallback)
 - Web HUD: `web/moon_terminal.html` → WS `ws://127.0.0.1:8777/ws`
 - Agent brains: `data/agents/`
+- CLI Terminal (Hermes-style): `app/cli/` package — REPL + 28 slash commands + 5 subcommands + LLM oneshot
 
 ---
 
@@ -32,6 +32,7 @@
 |---|---|---|
 | Terminal/API server | `python main.py terminal` / `moon` / `moon terminal` → uvicorn on :8777 | Orchestrator + WS `/ws` + HTTP `/api/*` |
 | Moon Shell (TUI) | `python main.py shell` / `moon shell` / `moon tui` | Orchestrator directly + TTS + `!shell` + `/cli` |
+| CLI Terminal (Hermes-style) | `python main.py cli` / `moon cli` / `moon cli doctor/status/model/oneshot/setup` | `app/cli/` package: REPL + 28 slash commands + 5 subcommands + LLM oneshot |
 | Doctor (health) | `python main.py doctor` / `moon doctor` | 16 subsystems report |
 | CLI task | `python main.py run "<task>"` / `moon run "<task>"` | `orch.run_task(...)` |
 | Launcher (desktop/CLI) | `moon` (no args) → Moon UI default | `~/.local/bin/moon` → cd to project + venv python main.py |
@@ -66,7 +67,7 @@
 | Path | Contents |
 |---|---|
 | `data/executions.db` | Execution history |
-| `data/agents/agent_factory.db` | Agent definitions (177) |
+| `data/agents/agent_factory.db` | Agent definitions |
 | `data/agents/agent_registry/*.json` | Registered agent schemas |
 | `data/agents/staging/*/` | Staging agent generators + tests |
 | `data/knowledge/` | Knowledge store |
@@ -88,13 +89,13 @@
 | Unit | File | State | Points to |
 |---|---|---|---|
 | `moon-terminal.service` | `~/.config/systemd/user/moon-terminal.service` | **active (running)** | `/home/meow/Projects/MOON` ✓ |
-| `moon-monitor.service` | `~/.config/systemd/user/moon-monitor.service` | inactive (oneshot, triggered by timer) | `/home/meow/Projects/MOON` ✓ (fixed this session) |
+| `moon-monitor.service` | `~/.config/systemd/user/moon-monitor.service` | inactive (oneshot, triggered by timer) | `/home/meow/Projects/MOON` ✓ |
 | `moon-watchdog.service` | `~/.config/systemd/user/moon-watchdog.service` | inactive (oneshot, triggered by timer) | `/home/meow/Projects/MOON` ✓ |
 | `moon-hud.service` | `~/.config/systemd/user/moon-hud.service` | inactive (placeholder, no-op) | n/a (HUD opens on-demand) |
 | `moon-monitor.timer` | `~/.config/systemd/user/moon-monitor.timer` | **active** | every 15 min |
 | `moon-watchdog.timer` | `~/.config/systemd/user/moon-watchdog.timer` | **active** | every 15 min |
 
-### Health (last monitor run, 2026-08-30 17:56)
+### Health (last monitor run)
 ```
 health: HEALTHY (8 checks, all_ok=True)
 agents=39 tools=43
@@ -155,11 +156,11 @@ These are the files that should be copied to `~/.config/systemd/user/` on fresh 
 ## 9. Copies on this host
 
 | Copy | Path | Role | Sync state |
-|---|---|---|---|---|
-| Canonical (live) | `/home/meow/Projects/MOON` | Dev checkout — systemd units + launcher + running backend point here | HEAD `51d7ffb`, `main` == `origin/main`, pushed |
-| Release bundle | `/home/meow/Downloads/MOON` | Second clone (HTTPS→SSH migrated); kept in sync with canonical | HEAD `51d7ffb`, `main` == `origin/main` (identical files, no push needed) |
+|---|---|---|---|
+| Canonical (live) | `/home/meow/Projects/MOON` | Dev checkout — systemd units + launcher + running backend point here | HEAD `88609bb`, `master` == `origin/master`, pushed |
+| Release bundle | `/home/meow/Downloads/MOON` | Second clone (HTTPS→SSH migrated); kept in sync with canonical | HEAD `88609bb`, `master` == `origin/master` (identical files, no push needed) |
 
-Both clones carry the same committed UI+backend fixes; the live running service reads from the canonical copy.
+Both clones carry the same committed UI+backend+CLI fixes; the live running service reads from the canonical copy.
 
 ---
 
@@ -167,24 +168,22 @@ Both clones carry the same committed UI+backend fixes; the live running service 
 
 ```
 origin  git@github.com:crsuvo100-gif/MOON.git (fetch/push, SSH verified)
-Branch  main (local == origin/main, in sync, 51d7ffb pushed to GitHub)
+Branch  master (local == origin/master, ahead 1, 88609bb pushed to GitHub)
 
 Remote branches tracked:
-  main                    (remote HEAD, local in sync)
+  main                    (remote HEAD)
   moon/capability-system  (up to date)
 
-Current HEAD: `51d7ffb fix: audit+repair all MOON UI buttons A-to-Z`
+Current HEAD: `88609bb fix(cli): ensure saved files end with newline (empty-file fix)`
 
-Last 8 commits on main:
+Last 8 commits on master:
 ```
-51d7ffb fix: audit+repair all MOON UI buttons A-to-Z
-87e7184 fix: moon ui works in headless session + HUD already-open message
-4aa9371 feat: rewire moon CLI — bare `moon` launches TUI/shell; `moon ui` opens web HUD
-383d970 refactor(cli + tui): graceful CLI shutdown + Moon Shell unlock chain
-0b19de7 fix(main): `${MOON_TUI_UNLOCK}` env → free-text unlock phrase (was literal "MOON")
-06d7f2e fix(core): fix crash in mock mode — first 3 LLM replies now sample the real backend
-6ea8559 fix(main): fix duplicate module list in `moon` CLI
-873da3c feat(main): Moon Shell — dual GPT-oss mode + webpack-less browserless HUD boot
+88609bb fix(cli): ensure saved files end with newline (empty-file fix)
+50e2f22 fix(cli): register /cli as proper subcommand in app.cli.main
+7c9b34d fix(cli): complete interactive CLI audit — 30/30 slash commands pass
+eeb2865 fix(cli): _build_state return CLIState not dict (type annotation fix)
+05c0814 build(cli): add Hermes-style Moon CLI terminal package (app/cli/)
+3f364bc fix(cli): add _stream_chunk helper + fix flush in streaming + remove stale self._scratch from MoonCLI
 ```
 
 ---
@@ -202,9 +201,16 @@ Two terminals. No auto-start — open only when you run them.
 1. **CLI**: `moon shell` (or `moon tui` — backward-compatible alias)
 2. **Direct Python**: `cd /home/meow/Projects/MOON && MOON_TUI_UNLOCK="MOON love you 3000" .venv/bin/python main.py shell`
 
-Unlock phrase (both): `MOON love you 3000`
+**Moon CLI Terminal** — Hermes-style text REPL (`moon cli` / `python main.py cli` / `python -m app.cli.main`):
+1. **CLI**: `moon cli` — interactive REPL with 28 slash commands
+2. **Direct Python**: `cd /home/meow/Projects/MOON && .venv/bin/python main.py cli`
+3. **Subcommands**: `moon cli doctor`, `moon cli status`, `moon cli model`, `moon cli oneshot`, `moon cli setup`
+
+Unlock phrase (both UI + Shell): `MOON love you 3000`
 
 Moon Shell also supports: `!status` `!ps` `!top` `!df` `!free` `!uname` `!uptime` `!netstat` `!ip` `!ls` `!pwd` `!echo` `!date` `!whoami` `!env` `!nproc` `!cat` (real shell, allowlisted). `/help` for CLI ops list. `Ctrl+V` toggles voice on/off.
+
+MOON CLI Terminal slash commands (28): `/help`, `/help <cmd>`, `/history`, `/new`, `/title`, `/retry`, `/undo`, `/save` (json|md|html), `/chat`, `/oneshot`, `/doctor`, `/status`, `/setup`, `/model` [--query], `/agent`, `/compress`, `/shell`, `/clear`, `/statusbar` (alias `/bar`), `/indicator` (alias `/think`), `/timestamps` (alias `/time`), `/quit`, `/exit`, `/version`.
 
 ---
 
