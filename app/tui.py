@@ -523,8 +523,7 @@ class Moonscope(App):
         """Handle Enter key in InputBar."""
         asyncio.create_task(self._handle_input(event.value))
         event.value = ""
-
-def action_quit(self) -> None:
+    def action_quit(self) -> None:
         """Quit the TUI — stop WS client first."""
         if hasattr(self, "_ws_client") and self._ws_client is not None:
             asyncio.create_task(self._ws_client.stop())
