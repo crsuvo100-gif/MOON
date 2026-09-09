@@ -34,8 +34,9 @@ import os
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Awaitable
 
+from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import (
@@ -180,20 +181,25 @@ def _status_line(label: str, value: str, width: int = 70) -> str:
     return f"│ {label:<{12}} {value:<{pad}}"
 
 
-def _status_line_check(ok: bool, label: str, detail: str, width: int = 70) -> str:
+def _status_line_check(ok: bool, label: str, detail: str, width: int = 70) -> Text:
     """Return a status line with ✓/✗ indicator: │ ✓ label     detail."""
     icon = "✓" if ok else "✗"
     ok_color = "green" if ok else "red"
     rest = f"{detail}"
     pad = max(width - 4 - 12 - len(label) - len(rest) - 1, 2)
-    return f"│ {ok_color}{icon}{'dim'} ✓ {label:<12} {rest:<{pad}}"
+    t = Text()
+    t.append("│ ", "dim")
+    t.append(f"{icon} ", ok_color)
+    t.append(f"{label:<12} ", "")
+    t.append(f"{rest:<{pad}}", "dim")
+    return t
 
 
 # ── Chat panel widget ─────────────────────────────────────────────────────────
 class ChatPanel(Static):
     """Conversation/chat panel widget — top-to-bottom message history."""
 
-    messages = reactive([], init=list)
+    messages = reactive([], init=True)
 
     def watch_messages(self, old: list, new: list) -> None:
         self._render_messages(new)
@@ -284,6 +290,7 @@ class Moonscope(App):
 
     _cli: CLICommandsMixin | None = None
     _state: CLIState | None = None
+    brain_panel: BrainCorePanel | None = None
     _chat_messages: list[dict[str, str]] = []
     _sessions_start: float = 0.0
     _hud_timer: Timer | None = None
@@ -334,7 +341,12 @@ class Moonscope(App):
         self._chat_messages.append({"role": "system", "content": welcome})
         self.query_one(ChatPanel).messages = self._chat_messages
 
-        # ── Wire brain-core backend (WS + HTTP) ─────────────────────────────
+        # ── Wire brain-core panel + backend (WS + HTTP) ─────────────────────────────
+        # Capture brain-core panel reference for WS event refresh
+        self.brain_panel = self.query_one(BrainCorePanel)
+        # Fetch initial brain status from backend
+        asyncio.create_task(self._fetch_brain_status())
+
         # Start the WebSocket client for live /ws/events stream
         self._ws_client = WSEventClient(
             "ws://127.0.0.1:8777/ws/events",
@@ -342,8 +354,39 @@ class Moonscope(App):
         )
         asyncio.create_task(self._ws_client.start())
 
-        # Fetch initial brain status from backend
-        asyncio.create_task(self._fetch_brain_status())
+    # ── Brain-core backend helpers ──────────────────────────────────────────────────
+
+    def _on_ws_event(self, msg: dict) -> None:
+        """Handle a live WS event from /ws/events: append to chat panel."""
+        event_type = msg.get("type", "event")
+        detail = msg.get("detail", "")
+        agent = msg.get("agent_id", "")
+        ts = msg.get("timestamp", "")
+
+        if event_type == "event":
+            text = f"[event] {detail}"
+            if agent:
+                text += f" (agent: {agent})"
+            if ts:
+                text += f" @ {ts}"
+            self._chat_messages.append(
+                {"role": "system", "content": text}
+            )
+            self.query_one(ChatPanel).messages = self._chat_messages
+
+    async def _fetch_brain_status(self) -> None:
+        """Fetch /api/brain-status and push into brain-core panel."""
+        try:
+            import httpx
+            resp = httpx.get("http://127.0.0.1:8777/api/brain-status", timeout=5.0)
+            if resp.status_code == 200:
+                data = resp.json()
+                if self.brain_panel is not None:
+                    self.brain_panel.brain_data = data
+        except Exception:
+            pass
+
+    # ── HUD update timer ────────────────────────────────────────────────────────────
 
     def _tick_hud(self) -> None:
         """Update HUD stats: poll /api/brain-status + /api/telemetry from backend."""
@@ -546,15 +589,23 @@ class BrainCorePanel(Static):
     emotion/severity orb. Updates from HTTP poll + WS event stream.
     """
 
-    brain_data = reactive({}, init=dict)
+    brain_data = reactive({}, init=True)
 
     def watch_brain_data(self, old: dict, new: dict) -> None:
-        self._render(new)
+        self._render_panel(new)
 
-    def _render(self, bs: dict) -> None:
+    def _fetch_and_render(self) -> None:
+        """Fetch /api/brain-status and render into this panel."""
+        try:
+            import httpx
+            resp = httpx.get("http://127.0.0.1:8777/api/brain-status", timeout=5.0)
+            if resp.status_code == 200:
+                self.brain_data = resp.json()
+        except Exception:
+            pass
+
+    def _render_panel(self, bs: dict) -> None:
         """Render the brain-core panel from a _moon_status_impl dict."""
-        from rich.text import Text
-
         W = 70
         lines: list[Text] = []
 
@@ -728,7 +779,7 @@ class BrainCorePanel(Static):
 class WSEventClient:
     """Thin websockets client that streams /ws/events into a callback."""
 
-    def __init__(self, url: str, on_event: Callable[[dict], None]) -> None:
+    def __init__(self, url: str, on_event: Callable[[dict], Awaitable[None]]) -> None:
         self._url = url
         self._on_event = on_event
         self._task: asyncio.Task | None = None
@@ -929,3 +980,14 @@ class BrainHUD(Static):
             self.tokens_per_sec = (n - self._last_tokens) / dt
         self._last_tokens = n
         self._token_timestamp = now
+
+def main() -> None:
+    """Entry point for moonscope TUI."""
+    import warnings
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    app = Moonscope()
+    app.run()
+
+
+if __name__ == "__main__":
+    main()
