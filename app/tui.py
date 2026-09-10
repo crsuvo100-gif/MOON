@@ -260,6 +260,13 @@ class Moonscope(App):
         color: {MOONSCAPE["dim"]};
         height: 1;
     }}
+    #brain-panel {{
+        background: {MOONSCAPE["panel-bg"]};
+        border: solid {MOONSCAPE["border"]};
+        border-title-color: {MOONSCAPE["yellow-dim"]};
+        height: 18;
+        padding: 1 2;
+    }}
     #chat-panel {{
         background: {MOONSCAPE["panel-bg"]};
         border: solid {MOONSCAPE["border"]};
@@ -298,10 +305,10 @@ class Moonscope(App):
     _hud_timer: Timer | None = None
 
     def compose(self) -> ComposeResult:
-        """Build the widget layout: chat panel, brain-core panel, HUD bar, input bar."""
+        """Build the widget layout: brain-core panel, chat panel, HUD bar, input bar."""
         yield Header()
-        yield ChatPanel(id="chat-panel")
         yield BrainCorePanel(id="brain-panel")
+        yield ChatPanel(id="chat-panel")
         yield BrainHUD(id="hud")
         yield Input(id="input-bar", placeholder="> ")
 
@@ -322,13 +329,16 @@ class Moonscope(App):
 
         # Capture brain-core panel reference for live updates
         self.brain_panel = self.query_one(BrainCorePanel)
+        with open("/tmp/ms_mount.log", "a") as f:
+            f.write(f"MOUNT: brain_panel={type(self.brain_panel).__name__}, id={self.brain_panel.id}\n")
+            f.flush()
 
         # Wire HUD reactive vars (BrainHUD — extended with brain-core orb + pipeline)
         hud = self.query_one(BrainHUD)
         hud.model_name = s.model_name
         hud.agent_name = "auto"
         hud.session_id = session_id
-        hud.locked = True
+        hud.locked = False
 
         # Start HUD update timer (every 2s)
         self._hud_timer = self.set_interval(2, self._tick_hud)
@@ -395,6 +405,7 @@ class Moonscope(App):
 
     def _tick_hud(self) -> None:
         """Update HUD stats: poll /api/brain-status + /api/telemetry from backend."""
+        import sys
         try:
             import httpx
             brain = httpx.get(
@@ -419,13 +430,28 @@ class Moonscope(App):
                 if self.brain_panel is not None:
                     self.brain_panel._render_panel(data)
                     self.brain_panel.refresh()
-                # Update emotion/severity on HUD
+                    with open("/tmp/ms_tick.log", "a") as f:
+                        f.write(f"TICK OK: panel={type(self.brain_panel).__name__}, data_keys={list(data.keys())}\n")
+                else:
+                    with open("/tmp/ms_tick.log", "a") as f:
+                        f.write(f"TICK FAIL: self.brain_panel is None\n")
+                # Update emotion/severity on HUD — extract string from dict
                 if "emotion" in data:
-                    hud.brain_emotion = data["emotion"]
+                    emotion_val = data["emotion"]
+                    if isinstance(emotion_val, dict):
+                        emotion_str = emotion_val.get("label", emotion_val.get("state", emotion_val.get("value", "normal")))
+                    else:
+                        emotion_str = str(emotion_val) if emotion_val else "normal"
+                    hud.brain_emotion = emotion_str
                 if "pipeline" in data:
                     active = [p["key"] for p in data["pipeline"] if p.get("active")]
                     hud.pipeline_active = active
-        except Exception:
+        except Exception as e:
+            import traceback
+            with open("/tmp/ms_tick.log", "a") as f:
+                f.write(f"TICK ERROR: {type(e).__name__}: {e}\n")
+                traceback.print_exc(file=f)
+                f.flush()
             # Backend not reachable — keep showing last known state
             pass
 
@@ -587,12 +613,14 @@ class Moonscope(App):
 # ──────────────────────────────────────────────────────────────────────────────
 
 class BrainCorePanel(Static):
-    """Full brain-core dashboard panel — renders _moon_status_impl data.
+    """Full brain-core dashboard panel — renders brain-status data.
 
-    Shows pipeline stages (INPUT/MEMORY/KNOWLEDGE/REASONING/PLANNER/TOOLS/
-    EXECUTION/VERIFY), agent count + list, tool count + list, memory stats,
-    knowledge stats, system metrics, voice mode, sensors with ✓/✗, and the
-    emotion/severity orb. Updates from HTTP poll + WS event stream.
+    Shows pipeline stages, agent/tool counts, memory/knowledge/system stats,
+    voice mode, sensors, emotion. Uses Static.update() with plain strings
+    for immediate visual refresh.
+
+    Data is pushed directly via _render_panel() from _tick_hud timer + WS
+    events (no reactive watcher — avoids double-render issues).
     """
 
     brain_data = reactive({}, init=True)
@@ -750,8 +778,15 @@ class BrainCorePanel(Static):
         lines.append(_close())
         lines.append(Text())
 
-        # ── Emotion / severity ─────────────────────────────────────────────
-        emotion = bs.get("emotion", "—")
+        # Emotion / severity — handle both string and dict (backend returns dict
+        # like {"state": "normal", "severity": 72} or plain string)
+        emotion_raw = bs.get("emotion", "—")
+        if isinstance(emotion_raw, dict):
+            emotion = emotion_raw.get("state", emotion_raw.get("value", "—"))
+            sev_val = emotion_raw.get("severity", emotion_raw.get("value", 0))
+        else:
+            emotion = str(emotion_raw) if emotion_raw else "—"
+            sev_val = 0
         sev_map = {
             "calm": "● calm",
             "normal": "◉ normal",
@@ -764,15 +799,19 @@ class BrainCorePanel(Static):
         lines.append(_row("current", sev_str))
         lines.append(_close())
 
-        # Combine into output — plain string join, reliable display update
-        parts = []
-        for lt in lines:
-            if isinstance(lt, str):
-                parts.append(lt)
+        # Combine into output — plain string build, then self.update() as plain str
+        parts: list[str] = []
+        for item in lines:
+            if isinstance(item, str):
+                parts.append(item)
             else:
-                parts.append(lt.plain)
+                parts.append(item.plain)
         combined = "\n".join(parts)
+        with open("/tmp/ms_render.log", "a") as f:
+            f.write(f"RENDER: {len(parts)} parts, {len(combined)} chars, first={parts[0][:50] if parts else 'EMPTY'}\n")
+            f.flush()
         self.update(combined)
+        self.refresh()  # force display refresh — Textual 8.x update() may skip if content unchanged
 
 
 # ── WebSocket event stream client ─────────────────────────────────────────────
@@ -834,7 +873,12 @@ class WSEventClient:
                     except Exception:
                         pass
         except Exception:
-            # Connection dropped — will retry on next start
+            import traceback
+            with open("/tmp/ms_tick.log", "a") as f:
+                f.write("TICK ERROR:\n")
+                traceback.print_exc(file=f)
+                f.flush()
+            # Backend not reachable — keep showing last known state
             pass
 
     async def reconnect(self) -> None:
@@ -863,9 +907,9 @@ class BrainHUD(Static):
     Shows:
       - model, agent, session (from moonscope CLI state)
       - brain-core orb: severity tier (calm/normal/working/dangerous/aggressive) with color
-      - pipeline: 8 stages with ▶/○ active indicators
+      - pipeline: 8 stages with `->`/`o` active indicators
       - live system metrics: memory MB, CPU%, tokens/s, latency ms, uptime
-      - lock state: 🔒/🔓 with unlock phrase hint
+      - lock state: locked/unlocked with unlock phrase hint
     """
 
     model_name = reactive("qwen2.5:1.5b")
@@ -920,8 +964,10 @@ class BrainHUD(Static):
         lock_icon = "🔒" if self.locked else "🔓"
         lock_color = "yellow" if self.locked else "green"
 
-        # Orb color by severity
+        # Orb color by severity — handle both string and dict emotion
         emotion = self.brain_emotion or "normal"
+        if isinstance(emotion, dict):
+            emotion = emotion.get("label", emotion.get("state", "normal"))
         orb_colors = {
             "calm": "green",
             "normal": "cyan",
