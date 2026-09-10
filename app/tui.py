@@ -264,7 +264,8 @@ class Moonscope(App):
         background: {MOONSCAPE["panel-bg"]};
         border: solid {MOONSCAPE["border"]};
         border-title-color: {MOONSCAPE["yellow-dim"]};
-        height: 18;
+        height: 22;       /* 85 lines of content, ~22 visible rows with scroll */
+        overflow-y: auto; /* scroll if content exceeds visible area */
         padding: 1 2;
     }}
     #chat-panel {{
@@ -329,9 +330,6 @@ class Moonscope(App):
 
         # Capture brain-core panel reference for live updates
         self.brain_panel = self.query_one(BrainCorePanel)
-        with open("/tmp/ms_mount.log", "a") as f:
-            f.write(f"MOUNT: brain_panel={type(self.brain_panel).__name__}, id={self.brain_panel.id}\n")
-            f.flush()
 
         # Wire HUD reactive vars (BrainHUD — extended with brain-core orb + pipeline)
         hud = self.query_one(BrainHUD)
@@ -359,7 +357,17 @@ class Moonscope(App):
         # ── Wire brain-core panel + backend (WS + HTTP) ─────────────────────────────
         # Capture brain-core panel reference for WS event refresh
         self.brain_panel = self.query_one(BrainCorePanel)
-        # Fetch initial brain status from backend
+        # Fetch initial brain status SYNCHRONOUSLY (before first render frame)
+        # so the panel has content immediately — timer refreshes every 2s after
+        try:
+            import httpx as _httpx
+            resp = _httpx.get("http://127.0.0.1:8777/api/brain-status", timeout=5.0)
+            if resp.status_code == 200:
+                self.brain_panel._render_panel(resp.json())
+        except Exception:
+            pass  # Backend may not be ready on slow boot — timer will refresh
+
+        # Also fetch via async task for WS + telemetry updates
         asyncio.create_task(self._fetch_brain_status())
 
         # Start the WebSocket client for live /ws/events stream
@@ -430,11 +438,8 @@ class Moonscope(App):
                 if self.brain_panel is not None:
                     self.brain_panel._render_panel(data)
                     self.brain_panel.refresh()
-                    with open("/tmp/ms_tick.log", "a") as f:
-                        f.write(f"TICK OK: panel={type(self.brain_panel).__name__}, data_keys={list(data.keys())}\n")
                 else:
-                    with open("/tmp/ms_tick.log", "a") as f:
-                        f.write(f"TICK FAIL: self.brain_panel is None\n")
+                    pass  # brain_panel not yet captured (timing) — _tick_hud fires every 2s, will retry
                 # Update emotion/severity on HUD — extract string from dict
                 if "emotion" in data:
                     emotion_val = data["emotion"]
@@ -448,10 +453,7 @@ class Moonscope(App):
                     hud.pipeline_active = active
         except Exception as e:
             import traceback
-            with open("/tmp/ms_tick.log", "a") as f:
-                f.write(f"TICK ERROR: {type(e).__name__}: {e}\n")
-                traceback.print_exc(file=f)
-                f.flush()
+            traceback.print_exc()
             # Backend not reachable — keep showing last known state
             pass
 
@@ -799,7 +801,9 @@ class BrainCorePanel(Static):
         lines.append(_row("current", sev_str))
         lines.append(_close())
 
-        # Combine into output — plain string build, then self.update() as plain str
+        # Combine into output — plain string join with explicit newlines.
+        # Static.update() with a plain string reliably renders in Textual 8.x
+        # from timer callbacks; Text objects can be skipped by change detection.
         parts: list[str] = []
         for item in lines:
             if isinstance(item, str):
@@ -807,9 +811,6 @@ class BrainCorePanel(Static):
             else:
                 parts.append(item.plain)
         combined = "\n".join(parts)
-        with open("/tmp/ms_render.log", "a") as f:
-            f.write(f"RENDER: {len(parts)} parts, {len(combined)} chars, first={parts[0][:50] if parts else 'EMPTY'}\n")
-            f.flush()
         self.update(combined)
         self.refresh()  # force display refresh — Textual 8.x update() may skip if content unchanged
 
@@ -874,10 +875,7 @@ class WSEventClient:
                         pass
         except Exception:
             import traceback
-            with open("/tmp/ms_tick.log", "a") as f:
-                f.write("TICK ERROR:\n")
-                traceback.print_exc(file=f)
-                f.flush()
+            traceback.print_exc()
             # Backend not reachable — keep showing last known state
             pass
 

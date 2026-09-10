@@ -394,8 +394,10 @@ def main() -> None:
     # Single terminal interface: Hermes-style Textual TUI (moonscope).
     #   moon / moon terminal / moon run  ->  Hermes-style TUI (moonscope)
     #   moon cli  ->  readline REPL (fallback, Hermes-feature-rich)
+    #   moon terminal-moon  ->  standalone MOON Terminal (terminal_moon/ sub-project)
     sub.add_parser("terminal", help="Launch MOON's Hermes-style Textual TUI (moonscope)")
     sub.add_parser("cli", help="MOON's readline REPL (Hermes-feature-rich, fallback)")
+    sub.add_parser("terminal-moon", help="Launch standalone MOON Terminal (terminal_moon/ sub-project)")
     sub.add_parser("doctor", help="Health check: Python/deps/config/DB/agents/tools/model/git")
     sub.add_parser("status", help="Check the running MOON backend health endpoint")
     sub.add_parser("backup", help="Snapshot runtime data into backups/ (cross-platform)")
@@ -443,6 +445,27 @@ def main() -> None:
         raise SystemExit(_cmd_uninstall())
     elif args.cmd == "update":
         raise SystemExit(_cmd_update())
+    elif args.cmd == "terminal-moon":
+        # Launch standalone MOON Terminal (terminal_moon/ sub-project).
+        # Uses its own .venv if available, else runs from project root with
+        # terminal_moon/ on sys.path so its app.* imports resolve.
+        import os
+        import sys as _sys2
+        import subprocess as _sp2
+        tm_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "terminal_moon")
+        tm_venv_py = os.path.join(tm_root, ".venv", "bin", "python")
+        if os.path.exists(tm_venv_py):
+            # Use terminal_moon's own venv (isolated deps) – prefers its .venv/bin/python
+            _sp2.run([tm_venv_py, "main.py", "terminal"], cwd=tm_root)
+        else:
+            # Fallback: run inline with terminal_moon/ on sys.path
+            _sys2.path.insert(0, tm_root)
+            try:
+                from terminal_moon.app.tui import Moonscope as _tm_Moonscope
+                raise SystemExit(_tm_Moonscope().run())
+            except Exception as exc:  # noqa: BLE001
+                print(f"[terminal-moon] launch failed: {exc}", file=_sys2.stderr)
+                raise SystemExit(1)
     elif args.cmd == "version":
         _cmd_version()
     else:
