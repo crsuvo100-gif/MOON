@@ -173,12 +173,14 @@ def _section_header(name: str, width: int = 70) -> str:
     return f"{left} ◆ {name} {right}"
 
 
-def _status_line(label: str, value: str, width: int = 70) -> str:
+def _status_line(label: str, value: str, width: int = 70) -> Text:
     """Return a status line: │ label     value."""
     pad = width - len(label) - len(value) - 5
     if pad < 2:
         pad = 2
-    return f"│ {label:<{12}} {value:<{pad}}"
+    t = Text()
+    t.append(f"│ {label:<{12}} {value:<{pad}}", "")
+    return t
 
 
 def _status_line_check(ok: bool, label: str, detail: str, width: int = 70) -> Text:
@@ -318,6 +320,9 @@ class Moonscope(App):
         self._cli = CLICommandsMixin()
         self._cli.state = self._state
 
+        # Capture brain-core panel reference for live updates
+        self.brain_panel = self.query_one(BrainCorePanel)
+
         # Wire HUD reactive vars (BrainHUD — extended with brain-core orb + pipeline)
         hud = self.query_one(BrainHUD)
         hud.model_name = s.model_name
@@ -410,9 +415,10 @@ class Moonscope(App):
                     hud.cpu_pct = float(sys_.get("cpu", 0))
                 if "uptime_fmt" in data:
                     pass  # HUD computes uptime from _start_time
-                # Update BrainCorePanel
-                panel = self.query_one(BrainCorePanel)
-                panel.brain_data = data
+                # Update BrainCorePanel directly (bypass query_one timing issues)
+                if self.brain_panel is not None:
+                    self.brain_panel._render_panel(data)
+                    self.brain_panel.refresh()
                 # Update emotion/severity on HUD
                 if "emotion" in data:
                     hud.brain_emotion = data["emotion"]
@@ -591,9 +597,6 @@ class BrainCorePanel(Static):
 
     brain_data = reactive({}, init=True)
 
-    def watch_brain_data(self, old: dict, new: dict) -> None:
-        self._render_panel(new)
-
     def _fetch_and_render(self) -> None:
         """Fetch /api/brain-status and render into this panel."""
         try:
@@ -625,9 +628,7 @@ class BrainCorePanel(Static):
             return t
 
         def _row(key: str, value: str) -> Text:
-            t = Text()
-            t.append(_status_line(key, value, W), "")
-            return t
+            return _status_line(key, value, W)
 
         # ── Header ────────────────────────────────────────────────────────
         lines.append(_box("  MOON BRAIN STATUS  "))
@@ -763,11 +764,14 @@ class BrainCorePanel(Static):
         lines.append(_row("current", sev_str))
         lines.append(_close())
 
-        # Combine into output
-        combined = Text()
+        # Combine into output — plain string join, reliable display update
+        parts = []
         for lt in lines:
-            combined.append(lt.plain, lt.style if lt.style else "")
-            combined.append("\n")
+            if isinstance(lt, str):
+                parts.append(lt)
+            else:
+                parts.append(lt.plain)
+        combined = "\n".join(parts)
         self.update(combined)
 
 
