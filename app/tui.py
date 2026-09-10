@@ -779,10 +779,10 @@ class BrainCorePanel(Static):
         lines.append(Text())
 
         # Emotion / severity — handle both string and dict (backend returns dict
-        # like {"state": "normal", "severity": 72} or plain string)
+        # like {"label": "ENGAGED", "value": 72} — use "label" when present)
         emotion_raw = bs.get("emotion", "—")
         if isinstance(emotion_raw, dict):
-            emotion = emotion_raw.get("label", emotion_raw.get("state", emotion_raw.get("value", "—")))
+            emotion = emotion_raw.get("label") or emotion_raw.get("state") or emotion_raw.get("value", "—")
             sev_val = emotion_raw.get("severity", emotion_raw.get("value", 0))
         else:
             emotion = str(emotion_raw) if emotion_raw else "—"
