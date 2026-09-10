@@ -782,7 +782,7 @@ class BrainCorePanel(Static):
         # like {"state": "normal", "severity": 72} or plain string)
         emotion_raw = bs.get("emotion", "—")
         if isinstance(emotion_raw, dict):
-            emotion = emotion_raw.get("state", emotion_raw.get("value", "—"))
+            emotion = emotion_raw.get("label", emotion_raw.get("state", emotion_raw.get("value", "—")))
             sev_val = emotion_raw.get("severity", emotion_raw.get("value", 0))
         else:
             emotion = str(emotion_raw) if emotion_raw else "—"
