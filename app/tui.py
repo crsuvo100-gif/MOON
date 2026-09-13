@@ -336,7 +336,10 @@ class Moonscope(App):
         hud.model_name = s.model_name
         hud.agent_name = "auto"
         hud.session_id = session_id
-        hud.locked = False
+        hud.locked = False  # boot unlocked — direct user access
+
+        # State: also unlock CLIState so _handle_input doesn't block on lock check
+        self._state.locked = False
 
         # Start HUD update timer (every 2s)
         self._hud_timer = self.set_interval(2, self._tick_hud)
@@ -348,8 +351,7 @@ class Moonscope(App):
         welcome = (
             f"MOON moonscope — Hermes-style TUI. "
             f"Model: {s.model_name}. "
-            f"Type /help for commands. "
-            f"Unlock: '{UNLOCK_PHRASE}'"
+            f"Type /help for commands."
         )
         self._chat_messages.append({"role": "system", "content": welcome})
         self.query_one(ChatPanel).messages = self._chat_messages

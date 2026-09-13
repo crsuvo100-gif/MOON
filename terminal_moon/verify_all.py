@@ -10,6 +10,7 @@ import sys
 import os
 import tempfile
 import subprocess
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(__file__))
 from app.config.env_guard import _guard  # noqa: F401
@@ -162,8 +163,14 @@ print("PASS")
 # ── Session lock ─────────────────────────────────────────────────────────────
 print("\n=== TEST 8: Session lock ===")
 from app.brain.lock import SessionLock
+import tempfile
 
-lock = SessionLock(locked=True, state_file=s.lock_state_path)
+# Use a temp file so the test is isolated from any persisted lock state
+# (the real unlock flow uses the configured state file, but tests need isolation)
+with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tf:
+    tf.write('{"locked": true}')
+    tmp_path = tf.name
+lock = SessionLock(locked=True, state_file=Path(tmp_path))
 assert lock.locked == True
 notice = lock.observe("hello")
 assert notice is not None
@@ -171,6 +178,8 @@ assert lock.locked == True
 notice2 = lock.observe("MOON love you 3000")
 assert notice2 is not None and "unlocked" in notice2.lower()
 assert lock.locked == False
+Path(tmp_path).unlink(missing_ok=True)
+print("PASS")
 print("PASS")
 
 # ── Event bus ───────────────────────────────────────────────────────────────
