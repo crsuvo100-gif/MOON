@@ -76,3 +76,8 @@ backups/
 # MOON runtime learning profile (regenerated on first run)
 app/data/brain_stats.json
 app/data/lock_state.json
+
+# terminal_moon runtime state (regenerated on first run, not shipped)
+terminal_moon/data/lock_state.json
+terminal_moon/logs/
+terminal_moon/memory/episodes.json
