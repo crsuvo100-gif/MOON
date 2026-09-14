@@ -121,9 +121,18 @@ class StatusHUD(Static):
         lock_icon = "🔒" if self.locked else "🔓"
         lock_color = "yellow" if self.locked else "green"
 
+        # Compact HUD so the lock indicator always fits a standard 80-col
+        # terminal. Short session id (moonscope-<ts> is ~22 chars), drop empty
+        # metrics, abbreviate labels. Pipeline is shown in the brain panel above.
+        _sid = self.session_id
+        _short_sid = _sid[-4:] if len(_sid) > 8 else _sid
         left = f"model {self.model_name}"
-        mid = f"agent {self.agent_name} session {self.session_id}"
-        right = f"mem {mem_str} cpu {cpu_str} ↑ {tps_str} lat {lat_str} uptime {hours:02d}:{mins:02d}:{secs:02d}"
+        mid = f"agent {self.agent_name} session {_short_sid}"
+        mem = mem_str if self.memory_mb > 0 else "—"
+        cpu = cpu_str if self.cpu_pct > 0 else "—"
+        tps = tps_str if self.tokens_per_sec and self.tokens_per_sec > 0 else "—"
+        lat = lat_str if self.latency_ms > 0 else "—"
+        right = f"mem {mem} cpu {cpu} ↑{tps} lat{lat} up {hours:02d}:{mins:02d}:{secs:02d}"
         lock = f"{lock_icon} {'locked' if self.locked else 'unlocked'}"
 
         from rich.text import Text
@@ -949,7 +958,13 @@ class BrainHUD(Static):
         self.refresh_hud()
 
     def refresh_hud(self) -> None:
-        """Re-render the brain-core HUD."""
+        """Re-render the brain-core HUD.
+
+        Compact single-line layout so the lock indicator always fits a standard
+        80-col terminal. Emotion orb + pipeline stages are shown in the brain
+        panel above, so the HUD line keeps to: model │ agent+session │ metrics │
+        emotion │ lock.
+        """
         elapsed = time.time() - self._start_time
         uptime = int(elapsed)
         mins, secs = divmod(uptime, 60)
@@ -959,67 +974,46 @@ class BrainHUD(Static):
         cpu_str = f"{self.cpu_pct:.1f}%" if self.cpu_pct > 0 else "—"
         tps = (self.tokens_per_sec or 0)
         tps_str = f"{tps:.1f}" if tps > 0 else "—"
-        lat_str = f"{self.latency_ms:.0f} ms" if self.latency_ms > 0 else "—"
+        lat_str = f"{self.latency_ms:.0f}ms" if self.latency_ms > 0 else "—"
 
         lock_icon = "🔒" if self.locked else "🔓"
         lock_color = "yellow" if self.locked else "green"
 
-        # Orb color by severity — handle both string and dict emotion
+        # Short session id (moonscope-<ts> is ~22 chars).
+        _sid = self.session_id
+        _short_sid = _sid[-4:] if len(_sid) > 8 else _sid
+
+        # Only show non-empty metrics so the line stays compact.
+        parts: list[str] = []
+        if self.memory_mb > 0:
+            parts.append(f"mem {mem_str}")
+        if self.cpu_pct > 0:
+            parts.append(f"cpu {cpu_str}")
+        if tps > 0:
+            parts.append(f"↑{tps_str}")
+        if self.latency_ms > 0:
+            parts.append(f"lat {lat_str}")
+        if hours or mins or secs:
+            parts.append(f"up {hours:02d}:{mins:02d}:{secs:02d}")
+        right = " ".join(parts) if parts else "—"
+
         emotion = self.brain_emotion or "normal"
         if isinstance(emotion, dict):
             emotion = emotion.get("label", emotion.get("state", "normal"))
-        orb_colors = {
-            "calm": "green",
-            "normal": "cyan",
-            "working": "yellow",
-            "dangerous": "red",
-            "aggressive": "orange",
-        }
-        orb = orb_colors.get(emotion, "dim")
-        orb_icon = {
-            "calm": "●",
-            "normal": "◉",
-            "working": "◎",
-            "dangerous": "◉",
-            "aggressive": "◉",
-        }.get(emotion, "●")
 
-        # Pipeline: show active stages
-        pipeline_active = self.pipeline_active or []
-        pipeline_labels = {
-            "input": "INPUT",
-            "memory": "MEMORY",
-            "knowledge": "KNOWLEDGE",
-            "reasoning": "REASONING",
-            "planner": "PLANNER",
-            "tools": "TOOLS",
-            "execution": "EXECUTION",
-            "verify": "VERIFY",
-        }
-        pipeline_str = " ".join(
-            f"{pipeline_labels.get(k, k):<12}" for k in pipeline_active
-        ) or "—all stages idle—"
-
-        left = f"model {self.model_name}"
-        mid = f"agent {self.agent_name} session {self.session_id}"
-        right = f"mem {mem_str} cpu {cpu_str} ↑ {tps_str} lat {lat_str} uptime {hours:02d}:{mins:02d}:{secs:02d}"
         lock = f"{lock_icon} {'locked' if self.locked else 'unlocked'}"
-        orb_colored = f"{orb_icon} {emotion}"
-        pipeline_colored = f"pipeline: {pipeline_str}"
 
         from rich.text import Text
         t = Text()
-        t.append(left, "yellow")
+        t.append(f"model {self.model_name}", "yellow")
         t.append(" │ ", "dim")
-        t.append(mid, "white")
+        t.append(f"agent {self.agent_name} sess {_short_sid}", "white")
         t.append(" │ ", "dim")
         t.append(right, "dim")
         t.append(" │ ", "dim")
-        t.append(orb_colored, orb)
+        t.append(f"● {emotion}", "cyan")
         t.append(" │ ", "dim")
         t.append(lock, lock_color)
-        t.append(" │ ", "dim")
-        t.append(pipeline_colored, "dim")
         self.update(t)
 
     def set_tokens(self, n: int) -> None:
