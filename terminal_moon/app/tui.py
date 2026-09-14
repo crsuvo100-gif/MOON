@@ -57,24 +57,39 @@ class StatusHUD(Static):
     locked = True
 
     def render(self) -> Text:
-        lines = []
-        lines.append(
-            f" model={self.model_name}  agent={self.agent_name}  "
-            f"session={self.session_id}"
-        )
-        lines.append(
-            f" mem={self.memory_mb:.0f}MB  cpu={self.cpu_pct:.1f}%  "
-            f"tps={self.tokens_per_sec:.1f}  lat={self.latency_ms}ms  "
-            f"up={self.uptime_s}s"
-        )
+        # Compact HUD line like moonscope: model │ agent │ session │ metrics │ lock.
+        # Split across Text segments so Rich doesn't wrap mid-line; only non-empty
+        # metrics are shown so the lock indicator always fits a standard 80-col
+        # terminal.
+        mem = f"{self.memory_mb:.0f}MB" if self.memory_mb > 0 else "—"
+        cpu = f"{self.cpu_pct:.1f}%" if self.cpu_pct > 0 else "—"
+        tps = f"{self.tokens_per_sec:.1f}" if self.tokens_per_sec > 0 else "—"
+        lat = f"{self.latency_ms}ms" if self.latency_ms > 0 else "—"
+        up = f"{self.uptime_s}s" if self.uptime_s > 0 else "—"
+        parts: list[str] = []
+        if self.memory_mb > 0:
+            parts.append(f"{mem}")
+        if self.cpu_pct > 0:
+            parts.append(f"{cpu}")
+        if self.tokens_per_sec > 0:
+            parts.append(f"{tps}")
+        if self.latency_ms > 0:
+            parts.append(f"{lat}")
+        if self.uptime_s > 0:
+            parts.append(f"{up}")
+        metrics = " ".join(parts) if parts else "—"
         lock_icon = "🔓" if not self.locked else "🔒"
         lock_state = "UNLOCKED" if not self.locked else "LOCKED"
-        lines.append(f" {lock_icon} {lock_state}")
         return Text.assemble(
-            *[
-                Text(line, style="white" if i == 0 else "dim")
-                for i, line in enumerate(lines)
-            ]
+            Text(f"model={self.model_name}", style="white"),
+            Text("  ", style="dim"),
+            Text(f"agent={self.agent_name}", style="white"),
+            Text("  ", style="dim"),
+            Text(f"session={self.session_id}", style="white"),
+            Text("  │  ", style="dim"),
+            Text(metrics, style="dim"),
+            Text("  │  ", style="dim"),
+            Text(f"{lock_icon} {lock_state}", style="dim"),
         )
 
 
