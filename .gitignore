@@ -1,3 +1,14 @@
+# Git ignore patterns for MOON project
+# Runtime data that should never be committed
+
+# moonscope runtime state
+data/lock_state.json
+logs/
+
+# terminal_moon runtime state  
+terminal_moon/data/lock_state.json
+terminal_moon/logs/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -11,73 +22,6 @@ dist/
 venv/
 env/
 
-# Secrets / local config (never commit)
+# Secrets
 .env
 .env.*
-!.env.example
-
-# Runtime logs & state
-app/logs/*.log
-app/logs/long_term.jsonl
-app/logs/lessons.jsonl
-app/logs/episodes.json
-app/logs/moon_lock.txt
-app/logs/agent.log.*
-app/logs/agent_brains/
-
-# Capability system runtime registry (written at runtime; source is committed, not state)
-capabilities/registry.json
-capabilities/manifests/
-capabilities/installed/
-capabilities/cache/
-
-# Global Connector runtime connection registry (permission-gated; written at runtime)
-connections/registry.json
-
-# Voice engine runtime: cloned-voice samples + registry (user audio, written at runtime)
-voices/
-
-# Test caches
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-
-# OS / editor
-.DS_Store
-*.swp
-
-# Runtime data (generated at runtime; source/code is committed, not state)
-data/**/*.db
-data/agents/agent_registry/*.json
-data/agents/staging/
-data/memory/
-data/knowledge/
-data/skills/
-data/evaluations/
-data/logs/
-app/memory/episodes.json
-app/memory/long_term.json
-app/memory/short_term.json
-web/moon_settings.json
-tmp/
-
-# Auto-generated on-demand tools (built at runtime)
-plugins/generated/
-Telegram/
-
-# Optional local skills corpus (not shipped; index_skills handles absence)
-skills/
-
-# Generated runtime backups (created by `python -m moon backup`)
-backups/
-
-# MOON runtime learning profile (regenerated on first run)
-app/data/brain_stats.json
-app/data/lock_state.json
-
-# terminal_moon runtime state (regenerated on first run, not shipped)
-terminal_moon/data/lock_state.json
-terminal_moon/logs/
-terminal_moon/memory/episodes.json
