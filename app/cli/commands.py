@@ -117,6 +117,8 @@ COMMAND_REGISTRY: list[CommandDef] = [
                cli_only=True, desktop="terminal"),
     CommandDef("chat", "Chat with the LLM (one message, non-interactive)", "Session",
                args_hint="<message>", cli_only=True, desktop="terminal"),
+    CommandDef("unlock", "Unlock MOON active operations (also triggered by phrase)", "Session",
+               args_hint="[phrase]", cli_only=True, desktop="terminal"),
     CommandDef("oneshot", "Send a single message to the LLM and print response", "Session",
                args_hint="<message>", cli_only=True, desktop="terminal"),
     CommandDef("setup", "Show MOON CLI setup and configuration summary", "System",
@@ -261,3 +263,4 @@ class CLIState:
         self.messages: list = messages if messages is not None else []
         self.last_response = None
         self.last_prompt = None
+        self.locked = True  # CLI starts locked; 'MOON love you 3000' unlocks

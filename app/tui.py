@@ -345,10 +345,10 @@ class Moonscope(App):
         hud.model_name = s.model_name
         hud.agent_name = "auto"
         hud.session_id = session_id
-        hud.locked = False  # boot unlocked — direct user access
+        hud.locked = True  # boot locked — await 'MOON love you 3000'
 
-        # State: also unlock CLIState so _handle_input doesn't block on lock check
-        self._state.locked = False
+        # State: also lock CLIState so unlock phrase is checked
+        self._state.locked = True
 
         # Start HUD update timer (every 2s)
         self._hud_timer = self.set_interval(2, self._tick_hud)
@@ -481,22 +481,29 @@ class Moonscope(App):
 
         # Check for lock
         if self._state and getattr(self._state, "locked", False):
-            if text.strip() == UNLOCK_PHRASE:
+            from app.brain.lock import SessionLock
+            notice = SessionLock().observe(text)
+            # observe() returns unlock notice ("unlocked") or locked rejection
+            # ("locked") — both truthy; distinguish by keyword.
+            if notice and "unlocked" in notice.lower():
                 self._state.locked = False
                 self.query_one(BrainHUD).locked = False
                 self._chat_messages.append({
-                    "role": "system",
-                    "content": "\U0001f513 Unlocked. MOON is now active."
+                    "role": "agent",
+                    "content": notice,
                 })
                 self.query_one(ChatPanel).messages = self._chat_messages
                 return
             else:
                 self._chat_messages.append({
                     "role": "system",
-                    "content": f"\U0001f512 Locked. Say '{UNLOCK_PHRASE}' to unlock."
+                    "content": notice or f"\U0001f512 Locked. Say '{UNLOCK_PHRASE}' to unlock.",
                 })
                 self.query_one(ChatPanel).messages = self._chat_messages
                 return
+
+        # Unlock phrase also works as first message even when already unlocked
+        # (some users type it anyway — acknowledge gracefully, don't re-lock).
 
         # Dispatch slash commands
         if text.startswith("/"):
@@ -589,7 +596,7 @@ class Moonscope(App):
                     "role": "agent",
                     "content": content
                 })
-                self.query_one(StatusHUD).set_tokens(len(content.split()))
+                self.query_one(BrainHUD).set_tokens(len(content.split()))
             else:
                 self._chat_messages.append({
                     "role": "system",
@@ -607,9 +614,9 @@ class Moonscope(App):
             })
         self.query_one(ChatPanel).messages = self._chat_messages
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle Enter key in InputBar."""
-        asyncio.create_task(self._handle_input(event.value))
+        await self._handle_input(event.value)
         event.value = ""
     def action_quit(self) -> None:
         """Quit the TUI — stop WS client first."""

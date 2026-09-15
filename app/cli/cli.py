@@ -186,6 +186,22 @@ class MoonCLI(CLICommandsMixin):
         from app.cli.oneshot import run_oneshot
         from app.cli.console_engine import print_spinner
 
+        # Lock guard: check for unlock phrase before sending to LLM.
+        # MOON CLI starts locked (banner printed in _print_banner); the
+        # phrase 'MOON love you 3000' unlocks active operations.
+        if self.state.locked:
+            from app.brain.lock import SessionLock
+            notice = SessionLock().observe(text)
+            if notice:
+                print_success(notice)
+                self.state.locked = False
+                return
+            else:
+                print_warning(
+                    "LOCKED — type 'MOON love you 3000' to unlock active operations"
+                )
+                return
+
         # Show thinking indicator
         await self._show_thinking_indicator()
 
@@ -228,6 +244,16 @@ class MoonCLI(CLICommandsMixin):
         print_info(f"Command /{cmd_name} — {cmd.description}")
         if cmd.args_hint:
             print_info(f"Usage: /{cmd_name} {cmd.args_hint}")
+
+    async def _handle_unlock(self, args: str) -> None:
+        """Explicit /unlock command — also triggered by the phrase automatically."""
+        from app.brain.lock import SessionLock
+        notice = SessionLock().observe(args or "MOON love you 3000")
+        if notice:
+            print_success(notice)
+            self.state.locked = False
+        else:
+            print_warning("Already unlocked or no valid phrase provided.")
 
     # ── History ───────────────────────────────────────────────────────────────
 

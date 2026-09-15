@@ -197,7 +197,7 @@ class Moonscope(App):
         hud.model_name = settings.model_name
         hud.agent_name = "coordinator"
         hud.session_id = "main"
-        hud.locked = False  # boot unlocked — direct user access
+        hud.locked = True  # boot locked — await 'MOON love you 3000'
 
         # start HUD ticker
         self.set_interval(2.0, self._tick_hud)
@@ -231,11 +231,16 @@ class Moonscope(App):
         self._chat_messages.append(("user", text))
         self.query_one(ChatPanel).messages = self._chat_messages
 
-        # lock check
-        if text == UNLOCK_PHRASE:
-            self._chat_messages.append(("system", "🔓 Unlocked! MOON is now active."))
-            self.query_one(StatusHUD).locked = False
-            self.query_one(ChatPanel).messages = self._chat_messages
+        # lock check — block non-unlock input while locked
+        if self.query_one(StatusHUD).locked:
+            if text.strip().casefold() == UNLOCK_PHRASE.casefold():
+                self.query_one(StatusHUD).locked = False
+                self._chat_messages.append(("system", "🔓 Unlocked! MOON is now active."))
+                self._chat_messages.append(("agent", "🔓 MOON is now unlocked. Active operations are enabled. Say 'moon' to wake the listening state."))
+                self.query_one(ChatPanel).messages = self._chat_messages
+            else:
+                self._chat_messages.append(("system", "🔒 MOON is locked. Say 'MOON love you 3000' to unlock."))
+                self.query_one(ChatPanel).messages = self._chat_messages
             return
 
         if text.startswith("/"):
@@ -349,7 +354,10 @@ class Moonscope(App):
             self._chat_messages.append(("error", f"LLM error: {exc}"))
         finally:
             if self._llm:
-                await self._llm.teardown()
+                try:
+                    await self._llm._client.aclose()
+                except Exception:
+                    pass
 
         self.query_one(ChatPanel).messages = self._chat_messages
 
