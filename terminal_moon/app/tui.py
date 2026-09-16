@@ -22,6 +22,8 @@ from app.config.logging import get_logger
 from app.services.llm_service import LLMService, ChatMessage
 from app.brain.lock import SessionLock
 from app.brain.orchestrator import Orchestrator
+from app.brain.agent_registry import AGENT_DEFS, persona_for
+from app.brain.intent_detector import detect_intent, _INTENT_RULES
 
 logger = get_logger("moontm.tui")
 
@@ -220,6 +222,11 @@ class Moonscope(App):
     @on(Input.Submitted)
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         text = event.value.strip()
+
+        # Append user message BEFORE clearing input
+        self._chat_messages.append({"role": "user", "content": text})
+        self.query_one(ChatPanel).messages = self._chat_messages
+
         self.query_one(Input).value = ""
         if not text:
             return
@@ -253,14 +260,14 @@ class Moonscope(App):
         cmd = parts[0].lower()
         args = parts[1] if len(parts) > 1 else ""
 
-        handlers = {
-            "help": self._cmd_help,
-            "clear": self._cmd_clear,
-            "model": self._cmd_model,
-            "agent": self._cmd_agent,
-            "status": self._cmd_status,
-            "quit": self._cmd_quit,
-            "voice": self._cmd_voice,
+        handlers: dict[str, callable] = {
+            "/help": self._cmd_help,
+            "/clear": self._cmd_clear,
+            "/model": self._cmd_model,
+            "/agent": self._cmd_agent,
+            "/status": self._cmd_status,
+            "/voice": self._cmd_voice,
+            "/quit": self._cmd_quit,
         }
 
         handler = handlers.get(cmd)
@@ -268,10 +275,10 @@ class Moonscope(App):
             try:
                 await handler(args)
             except Exception as exc:
-                self._chat_messages.append(("system", f"[red]Error running /{cmd}: {exc}[/red]"))
+                self._chat_messages.append(("system", f"[red]Error running {cmd}: {exc}[/red]"))
                 self.query_one(ChatPanel).messages = self._chat_messages
         else:
-            self._chat_messages.append(("system", f"Unknown command: /{cmd}. Type /help."))
+            self._chat_messages.append(("system", f"Unknown command: {cmd}. Type /help."))
             self.query_one(ChatPanel).messages = self._chat_messages
 
     async def _cmd_help(self, args: str) -> None:
@@ -309,13 +316,26 @@ class Moonscope(App):
             self._chat_messages.append(("system", "Not initialized yet."))
             self.query_one(ChatPanel).messages = self._chat_messages
             return
+
+        all_agents = sorted(AGENT_DEFS.keys())
         if not args:
-            self._chat_messages.append(("system", f"Current agent: {self._state['agent_name']}"))
+            cur = self._state["agent_name"]
+            avail = ", ".join(all_agents[:6]) + f" ... (+{len(all_agents)-6} more)"
+            self._chat_messages.append(("system", f"Current agent: {cur}\nAvailable ({len(all_agents)}): {avail}"))
+            self.query_one(ChatPanel).messages = self._chat_messages
+            return
+
+        name = args.strip().lower()
+        if name in AGENT_DEFS:
+            self._state["agent_name"] = name
+            self.query_one(StatusHUD).agent_name = name
+            persona = persona_for(name)
+            self._chat_messages.append(("system", f"Agent → {name}"))
+            self._chat_messages.append(("system", persona))
+            self.query_one(ChatPanel).messages = self._chat_messages
         else:
-            self._state["agent_name"] = args
-            self.query_one(StatusHUD).agent_name = args
-            self._chat_messages.append(("system", f"Agent set to: {args}"))
-        self.query_one(ChatPanel).messages = self._chat_messages
+            self._chat_messages.append(("system", f"Unknown agent '{name}'. Available: {', '.join(all_agents[:6])}..."))
+            self.query_one(ChatPanel).messages = self._chat_messages
 
     async def _cmd_status(self, args: str) -> None:
         hud = self.query_one(StatusHUD)
@@ -352,8 +372,68 @@ class Moonscope(App):
             )
             await self._llm.setup()
 
+            # ── Agent routing: explicit agent: prefix, else intent auto-detect ──
+            agent_name = self._state.get("agent_name", "assistant") if self._state else "assistant"
+            routed_prompt = prompt_text
+            system_persona = ""
+            # Explicit agent selection: "agent_name: task text"
+            if ":" in prompt_text and not prompt_text.startswith("/"):
+                prefix, _, routed_prompt = prompt_text.partition(":")
+                prefix = prefix.strip().lower()
+                if prefix in AGENT_DEFS:
+                    agent_name = prefix
+                    system_persona = persona_for(prefix)
+                    self._state["agent_name"] = agent_name
+                    if self.query_one(StatusHUD).agent_name != agent_name:
+                        self.query_one(StatusHUD).agent_name = agent_name
+
+            # Auto-detect intent when no explicit agent given
+            if not system_persona and self._state:
+                try:
+                    conversation = self._state.get("conversation_history")
+                    if isinstance(conversation, list):
+                        history: list[dict] = conversation
+                    else:
+                        history = []
+                    intent_label, _conf = detect_intent(routed_prompt)
+                    # map intent label -> agent name via orchestrator's intent→agent table
+                    intent_agent: str | None = None
+                    if isinstance(intent_label, str) and intent_label in AGENT_DEFS:
+                        intent_agent = intent_label
+                    elif isinstance(intent_label, str) and intent_label in _INTENT_RULES:
+                        # translate intent token to agent name via common mapping
+                        intent_map = {
+                            "code": "coding", "research": "research", "web": "browser",
+                            "writing": "writing", "vision": "vision", "planning": "planning",
+                            "math": "math", "science": "science", "data_science": "data_science",
+                            "security": "security", "cyber": "cyber", "red_team": "red_team",
+                            "blue_team": "blue_team", "forensics": "forensics", "reverse_eng": "reverse_eng",
+                            "threat_hunt": "threat_hunt", "siem": "siem", "translation": "translation",
+                            "audio": "audio", "qa": "qa", "infra": "infra", "finance": "finance",
+                            "legal": "legal", "medical": "medical", "design": "design",
+                            "summarizer": "summarizer", "fact_check": "fact_checker",
+                            "strategy": "strategist", "tools": "toolsmith", "github_sync": "github_sync",
+                            "voice": "assistant", "system": "assistant", "chat": "assistant",
+                            "unknown": "assistant",
+                        }
+                        mapped = intent_map.get(intent_label)
+                        if mapped and mapped in AGENT_DEFS:
+                            intent_agent = mapped
+                    if intent_agent and intent_agent in AGENT_DEFS:
+                        agent_name = intent_agent
+                        system_persona = persona_for(intent_agent)
+                        self._state["agent_name"] = agent_name
+                        if self.query_one(StatusHUD).agent_name != agent_name:
+                            self.query_one(StatusHUD).agent_name = agent_name
+                except Exception:
+                    pass  # Fall back to current / default agent
+
             t0 = time.time()
-            result = await self._llm.complete([ChatMessage(role="user", content=prompt_text)])
+            messages: list[ChatMessage] = []
+            if system_persona:
+                messages.append(ChatMessage(role="system", content=system_persona))
+            messages.append(ChatMessage(role="user", content=routed_prompt))
+            result = await self._llm.complete(messages)
             elapsed = (time.time() - t0) * 1000
 
             if result.content:

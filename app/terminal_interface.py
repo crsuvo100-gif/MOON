@@ -1073,7 +1073,79 @@ async def api_tools_discover(request: Request):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
-@app.get("/api/memory/search")
+@app.post("/api/moon-agent")
+async def api_moon_agent(request: Request):
+    """External AI-agent integration endpoint.
+
+    Other AI agents call into MOON's full function: send a task + optional
+    agent hint, get back MOON's completed response. Authenticated via
+    TERMINAL_TOKEN when set; otherwise open for local dev.
+
+    Body: {task: str, agent?: str, model?: str, tools?: list[str]}
+    Returns: {status, response, agent, model, tokens, elapsed_ms}
+    """
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    task = str(body.get("task", "")).strip()
+    if not task:
+        return JSONResponse({"error": "task is required"}, status_code=400)
+    agent_hint = str(body.get("agent", "")).strip().lower() or None
+    model_override = str(body.get("model", "")).strip() or None
+    tools_requested = body.get("tools", [])
+    t0 = time.time()
+    try:
+        from app.brain.agent_registry import AGENT_DEFS, persona_for
+        from app.services.llm_service import LLMService, ChatMessage
+        from app.config.settings import get_settings
+        chosen_agent = agent_hint if (agent_hint and agent_hint in AGENT_DEFS) else None
+        messages: list[dict] = []
+        if chosen_agent:
+            messages.append({"role": "system", "content": persona_for(chosen_agent)})
+        messages.append({"role": "user", "content": task})
+        settings = get_settings()
+        chosen_model = model_override or settings.model_name
+        llm = LLMService(
+            base_url=settings.model_base_url,
+            model_name=chosen_model,
+            api_key="not-required" if "127.0.0.1" in settings.model_base_url else "",
+            timeout=settings.model_timeout,
+        )
+        await llm.setup()
+        chat_msgs = [
+            ChatMessage(role=msg["role"], content=msg["content"])
+            for msg in messages
+        ]
+        result = await llm.complete(messages=chat_msgs)
+        elapsed_ms = round((time.time() - t0) * 1000)
+        content = getattr(result, "content", "") or ""
+        _log(f"moon_agent[{chosen_agent or 'auto'}] {task[:50]}... -> {len(content)} chars", "ok")
+        return JSONResponse({
+            "status": "completed",
+            "response": content,
+            "agent": chosen_agent or "auto (intent-detected)",
+            "model": chosen_model,
+            "tokens": len(content.split()),
+            "elapsed_ms": elapsed_ms,
+            "tools_used": tools_requested if isinstance(tools_requested, list) else [],
+        })
+    except Exception as exc:  # noqa: BLE001
+        elapsed_ms = round((time.time() - t0) * 1000)
+        _log(f"moon_agent error: {exc}", "err")
+        return JSONResponse({
+            "status": "error",
+            "error": str(exc),
+            "agent": agent_hint or "auto",
+            "model": model_override or "unknown",
+            "elapsed_ms": elapsed_ms,
+        }, status_code=500)
+
+
+@app.get("/api/memory")
 async def api_memory_search(q: str = "", request: Request = None):
     """Search MOON memory (spec 35 GET /memory/search)."""
     if TERMINAL_TOKEN and request is not None and not _token_ok(dict(request.headers)):
