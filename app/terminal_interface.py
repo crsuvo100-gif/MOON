@@ -29,7 +29,7 @@ from collections import deque
 from pathlib import Path
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from pydantic import BaseModel
 
 SETTINGS_JSON = None  # web/ removed; settings persistence removed with it
@@ -48,6 +48,25 @@ def _load_settings() -> dict:
     return dict(_DEFAULT_SETTINGS)
 
 app = FastAPI(title="MOON Terminal")
+
+# Serve the interactive HUD (single-file HTML, no server-side routes beyond static serve).
+_HUD_PATH = Path(__file__).resolve().parent.parent / "moon_ui" / "hud.html"
+
+@app.get("/ui", response_class=HTMLResponse)
+async def ui_hud():
+    """MOON Neural Core interactive HUD — single-page app, live health + WS feed + API explorer."""
+    if not _HUD_PATH.is_file():
+        return HTMLResponse("<h1>MOON HUD — not deployed</h1><p>Copy moon_ui/hud.html beside this file.</p>", status_code=503)
+    return HTMLResponse(_HUD_PATH.read_text(encoding="utf-8"))
+
+@app.get("/hud")
+@app.get("/hud/")
+async def hud_alt():
+    return await ui_hud()
+
+@app.get("/hud.{ext}")
+async def hud_catch(ext: str):
+    return await ui_hud()
 
 # --- Remote-access authorization gate ----------------------------------------
 # When MOON_TERMINAL_TOKEN / settings.terminal_access_token is set, the Terminal

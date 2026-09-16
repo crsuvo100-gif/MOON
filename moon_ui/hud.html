@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOON — Neural Core HUD</title>
+<style>
+  :root {
+    --bg: #0a0b0d;
+    --fg: #e0e0e0;
+    --muted: #666;
+    --accent: #00ffc8;
+    --accent2: #ff3366;
+    --border: #1a1c20;
+    --card: #111318;
+    --green: #00ff88;
+    --red: #ff3344;
+    --yellow: #ffcc00;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: "JetBrains Mono", "Fira Code", monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  .scanline {
+    position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+  }
+  .glow {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,255,200,0.04) 0%, transparent 70%);
+  }
+  .grid {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(0,255,200,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,200,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse 100% 80% at 50% 50%, black 30%, transparent 70%);
+  }
+
+  header {
+    position: relative; z-index: 10;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(0,255,200,0.06) 0%, transparent 100%);
+  }
+  .brand {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .logo {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, var(--accent), var(--accent2), var(--accent));
+    animation: spin 8s linear infinite;
+    box-shadow: 0 0 24px rgba(0,255,200,0.3), inset 0 0 12px rgba(0,0,0,0.4);
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .brand h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, var(--accent), #fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .brand .sub {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .badge {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: rgba(0,255,200,0.1);
+    border: 1px solid rgba(0,255,200,0.3);
+    color: var(--accent);
+  }
+  .badge.offline {
+    background: rgba(255,51,68,0.1);
+    border-color: rgba(255,51,68,0.3);
+    color: var(--red);
+  }
+
+  main {
+    position: relative; z-index: 10;
+    padding: 20px 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,255,200,0.2), transparent);
+  }
+  .panel h2 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel h2 .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 10px;
+  }
+  .stat {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 13px;
+  }
+  .stat .label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+  }
+  .stat .value {
+    font-size: 16px;
+    font-weight: 700;
+    font-family: var(--mono);
+  }
+  .stat .value.green { color: var(--green); }
+  .stat .value.red { color: var(--red); }
+  .stat .value.yellow { color: var(--yellow); }
+  .stat .value.accent { color: var(--accent); }
+  .stat .value small {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  .health-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  .health-bar .fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--red), var(--yellow), var(--green));
+    transition: width 0.5s ease;
+    border-radius: 2px;
+  }
+
+  .section-title {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 18px 0 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .endpoint-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .endpoint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    color: var(--fg);
+  }
+  .endpoint:hover {
+    background: rgba(0,255,200,0.1);
+    border-color: rgba(0,255,200,0.3);
+    color: var(--accent);
+    transform: translateY(-1px);
+  }
+  .endpoint .method {
+    font-weight: 700;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+  }
+  .method.get { background: rgba(0,255,136,0.15); color: var(--green); }
+  .method.post { background: rgba(255,204,0,0.15); color: var(--yellow); }
+  .method.put { background: rgba(0,100,255,0.15); color: #4488ff; }
+  .method.delete { background: rgba(255,51,68,0.15); color: var(--red); }
+  .method.ws { background: rgba(255,51,102,0.15); color: var(--accent2); }
+
+  .endpoint-detail {
+    margin-top: 14px;
+    padding: 14px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--fg);
+    display: none;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  .endpoint-detail.show { display: block; }
+
+  .ws-feed {
+    max-height: 280px;
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.7;
+  }
+  .ws-feed::-webkit-scrollbar { width: 4px; }
+  .ws-feed::-webkit-scrollbar-track { background: transparent; }
+  .ws-feed::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .ws-entry {
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    animation: fadeIn 0.2s ease;
+  }
+  .ws-entry .ts {
+    color: var(--muted);
+    margin-right: 8px;
+    font-size: 10px;
+  }
+  .ws-entry .type {
+    font-weight: 700;
+    font-size: 10px;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-right: 6px;
+  }
+  .type.event { background: rgba(0,255,200,0.15); color: var(--accent); }
+  .type.agent { background: rgba(0,100,255,0.15); color: #4488ff; }
+  .type.system { background: rgba(255,204,0,0.15); color: var(--yellow); }
+  .type.error { background: rgba(255,51,68,0.15); color: var(--red); }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; } }
+
+  .ws-controls {
+    display: flex; gap: 10px; align-items: center;
+    margin-bottom: 12px;
+  }
+  .btn {
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.03);
+    color: var(--fg);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: var(--font);
+  }
+  .btn:hover { background: rgba(0,255,200,0.1); border-color: rgba(0,255,200,0.3); color: var(--accent); }
+  .btn.active { background: rgba(0,255,200,0.15); border-color: var(--accent); color: var(--accent); }
+  .btn.danger:hover { background: rgba(255,51,68,0.1); border-color: rgba(255,51,68,0.3); color: var(--red); }
+
+  .ws-status {
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ws-status .led {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 6px rgba(255,51,68,0.5);
+  }
+  .ws-status .led.on {
+    background: var(--green);
+    box-shadow: 0 0 6px rgba(0,255,136,0.5);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .exec-panel {
+    display: flex; gap: 10px;
+    margin-bottom: 12px;
+  }
+  .exec-panel input {
+    flex: 1;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .exec-panel input:focus { border-color: var(--accent); }
+
+  .exec-output {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 200px;
+    overflow-y: auto;
+    min-height: 60px;
+    color: var(--fg);
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 8px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    background: none;
+    font-family: var(--font);
+  }
+  .tab:hover { color: var(--fg); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  footer {
+    position: relative; z-index: 10;
+    text-align: center;
+    padding: 24px;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    border-top: 1px solid var(--border);
+  }
+  footer .sep { margin: 0 8px; color: var(--border); }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    padding: 12px 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+    z-index: 100;
+    animation: slideUp 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .model-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 10px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    font-size: 11px;
+    font-family: var(--mono);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .empty-state .icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+  }
+</style>
+</head>
+<body>
+<div class="scanline"></div>
+<div class="glow"></div>
+<div class="grid"></div>
+
+<header>
+  <div class="brand">
+    <div class="logo"></div>
+    <div>
+      <h1>MOON</h1>
+      <div class="sub">Neural Core · AI Agent System</div>
+    </div>
+    <div class="badge" id="healthBadge">● ONLINE</div>
+  </div>
+</header>
+
+<main>
+  <!-- Health Snapshot -->
+  <div class="panel">
+    <h2><span class="dot"></span>System Health · Live Snapshot</h2>
+    <div id="healthPanel">
+      <div class="empty-state">
+        <div class="icon">⌁</div>
+        Loading health snapshot...
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="endpoints">API Endpoints</button>
+    <button class="tab" data-tab="ws">WebSocket Feed</button>
+    <button class="tab" data-tab="exec">Direct Execute</button>
+    <button class="tab" data-tab="settings">Settings</button>
+  </div>
+
+  <!-- API Endpoints -->
+  <div class="panel" id="panel-endpoints">
+    <h2><span class="dot"></span>REST API · All Endpoints</h2>
+    <div id="endpointList" class="endpoint-list">
+      <div class="empty-state">
+        <div class="icon">⌁</div>
+        Loading OpenAPI spec...
+      </div>
+    </div>
+    <div id="endpointDetail" class="endpoint-detail"></div>
+  </div>
+
+  <!-- WebSocket Feed -->
+  <div class="panel" id="panel-ws" style="display:none">
+    <h2><span class="dot"></span>Live WebSocket Feed · /ws/events</h2>
+    <div class="ws-controls">
+      <button class="btn" id="wsConnect">Connect</button>
+      <button class="btn danger" id="wsDisconnect" style="display:none">Disconnect</button>
+      <div class="ws-status">
+        <span class="led" id="wsLed"></span>
+        <span id="wsStatusText">disconnected</span>
+      </div>
+    </div>
+    <div class="ws-feed" id="wsFeed">
+      <div class="empty-state">
+        <div class="icon">⌁</div>
+        Connect to start receiving live events
+      </div>
+    </div>
+  </div>
+
+  <!-- Direct Execute -->
+  <div class="panel" id="panel-exec" style="display:none">
+    <h2><span class="dot"></span>Direct API Execute</h2>
+    <div class="exec-panel">
+      <input type="text" id="execAgent" placeholder="agent_id (e.g. moonscope)" />
+      <input type="text" id="execTask" placeholder="Task for the agent..." />
+      <button class="btn" id="execRun">Run</button>
+    </div>
+    <div class="exec-output" id="execOutput">Awaiting execution...</div>
+  </div>
+
+  <!-- Settings -->
+  <div class="panel" id="panel-settings" style="display:none">
+    <h2><span class="dot"></span>Live Settings</h2>
+    <div id="settingsPanel">
+      <div class="empty-state">
+        <div class="icon">⌁</div>
+        Loading settings...
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  MOON Neural Core v<span id="version">—</span>
+  <span class="sep">|</span>
+  <span id="clock">—</span>
+  <span class="sep">|</span>
+  <a href="http://127.0.0.1:8777/api/health" target="_blank">health</a>
+  <span class="sep">·</span>
+  <a href="http://127.0.0.1:8777/openapi.json" target="_blank">openapi.json</a>
+  <span class="sep">·</span>
+  <a href="http://127.0.0.1:8777/api/events" target="_blank">events</a>
+</footer>
+
+<div id="toast" style="display:none" class="toast"></div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+let health = null;
+let settings = null;
+let ws = null;
+let wsTimer = null;
+let openapi = null;
+let endpointDetailTimeout = null;
+
+const $ = (s) => document.querySelector(s);
+const API = 'http://127.0.0.1:8777';
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(t._hide);
+  t._hide = setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+// ── Clock ─────────────────────────────────────────────────────────────────────
+function tickClock() {
+  const now = new Date();
+  $('#clock').textContent = now.toLocaleString('en-GB', {
+    hour12: false,
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    timeZoneName: 'short'
+  });
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+// ── Fetch helpers ─────────────────────────────────────────────────────────────
+async function getJSON(path) {
+  const r = await fetch(API + path);
+  if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+  return r.json();
+}
+
+async function postJSON(path, body) {
+  const r = await fetch(API + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
+  return r.json();
+}
+
+// ── Health Panel ──────────────────────────────────────────────────────────────
+async function refreshHealth() {
+  try {
+    health = await getJSON('/api/health');
+    renderHealth();
+  } catch (e) {
+    $('#healthBadge').textContent = '● OFFLINE';
+    $('#healthBadge').classList.add('offline');
+    $('#healthPanel').innerHTML = `
+      <div class="empty-state">
+        <div class="icon">⌁</div>
+        Backend unreachable: ${e.message}
+      </div>`;
+  }
+}
+
+function renderHealth() {
+  const h = health;
+  const badge = $('#healthBadge');
+  badge.textContent = h.locked ? '● LOCKED' : '● ONLINE';
+  badge.classList.toggle('offline', !h.status || h.status !== 'HEALTHY');
+
+  const status = h.status === 'HEALTHY' ? 'green' : 'red';
+  const uptime = Math.floor((Date.now() / 1000) - (h.timestamp || Date.now() / 1000));
+  const uptimeStr = uptime < 60 ? `${uptime}s` :
+                    uptime < 3600 ? `${Math.floor(uptime/60)}m ${uptime%60}s` :
+                    `${Math.floor(uptime/3600)}h ${Math.floor((uptime%3600)/60)}m`;
+
+  $('#version').textContent = h.version || '—';
+
+  $('#healthPanel').innerHTML = `
+    <div class="status-grid">
+      <div class="stat">
+        <div class="label">Status</div>
+        <div class="value ${status}">${h.status || '—'}</div>
+      </div>
+      <div class="stat">
+        <div class="label">Model</div>
+        <div class="value accent">${h.model || '—'}</div>
+      </div>
+      <div class="stat">
+        <div class="label">Uptime</div>
+        <div class="value">${uptimeStr}</div>
+      </div>
+      <div class="stat">
+        <div class="label">Lock</div>
+        <div class="value ${h.locked ? 'red' : 'green'}">${h.locked ? 'LOCKED' : 'UNLOCKED'}</div>
+      </div>
+      <div class="stat">
+        <div class="label">Agents</div>
+        <div class="value">${h.agents?.length ?? '—'}</div>
+      </div>
+      <div class="stat">
+        <div class="label">Tools</div>
+        <div class="value">${h.tools?.length ?? '—'}</div>
+      </div>
+      <div class="stat">
+        <div class="label">Memory (ST)</div>
+        <div class="value">${h.short_term?.count ?? '—'}</div>
+      </div>
+      <div class="stat">
+        <div class="label">Memory (LT)</div>
+        <div class="value">${h.long_term?.count ?? '—'}</div>
+      </div>
+      <div class="stat">
+        <div class="label">Knowledge</div>
+        <div class="value">${h.knowledge?.doc_count ?? '—'} docs</div>
+      </div>
+      <div class="stat">
+        <div class="label">CPU</div>
+        <div class="value">${h.system?.cpu ?? '—'}%</div>
+      </div>
+      <div class="stat">
+        <div class="label">RAM</div>
+        <div class="value">${h.system?.ram ?? '—'}%</div>
+      </div>
+      <div class="stat">
+        <div class="label">Voice</div>
+        <div class="value ${h.voice?.status === 'idle' ? 'green' : h.voice?.status === 'speaking' ? 'yellow' : 'muted'}">${h.voice?.status ?? '—'}</div>
+      </div>
+    </div>
+    <div class="health-bar"><div class="fill" style="width:${h.integrity ?? 100}%"></div></div>
+    <div style="margin-top:8px;font-size:11px;color:var(--muted)">
+      Integrity ${h.integrity ?? '—'} · Summary: ${h.summary || '—'}
+    </div>`;
+}
+
+// ── Settings Panel ────────────────────────────────────────────────────────────
+async function refreshSettings() {
+  try {
+    settings = await getJSON('/api/settings');
+    renderSettings();
+  } catch (e) {
+    $('#settingsPanel').innerHTML = `<div class="empty-state">Settings unavailable: ${e.message}</div>`;
+  }
+}
+
+function renderSettings() {
+  const s = settings || {};
+  const rows = Object.entries(s).map(([k, v]) => {
+    const val = typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v);
+    return `<div style="margin-bottom:6px"><span style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px">${k}</span><pre style="margin-top:2px;font-size:12px;color:var(--fg)">${escapeHTML(val)}</pre></div>`;
+  }).join('');
+  $('#settingsPanel').innerHTML = rows || '<div class="empty-state">No settings exposed.</div>';
+}
+
+function escapeHTML(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── OpenAPI / Endpoints ───────────────────────────────────────────────────────
+async function loadOpenAPI() {
+  try {
+    openapi = await getJSON('/openapi.json');
+    renderEndpoints();
+  } catch (e) {
+    // Fall back: try /api/openapi.json or /docs
+    try {
+      openapi = await getJSON('/api/openapi.json');
+      renderEndpoints();
+    } catch (e2) {
+      $('#endpointList').innerHTML = `
+        <div class="empty-state">
+          <div class="icon">⌁</div>
+          Could not load OpenAPI spec: ${e.message}
+          <div style="margin-top:8px;font-size:11px">Trying /api/openapi.json...</div>
+        </div>`;
+    }
+  }
+}
+
+function renderEndpoints() {
+  if (!openapi || !openapi.paths) {
+    $('#endpointList').innerHTML = '<div class="empty-state">No OpenAPI spec available.</div>';
+    return;
+  }
+
+  const paths = openapi.paths;
+  const list = $('#endpointList');
+  const entries = [];
+
+  for (const [path, methods] of Object.entries(paths)) {
+    if (!methods || typeof methods !== 'object') continue;
+    for (const [method, op] of Object.entries(methods)) {
+      if (!['get','post','put','patch','delete','head','options','websocket'].includes(method)) continue;
+      const summary = (op.summary || op.description || '').split('\n')[0].slice(0, 80);
+      entries.push({ path, method, summary, op });
+    }
+  }
+
+  // Sort: websockets first, then by method priority
+  const order = { websocket: 0, post: 1, get: 2, put: 3, patch: 4, delete: 5 };
+  entries.sort((a,b) => (order[a.method]??9) - (order[b.method]??9) || a.path.localeCompare(b.path));
+
+  list.innerHTML = entries.map((e, i) => `
+    <div class="endpoint" data-idx="${i}" title="${escapeHTML(e.summary || e.path)}">
+      <span class="method ${e.method}">${e.method}</span>
+      <span style="color:var(--muted)">${escapeHTML(e.path)}</span>
+    </div>
+  `).join('');
+
+  // Click handler
+  list.querySelectorAll('.endpoint').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.dataset.idx);
+      showEndpointDetail(entries[idx]);
+    });
+  });
+
+  // Show first endpoint detail by default
+  if (entries.length) showEndpointDetail(entries[0]);
+}
+
+function showEndpointDetail(entry) {
+  const detail = $('#endpointDetail');
+  const op = entry.op || {};
+  const params = op.parameters || [];
+  const reqBody = op.requestBody ? 'Request body: ' + JSON.stringify(op.requestBody, null, 2).slice(0, 300) : '';
+  const responses = Object.entries(op.responses || {}).map(([code, resp]) =>
+    `  ${code}: ${resp.description || ''}`
+  ).join('\n');
+
+  detail.innerHTML = `
+<span style="color:var(--accent);font-weight:700">${entry.method.toUpperCase()}</span>
+<span style="color:var(--fg)">${escapeHTML(entry.path)}</span>
+${entry.summary ? '\n' + entry.summary : ''}
+${params.length ? '\n\nParams:\n' + params.map(p =>
+  `  ${p.name}: ${p.schema?.type || 'any'} ${p.required ? '(required)' : ''} — ${p.description || ''}`
+).join('\n') : ''}
+${reqBody ? '\n\n' + reqBody : ''}
+${responses ? '\n\nResponses:\n' + responses : ''}
+${op.deprecated ? '\n\n[DEPRECATED]' : ''}
+${entry.method === 'websocket' ? '\n\n[WebSocket — connect via WS client]' : ''}
+`;
+  detail.classList.add('show');
+}
+function hideEndpointDetail() {
+  $('#endpointDetail').classList.remove('show');
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const name = tab.dataset.tab;
+    document.querySelectorAll('[id^="panel-"]').forEach(p => {
+      p.style.display = p.id === 'panel-' + name ? 'block' : 'none';
+    });
+    if (name === 'ws' && ws) {
+      $('#wsStatusText').textContent = ws.readyState === WebSocket.OPEN ? 'connected' : 'closed';
+      $('#wsLed').classList.toggle('on', ws.readyState === WebSocket.OPEN);
+    }
+  });
+});
+
+// ── WebSocket ────────────────────────────────────────────────────────────────
+function connectWS() {
+  if (ws && ws.readyState === WebSocket.OPEN) return;
+  try {
+    ws = new WebSocket(API + '/ws/events');
+    ws.binaryType = 'arraybuffer';
+
+    ws.onopen = () => {
+      $('#wsConnect').classList.add('active');
+      $('#wsDisconnect').style.display = 'inline-block';
+      $('#wsLed').classList.add('on');
+      $('#wsStatusText').textContent = 'connected';
+      toast('WS connected to /ws/events');
+    };
+
+    ws.onmessage = (ev) => {
+      let data;
+      try {
+        data = JSON.parse(ev.data);
+      } catch {
+        data = { raw: ev.data.slice(0, 200) };
+      }
+      appendWSEntry(data);
+    };
+
+    ws.onclose = () => {
+      $('#wsConnect').classList.remove('active');
+      $('#wsDisconnect').style.display = 'none';
+      $('#wsLed').classList.remove('on');
+      $('#wsStatusText').textContent = 'disconnected';
+      toast('WS disconnected');
+      ws = null;
+    };
+
+    ws.onerror = () => {
+      ws.onclose();
+      toast('WS error');
+    };
+  } catch (e) {
+    toast('WS connection failed: ' + e.message);
+  }
+}
+
+function disconnectWS() {
+  if (ws) {
+    ws.close();
+    ws = null;
+  }
+  $('#wsFeed').innerHTML = '<div class="empty-state"><div class="icon">⌁</div>Disconnected.</div>';
+}
+
+function appendWSEntry(data) {
+  const feed = $('#wsFeed');
+  const empty = feed.querySelector('.empty-state');
+  if (empty) empty.remove();
+
+  const entry = document.createElement('div');
+  entry.className = 'ws-entry';
+
+  const ts = new Date().toLocaleTimeString('en-GB', { hour12: false });
+  const type = (data.type || 'event').toLowerCase();
+  const detail = data.detail || JSON.stringify(data, null, 2).slice(0, 200);
+
+  entry.innerHTML = `
+    <span class="ts">${ts}</span>
+    <span class="type ${type}">${type}</span>
+    <span>${escapeHTML(String(detail).slice(0, 200))}</span>
+  `;
+
+  feed.appendChild(entry);
+  feed.scrollTop = feed.scrollHeight;
+
+  // Trim old entries
+  while (feed.children.length > 200) {
+    feed.removeChild(feed.firstChild);
+  }
+}
+
+$('#wsConnect').addEventListener('click', connectWS);
+$('#wsDisconnect').addEventListener('click', disconnectWS);
+
+// ── Direct Execute ────────────────────────────────────────────────────────────
+$('#execRun').addEventListener('click', async () => {
+  const agentId = $('#execAgent').value.trim() || 'moonscope';
+  const task = $('#execTask').value.trim();
+  if (!task) {
+    toast('Enter a task');
+    return;
+  }
+  const out = $('#execOutput');
+  out.textContent = `→ Running task on ${agentId}...\n${'─'.repeat(40)}`;
+  try {
+    const result = await postJSON(`/api/agents/${agentId}/run`, { task });
+    out.textContent = `Done.\n\n${JSON.stringify(result, null, 2).slice(0, 1500)}`;
+    toast('Task executed');
+  } catch (e) {
+    out.textContent = `Error: ${e.message}`;
+    toast('Execution failed');
+  }
+});
+
+// ── Bootstrap ────────────────────────────────────────────────────────────────
+async function bootstrap() {
+  await refreshHealth();
+  await loadOpenAPI();
+  await refreshSettings();
+
+  // Refresh health every 15s
+  setInterval(refreshHealth, 15000);
+  setInterval(refreshSettings, 30000);
+}
+
+bootstrap().catch(e => {
+  console.error('Bootstrap failed:', e);
+  toast('Dashboard failed to load: ' + e.message);
+});
+</script>
+</body>
+</html>
