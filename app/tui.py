@@ -390,12 +390,12 @@ class Moonscope(App):
 
     # ── Brain-core backend helpers ──────────────────────────────────────────────────
 
-    def _on_ws_event(self, msg: dict) -> None:
+    async def _on_ws_event(self, event: dict[str, Any]) -> None:
         """Handle a live WS event from /ws/events: append to chat panel."""
-        event_type = msg.get("type", "event")
-        detail = msg.get("detail", "")
-        agent = msg.get("agent_id", "")
-        ts = msg.get("timestamp", "")
+        event_type = event.get("type", "event")
+        detail = event.get("detail", "")
+        agent = event.get("agent_id", "")
+        ts = event.get("timestamp", "")
 
         if event_type == "event":
             text = f"[event] {detail}"
@@ -558,10 +558,16 @@ class Moonscope(App):
                 await handler(args)
             else:
                 handler(args)
-        finally:
-            ce._console = old_console
-
+        except Exception as exc:
+            self._chat_messages.append({
+                "role": "system",
+                "content": f"[red]Command /{cmd_name} error: {exc}[/red]"
+            })
+            self.query_one(ChatPanel).messages = self._chat_messages
+            return
         output = capture_console.file.getvalue()
+        ce._console = old_console
+
         if output.strip():
             for line in output.strip().split("\n"):
                 if line.strip():
@@ -616,12 +622,15 @@ class Moonscope(App):
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle Enter key in InputBar."""
-        await self._handle_input(event.value)
+        text = event.value
         event.value = ""
-    def action_quit(self) -> None:
+        if text:
+            await self._handle_input(text)
+
+    async def action_quit(self) -> None:
         """Quit the TUI — stop WS client first."""
         if hasattr(self, "_ws_client") and self._ws_client is not None:
-            asyncio.create_task(self._ws_client.stop())
+            await self._ws_client.stop()
         self.exit()
 
 

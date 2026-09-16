@@ -40,7 +40,7 @@ from app.memory.episodic_memory import EpisodicMemory
 from app.memory.vector_db import InMemoryVectorStore
 from app.memory.knowledge_base import KnowledgeBase
 from app.memory.conversation_history import ConversationHistory
-from app.tools.base import ToolRegistry
+from app.tools.registry import ToolRegistry
 from app.tools.registry import ToolRegistry as TR
 
 

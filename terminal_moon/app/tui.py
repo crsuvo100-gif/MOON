@@ -1,8 +1,11 @@
-"""
-Moonscope TUI — Textual-based terminal UI (moonscope-style).
-"""
 from __future__ import annotations
 
+from textual.app import App, ComposeResult
+from textual.widgets import Header, Footer, Input, Static
+from textual.containers import Vertical, Container
+from textual import on
+from textual.message import Message
+from textual.screen import ModalScreen
 import asyncio
 import os
 import resource
@@ -13,11 +16,6 @@ from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
-from textual import on, work
-from textual.app import App
-from textual.containers import Container
-from textual.screen import ModalScreen
-from textual.widgets import Header, Footer, Input, Static
 
 from app.config.settings import get_settings
 from app.config.logging import get_logger
@@ -54,7 +52,7 @@ class StatusHUD(Static):
     tokens_per_sec = 0.0
     latency_ms = 0
     uptime_s = 0
-    locked = True
+    locked = False
 
     def render(self) -> Text:
         # Compact HUD line like moonscope: model │ agent │ session │ metrics │ lock.
@@ -198,6 +196,7 @@ class Moonscope(App):
         hud.agent_name = "coordinator"
         hud.session_id = "main"
         hud.locked = True  # boot locked — await 'MOON love you 3000'
+        self.query_one(Input).focus()
 
         # start HUD ticker
         self.set_interval(2.0, self._tick_hud)
@@ -266,7 +265,11 @@ class Moonscope(App):
 
         handler = handlers.get(cmd)
         if handler:
-            await handler(args)
+            try:
+                await handler(args)
+            except Exception as exc:
+                self._chat_messages.append(("system", f"[red]Error running /{cmd}: {exc}[/red]"))
+                self.query_one(ChatPanel).messages = self._chat_messages
         else:
             self._chat_messages.append(("system", f"Unknown command: /{cmd}. Type /help."))
             self.query_one(ChatPanel).messages = self._chat_messages
@@ -289,6 +292,10 @@ class Moonscope(App):
         self.query_one(ChatPanel).messages = self._chat_messages
 
     async def _cmd_model(self, args: str) -> None:
+        if self._state is None:
+            self._chat_messages.append(("system", "Not initialized yet."))
+            self.query_one(ChatPanel).messages = self._chat_messages
+            return
         if not args:
             self._chat_messages.append(("system", f"Current model: {self._state['model_name']}"))
         else:
@@ -298,6 +305,10 @@ class Moonscope(App):
         self.query_one(ChatPanel).messages = self._chat_messages
 
     async def _cmd_agent(self, args: str) -> None:
+        if self._state is None:
+            self._chat_messages.append(("system", "Not initialized yet."))
+            self.query_one(ChatPanel).messages = self._chat_messages
+            return
         if not args:
             self._chat_messages.append(("system", f"Current agent: {self._state['agent_name']}"))
         else:
@@ -362,9 +373,8 @@ class Moonscope(App):
         self.query_one(ChatPanel).messages = self._chat_messages
 
     def action_quit(self) -> None:
+        """Quit the standalone moonscope TUI — no WS client to clean up."""
         self.exit()
-
-
 def main() -> None:
     Moonscope().run()
 
