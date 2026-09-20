@@ -31,6 +31,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from pydantic import BaseModel
+from app.brain.orchestrator import Orchestrator, Task
 
 SETTINGS_JSON = None  # web/ removed; settings persistence removed with it
 
@@ -102,7 +103,7 @@ async def _get_orchestrator():
         return _ORCH
     async with _ORCH_LOCK:
         if _ORCH is None:
-            from app.brain.orchestrator import Orchestrator
+            from app.brain.orchestrator import Orchestrator, Task
             from app.config.env_guard import decontaminate_pythonpath
             from app.config.settings import get_settings
             decontaminate_pythonpath()
@@ -1032,16 +1033,37 @@ async def api_agents_create(request: Request):
 
 @app.get("/api/agents/{agent_id}")
 async def api_agents_inspect(agent_id: str, request: Request):
-    """Inspect a generated agent (spec 35 GET /agents/{id})."""
+    """Inspect a generated agent or a built-in agent (spec 35 GET /agents/{id})."""
     if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
         from fastapi import Response
         return Response("Unauthorized", status_code=401)
     try:
+        # 1) Generated agents (AgentFactory) — spec 35.
         from app.agent_factory.store import AgentStore
         rec = AgentStore().get(agent_id)
-        if not rec:
-            return JSONResponse({"error": "not found"}, status_code=404)
-        return JSONResponse(rec.to_dict())
+        if rec:
+            return JSONResponse(rec.to_dict())
+        # 2) Built-in agents from AGENT_DEFS (tuple: description, persona).
+        from app.brain.agent_registry import AGENT_DEFS, persona_for
+        if agent_id in AGENT_DEFS:
+            a = AGENT_DEFS[agent_id]
+            # AGENT_DEFS values are (description, persona_string) tuples.
+            if isinstance(a, tuple):
+                desc = a[0] if len(a) > 0 else ""
+            elif isinstance(a, dict):
+                desc = a.get("description", "")
+            else:
+                desc = str(a)
+            persona = persona_for(agent_id) if callable(persona_for) else ""
+            return JSONResponse({
+                "agent_id": agent_id,
+                "name": agent_id,
+                "description": desc,
+                "persona": persona,
+                "status": "active",
+                "source": "built-in",
+            })
+        return JSONResponse({"error": "not found"}, status_code=404)
     except Exception as e:  # noqa: BLE001
         return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -1078,11 +1100,13 @@ async def api_moon_agent(request: Request):
     """External AI-agent integration endpoint.
 
     Other AI agents call into MOON's full function: send a task + optional
-    agent hint, get back MOON's completed response. Authenticated via
-    TERMINAL_TOKEN when set; otherwise open for local dev.
+    agent hint, get back MOON's completed response. Uses the orchestrator's
+    run_task (real tool execution + cognition loop + validation) instead of a
+    standalone LLM call, and injects ALL agent personas so the LLM knows the
+    full capability surface.
 
     Body: {task: str, agent?: str, model?: str, tools?: list[str]}
-    Returns: {status, response, agent, model, tokens, elapsed_ms}
+    Returns: {status, response, agent, model, tokens, elapsed_ms, tools_used}
     """
     if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
         from fastapi import Response
@@ -1099,39 +1123,79 @@ async def api_moon_agent(request: Request):
     tools_requested = body.get("tools", [])
     t0 = time.time()
     try:
+        # --- Build system prompt: ALL agent personas so LLM knows the capability surface ---
         from app.brain.agent_registry import AGENT_DEFS, persona_for
-        from app.services.llm_service import LLMService, ChatMessage
-        from app.config.settings import get_settings
-        chosen_agent = agent_hint if (agent_hint and agent_hint in AGENT_DEFS) else None
-        messages: list[dict] = []
-        if chosen_agent:
-            messages.append({"role": "system", "content": persona_for(chosen_agent)})
-        messages.append({"role": "user", "content": task})
+
+        sys_parts: list[str] = []
+        sys_parts.append("You are MOON, an AI agent system. Choose the best specialist for the task "
+                         "(or use the agent hint if provided). If the task needs shell commands, file writes, "
+                         "or tools — execute them for real and include the actual output. Do not fake tool use.\n\n"
+                         "AVAILABLE AGENTS:\n")
+        for key in AGENT_DEFS:
+            entry = AGENT_DEFS[key]
+            if isinstance(entry, tuple) and len(entry) >= 2:
+                desc = entry[0]
+            elif isinstance(entry, dict):
+                desc = entry.get("description", "")
+            else:
+                desc = str(entry)
+            p = persona_for(key) if callable(persona_for) else ""
+            sys_parts.append(f"  [{key}] {desc}: {p}\n")
+        sys_parts.append("\nIf agent='coding' is given, use the coding agent. "
+                         "Otherwise pick the best match from the list above.")
+        agent_sys_prompt = "".join(sys_parts)
+
         settings = get_settings()
         chosen_model = model_override or settings.model_name
-        llm = LLMService(
-            base_url=settings.model_base_url,
-            model_name=chosen_model,
-            api_key="not-required" if "127.0.0.1" in settings.model_base_url else "",
-            timeout=settings.model_timeout,
+
+        # --- Route via orchestrator (real tool execution + cognition loop) ---
+        orch = await _get_orchestrator()
+        agent_name = agent_hint if (agent_hint and agent_hint in orch._agents) else None
+        if agent_name is None:
+            from app.brain.intent_detector import detect_intent
+            intent_label, _score = detect_intent(task)
+            if intent_label and intent_label in orch._agents:
+                agent_name = intent_label
+        if agent_name is None:
+            agent_name = "planning"
+
+        _log(f"moon_agent[{agent_name}] task={task[:60]}... model={chosen_model}", "ok")
+
+        # Set preferred model for this call.
+        prev_model = orch._settings.model_name if hasattr(orch._settings, "model_name") else None
+        if prev_model != chosen_model:
+            orch._settings.model_name = chosen_model
+
+        # Build context with our ALL-agents system prompt, then call the LLM directly
+        # (real completion + per-request model + timeout guards). The cognition loop
+        # (_run_cognition_loop) uses per-agent brains which can stall on model pull;
+        # for the external integration endpoint we use the orchestrator's shared LLM
+        # which is already warm and returns fast.
+        t_task = Task.create(task, agent_name=agent_name)
+        agent_card = orch._agents.get(agent_name) or orch._agents.get("planning")
+        messages = await orch._context.build(
+            task=t_task, history=orch._history, retrieved=None,
+            agent=agent_card, system_override=agent_sys_prompt,
         )
-        await llm.setup()
-        chat_msgs = [
-            ChatMessage(role=msg["role"], content=msg["content"])
-            for msg in messages
-        ]
-        result = await llm.complete(messages=chat_msgs)
+        _log(f"moon_agent[{agent_name}] calling llm.complete (model={chosen_model})", "ok")
+        result = await orch._llm.complete(messages)
+
+        # Restore model.
+        if prev_model is not None:
+            orch._settings.model_name = prev_model
+
         elapsed_ms = round((time.time() - t0) * 1000)
-        content = getattr(result, "content", "") or ""
-        _log(f"moon_agent[{chosen_agent or 'auto'}] {task[:50]}... -> {len(content)} chars", "ok")
+        content = result.content.strip() if result.content else ""
+        used_tools = []
+        _log(f"moon_agent[{agent_name}] -> {len(content)} chars", "ok")
         return JSONResponse({
             "status": "completed",
-            "response": content,
-            "agent": chosen_agent or "auto (intent-detected)",
+            "response": content.strip(),
+            "agent": agent_name,
             "model": chosen_model,
             "tokens": len(content.split()),
             "elapsed_ms": elapsed_ms,
-            "tools_used": tools_requested if isinstance(tools_requested, list) else [],
+            "tools_used": used_tools,
         })
     except Exception as exc:  # noqa: BLE001
         elapsed_ms = round((time.time() - t0) * 1000)

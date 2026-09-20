@@ -893,7 +893,14 @@ class Orchestrator:
                 pass
         return task
 
-    async def _run_cognition_loop(self, task: Task, agent: AgentCard, on_event=None) -> tuple[str, int]:
+    async def _run_cognition_loop(
+        self,
+        task: Task,
+        agent: AgentCard,
+        on_event=None,
+        *,
+        system_override: str | None = None,
+    ) -> tuple[str, int]:
         assert self._llm is not None and self._tools is not None and self._context is not None
         retrieved = await self._memory.semantic_recall(task.prompt) if self._memory else []
         if self._memory is not None:
@@ -903,7 +910,10 @@ class Orchestrator:
                         retrieved.append({"content": f"[past lesson] goal: {ep.goal} | lesson: {ep.lesson}", "score": 0.6})
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Episodic recall failed (skipped): %s", exc)
-        messages = await self._context.build(task=task, history=self._history, retrieved=retrieved, agent=agent)
+        messages = await self._context.build(
+            task=task, history=self._history, retrieved=retrieved, agent=agent,
+            system_override=system_override,
+        )
         tool_specs = self._tools.available_specs()
         total_tokens = 0
         final_text = ""
