@@ -467,16 +467,11 @@ def main() -> None:
                 print(f"[terminal-moon] launch failed: {exc}", file=_sys2.stderr)
                 raise SystemExit(1)
     elif args.cmd == "telegram":
-        import subprocess as _sp
-        tg_root = os.path.dirname(os.path.abspath(__file__))
-        tg_venv_py = os.path.join(tg_root, ".venv", "bin", "python")
-        if os.path.exists(tg_venv_py):
-            _sp.run([tg_venv_py, "-m", "app.services.telegram_bot"], cwd=tg_root)
-        else:
-            os.environ.setdefault("MOON_ROOT", tg_root)
-            os.environ.setdefault("PYTHONPATH", tg_root)
-            from app.services.telegram_bot import main as _tg_main
-            raise SystemExit(_tg_main())
+        # Launch MOON's Telegram bot listener (polling mode).
+        # Token is read from TELEGRAM_BOT_TOKEN env var (set via .env or
+        # passed explicitly). Runs in-process as a foreground blocking service.
+        from app.services.telegram_bot import main as _tg_main
+        raise SystemExit(_tg_main())
     elif args.cmd == "version":
         _cmd_version()
     else:
