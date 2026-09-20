@@ -450,7 +450,6 @@ def main() -> None:
         # Launch standalone MOON Terminal (terminal_moon/ sub-project).
         # Uses its own .venv if available, else runs from project root with
         # terminal_moon/ on sys.path so its app.* imports resolve.
-        import os
         import sys as _sys2
         import subprocess as _sp2
         tm_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "terminal_moon")
