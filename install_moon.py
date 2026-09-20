@@ -529,6 +529,24 @@ def main() -> None:
 
     install_launcher(root)
 
+    # ── Terminal (standalone MOON Terminal sub-project) ─────────────────────
+    # terminal_moon/ is a self-contained sub-project with its own .venv + deps.
+    # Fresh clones have no terminal_moon/.venv (gitignored) → 'moon terminal-moon'
+    # would crash. Ensure it is bootstrapped so the separate terminal works.
+    _log("Setting up MOON Terminal (terminal_moon/) ...")
+    try:
+        import subprocess as _sp
+        _sp.run(
+            [vpy, "app/install.py"],
+            cwd=root / "terminal_moon",
+            check=True,
+            env=_clean_env(),
+        )
+        _ok("MOON Terminal (terminal_moon/) initialized")
+    except Exception as exc:
+        _warn(f"MOON Terminal setup skipped: {exc}")
+        _log("   Run: cd terminal_moon && ./.venv/bin/python app/install.py")
+
     if not args.no_service:
         install_service(root)
 
