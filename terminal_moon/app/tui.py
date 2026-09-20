@@ -23,7 +23,20 @@ from app.services.llm_service import LLMService, ChatMessage
 from app.brain.lock import SessionLock
 from app.brain.orchestrator import Orchestrator
 from app.brain.agent_registry import AGENT_DEFS, persona_for
-from app.brain.intent_detector import detect_intent, _INTENT_RULES
+from app.brain.intent_detector import detect_intent, INTENT_MAP
+
+# Normalise AGENT_DEFS (terminal_moon uses a list of dicts; main MOON uses a dict).
+_AGENT_NAMES = set()
+_AGENT_BY_NAME = {}
+if isinstance(AGENT_DEFS, dict):
+    _AGENT_NAMES = set(AGENT_DEFS.keys())
+    _AGENT_BY_NAME = AGENT_DEFS
+elif isinstance(AGENT_DEFS, list):
+    for _d in AGENT_DEFS:
+        _n = _d.get("name", "")
+        if _n:
+            _AGENT_NAMES.add(_n)
+            _AGENT_BY_NAME[_n] = _d
 
 logger = get_logger("moontm.tui")
 
@@ -317,7 +330,7 @@ class Moonscope(App):
             self.query_one(ChatPanel).messages = self._chat_messages
             return
 
-        all_agents = sorted(AGENT_DEFS.keys())
+        all_agents = sorted(d.get("name", "") for d in AGENT_DEFS if d.get("name"))
         if not args:
             cur = self._state["agent_name"]
             avail = ", ".join(all_agents[:6]) + f" ... (+{len(all_agents)-6} more)"
@@ -326,7 +339,7 @@ class Moonscope(App):
             return
 
         name = args.strip().lower()
-        if name in AGENT_DEFS:
+        if any(d.get("name", "").lower() == name for d in AGENT_DEFS):
             self._state["agent_name"] = name
             self.query_one(StatusHUD).agent_name = name
             persona = persona_for(name)
@@ -380,7 +393,7 @@ class Moonscope(App):
             if ":" in prompt_text and not prompt_text.startswith("/"):
                 prefix, _, routed_prompt = prompt_text.partition(":")
                 prefix = prefix.strip().lower()
-                if prefix in AGENT_DEFS:
+                if prefix in _AGENT_NAMES:
                     agent_name = prefix
                     system_persona = persona_for(prefix)
                     self._state["agent_name"] = agent_name
@@ -398,9 +411,9 @@ class Moonscope(App):
                     intent_label, _conf = detect_intent(routed_prompt)
                     # map intent label -> agent name via orchestrator's intent→agent table
                     intent_agent: str | None = None
-                    if isinstance(intent_label, str) and intent_label in AGENT_DEFS:
+                    if isinstance(intent_label, str) and any(d.get("name") == intent_label for d in AGENT_DEFS):
                         intent_agent = intent_label
-                    elif isinstance(intent_label, str) and intent_label in _INTENT_RULES:
+                    elif isinstance(intent_label, str) and intent_label in INTENT_MAP:
                         # translate intent token to agent name via common mapping
                         intent_map = {
                             "code": "coding", "research": "research", "web": "browser",
@@ -417,9 +430,9 @@ class Moonscope(App):
                             "unknown": "assistant",
                         }
                         mapped = intent_map.get(intent_label)
-                        if mapped and mapped in AGENT_DEFS:
+                        if mapped and mapped in _AGENT_NAMES:
                             intent_agent = mapped
-                    if intent_agent and intent_agent in AGENT_DEFS:
+                    if intent_agent and intent_agent in _AGENT_NAMES:
                         agent_name = intent_agent
                         system_persona = persona_for(intent_agent)
                         self._state["agent_name"] = agent_name
