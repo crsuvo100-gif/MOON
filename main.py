@@ -398,6 +398,7 @@ def main() -> None:
     sub.add_parser("terminal", help="Launch MOON's Hermes-style Textual TUI (moonscope)")
     sub.add_parser("cli", help="MOON's readline REPL (Hermes-feature-rich, fallback)")
     sub.add_parser("terminal-moon", help="Launch standalone MOON Terminal (terminal_moon/ sub-project)")
+    sub.add_parser("telegram", help="Launch MOON's Telegram bot listener (polling)")
     sub.add_parser("doctor", help="Health check: Python/deps/config/DB/agents/tools/model/git")
     sub.add_parser("status", help="Check the running MOON backend health endpoint")
     sub.add_parser("backup", help="Snapshot runtime data into backups/ (cross-platform)")
@@ -466,6 +467,18 @@ def main() -> None:
             except Exception as exc:  # noqa: BLE001
                 print(f"[terminal-moon] launch failed: {exc}", file=_sys2.stderr)
                 raise SystemExit(1)
+    elif args.cmd == "telegram":
+        import os as _os
+        import subprocess as _sp
+        tg_root = os.path.dirname(os.path.abspath(__file__))
+        tg_venv_py = os.path.join(tg_root, ".venv", "bin", "python")
+        if os.path.exists(tg_venv_py):
+            _sp.run([tg_venv_py, "-m", "app.services.telegram_bot"], cwd=tg_root)
+        else:
+            _os.environ.setdefault("MOON_ROOT", tg_root)
+            _os.environ.setdefault("PYTHONPATH", tg_root)
+            from app.services.telegram_bot import main as _tg_main
+            raise SystemExit(_tg_main())
     elif args.cmd == "version":
         _cmd_version()
     else:
