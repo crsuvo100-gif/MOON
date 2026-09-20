@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+"""terminal_moon CLI entry point."""
 from __future__ import annotations
 
 import argparse

@@ -23,7 +23,7 @@ from app.services.llm_service import LLMService, ChatMessage
 from app.brain.lock import SessionLock
 from app.brain.orchestrator import Orchestrator
 from app.brain.agent_registry import AGENT_DEFS, persona_for
-from app.brain.intent_detector import detect_intent, INTENT_MAP
+from terminal_moon.app.brain.intent_detector import detect_intent, INTENT_MAP
 
 # Normalise AGENT_DEFS (terminal_moon uses a list of dicts; main MOON uses a dict).
 _AGENT_NAMES = set()
