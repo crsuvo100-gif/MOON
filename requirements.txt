@@ -52,3 +52,5 @@ langdetect>=1.0.0
 # NOTE: the primary terminal UI is the pure HTML/CSS/Canvas2D HUD served by
 # app.terminal_interface (no Python UI dep). A separate beautiful Textual TUI
 # is available via `moon tui` (optional dep: textual, see requirements-optional.txt).
+
+websockets>=10.0

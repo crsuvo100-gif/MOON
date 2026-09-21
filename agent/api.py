@@ -363,24 +363,51 @@ if HAS_ASGI:
         await api.handle_request(scope, receive, send)
 
     async def health_route(request: Request):
-        await _starlette_handle(request)
-        return Response("ok")
+        api = MoonAgentAPI()
+        scope = request.scope
+        receive = request._receive
+        send = request._send
+        await api._health(scope, send)
+        return Response("", media_type="application/json")
 
     async def agents_route(request: Request):
-        await _starlette_handle(request)
-        return Response("ok")
+        api = MoonAgentAPI()
+        scope = request.scope
+        receive = request._receive
+        send = request._send
+        await api._list_agents(scope, send)
+        return Response("", media_type="application/json")
 
     async def message_route(request: Request):
-        await _starlette_handle(request)
-        return Response("ok")
+        api = MoonAgentAPI()
+        scope = request.scope
+        receive = request._receive
+        send = request._send
+        if request.method == "GET":
+            await api._list_agents(scope, send)
+        else:
+            await api._process_message(scope, receive, send)
+        return Response("", media_type="application/json")
 
     async def route_route(request: Request):
-        await _starlette_handle(request)
-        return Response("ok")
+        api = MoonAgentAPI()
+        scope = request.scope
+        receive = request._receive
+        send = request._send
+        query = request.query_params.get("query", "")
+        await api._route_query(scope, send, query)
+        return Response("", media_type="application/json")
 
     async def memory_route(request: Request):
-        await _starlette_handle(request)
-        return Response("ok")
+        api = MoonAgentAPI()
+        scope = request.scope
+        receive = request._receive
+        send = request._send
+        if request.method == "GET":
+            await api._get_memory(scope, send)
+        else:
+            await api._set_memory(scope, receive, send)
+        return Response("", media_type="application/json")
 
     app = Starlette(
         routes=[

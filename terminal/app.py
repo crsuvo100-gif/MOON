@@ -307,6 +307,7 @@ class MoonTerminal:
         self.show_banner()
         self.show_status()
         self.show_help()
+        await self.ws_connect()  # Attempt WebSocket connection
         cprint("[bold green]Type /help for commands, /quit to exit.[/bold green]")
         cprint("[bold yellow]Try: agent:code write a hello world function[/bold yellow]")
         cprint()
@@ -341,8 +342,46 @@ class MoonTerminal:
             except Exception as e:
                 cprint(f"[bold red]Error: {e}[/bold red]")
 
+        await self.ws_disconnect()
         cprint()
         cprint(f"[dim]Session {self.session_id} ended. {self.message_count} messages processed.[/dim]")
+
+    async def ws_connect(self, url: str = "ws://127.0.0.1:8778/api/ws"):
+        """Connect to the API WebSocket for real-time streaming."""
+        try:
+            import websockets
+            self.ws = await websockets.connect(url)
+            cprint("[bold green]Connected to API WebSocket[/bold green]")
+            return True
+        except ImportError:
+            cprint("[yellow]websockets not installed — WebSocket disabled[/yellow]")
+            return False
+        except Exception as e:
+            cprint(f"[red]WebSocket connection failed: {e}[/red]")
+            return False
+
+    async def ws_send(self, message: str, agent: str | None = None):
+        """Send a message via WebSocket."""
+        if not hasattr(self, "ws"):
+            return None
+        try:
+            import websockets
+            msg = {"text": message, "session_id": self.session_id, "agent": agent}
+            await self.ws.send_json(msg)
+            response = await self.ws.recv_json()
+            return response
+        except Exception as e:
+            cprint(f"[red]WebSocket send failed: {e}[/red]")
+            return None
+
+    async def ws_disconnect(self):
+        """Close WebSocket connection."""
+        if hasattr(self, "ws"):
+            try:
+                await self.ws.close()
+                cprint("[dim]WebSocket disconnected.[/dim]")
+            except Exception:
+                pass
 
     # ------------------------------------------------------------------
     # Non-interactive mode (for API / scripting)

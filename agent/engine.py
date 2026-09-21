@@ -483,10 +483,82 @@ async def _tool_memory_write(args: dict) -> dict:
     return {"status": "written", "count": len(default_engine._memory)}
 
 
+
+async def _tool_network_scan(args: dict) -> dict:
+    """Scan network hosts and ports (simplified)."""
+    import socket, subprocess
+    targets = args.get("targets", ["127.0.0.1"])
+    ports = args.get("ports", [22, 80, 443, 8777, 8778])
+    results = []
+    for target in targets:
+        for port in ports:
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.settimeout(1)
+                s.connect((target, port))
+                results.append({"host": target, "port": port, "status": "open"})
+                s.close()
+            except (socket.timeout, socket.error, OSError):
+                results.append({"host": target, "port": port, "status": "closed"})
+    return {"scanned": len(results), "results": results, "targets": targets, "ports": ports}
+
+async def _tool_security_tools(args: dict) -> dict:
+    """Run security analysis tools (simplified)."""
+    import platform, subprocess
+    technique = args.get("technique", "info")
+    if technique == "info":
+        return {
+            "system": platform.system(),
+            "hostname": subprocess.getoutput("hostname 2>/dev/null") or "unknown",
+            "kernel": platform.release(),
+            "techniques_supported": ["info", "audit", "vulnerability-scan", "port-scan"],
+        }
+    return {"technique": technique, "status": "not_implemented", "message": "Security tool stub — wire to real implementation"}
+
+async def _tool_file_read(args: dict) -> dict:
+    """Read a file."""
+    path = args.get("path", "")
+    try:
+        with open(path) as f:
+            content = f.read()
+        return {"path": path, "content": content[:10000], "bytes": len(content)}
+    except Exception as e:
+        return {"error": str(e), "path": path}
+
+async def _tool_file_write(args: dict) -> dict:
+    """Write to a file."""
+    path = args.get("path", "")
+    content = args.get("content", "")
+    try:
+        with open(path, "w") as f:
+            f.write(content)
+        return {"status": "written", "path": path, "bytes": len(content)}
+    except Exception as e:
+        return {"error": str(e), "path": path}
+
+async def _tool_shell(args: dict) -> dict:
+    """Execute a shell command."""
+    import subprocess
+    cmd = args.get("command", "")
+    if not cmd:
+        return {"error": "No command provided"}
+    try:
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+        return {"command": cmd, "stdout": result.stdout[:10000], "stderr": result.stderr[:10000], "returncode": result.returncode}
+    except subprocess.TimeoutExpired:
+        return {"error": "Command timed out", "command": cmd}
+    except Exception as e:
+        return {"error": str(e), "command": cmd}
+
 # Register built-in tools
 default_engine.register_tool("system_info", _tool_system_info)
 default_engine.register_tool("memory_read", _tool_memory_read)
 default_engine.register_tool("memory_write", _tool_memory_write)
+default_engine.register_tool("network_scan", _tool_network_scan)
+default_engine.register_tool("security_tools", _tool_security_tools)
+default_engine.register_tool("file_read", _tool_file_read)
+default_engine.register_tool("file_write", _tool_file_write)
+default_engine.register_tool("shell", _tool_shell)
 
 
 # ---------------------------------------------------------------------------
