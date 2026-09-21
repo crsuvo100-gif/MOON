@@ -25,7 +25,6 @@ import urllib.request
 PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VENV_PY = os.path.join(PROJECT, ".venv", "bin", "python")
 BACKEND = "http://127.0.0.1:8777"
-UNLOCK = "MOON love you 3000"
 
 
 def log(msg):
@@ -58,7 +57,6 @@ def deep_proof():
         "    from app.brain.orchestrator import Orchestrator\n"
         "    from app.config.settings import get_settings\n"
         "    o = Orchestrator(get_settings()); await o.setup()\n"
-        "    o._lock.observe('" + UNLOCK + "')\n"
         "    r = await o._tools.run('system_info', {}, agent=None)\n"
         "    out = getattr(r, 'output', str(r))\n"
         "    print('DEEP_PROOF_OK' if 'linux' in out.lower() else 'DEEP_PROOF_FAIL')\n"

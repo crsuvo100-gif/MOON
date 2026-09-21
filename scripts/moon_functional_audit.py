@@ -15,9 +15,8 @@ from app.models.task import Task
 async def main() -> None:
     o = Orchestrator(get_settings())
     await o.setup()
-    # Unlock so the agent-tool path is exercised (MOON is locked by default).
-    await o.run_task(Task.create("MOON love you 3000"))
-    print(f"UNLOCKED={not o._lock.locked}")
+    # MOON is always unlocked (lock mode removed) — no separate unlock step.
+    print(f"LOCK_STATE=unlocked")
     print(f"AGENT_BRAINS={len(o._agent_brains)}")
     names = sorted(o._tools._registry.tool_names)
     print(f"TOOLS={len(names)}")

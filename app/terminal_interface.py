@@ -1570,55 +1570,33 @@ async def ws_endpoint(ws: WebSocket):
                 if _stop_requested:
                     await send(type="notice", message="[STOP] task start blocked — use the TERMINAL/chat freely, new tasks are paused until you tell me to resume.")
                     return
-                # The unlock phrase (e.g. "love you 3000 Moon") must actually
-                # unlock MOON through the terminal. observe() returns a notice if
-                # the phrase is present and clears the lock; otherwise None.
+                # MOON is always unlocked (lock mode removed). observe() is a
+                # no-op and orch._lock.locked is always False, so we skip the
+                # locked-branch entirely and run the real brain on every message.
                 unlock_notice = None
                 try:
                     unlock_notice = orch._lock.observe(text)
                 except Exception:
                     unlock_notice = None
                 await send(type="assistant_start")
-                t0 = 0.0
-                if orch._lock.locked:
-                    # Still locked: MOON converses (wife persona / status /
-                    # knowledge) but does NOT execute active operations.
-                    await send(type="workflow", stage="locked", detail="conversing (locked)")
-                    if unlock_notice:
-                        answer = unlock_notice
-                    else:
-                        try:
-                            answer = await orch.quick_reply(text)
-                        except Exception as e:  # noqa: BLE001
-                            answer = f"[MOON error: {e}]"
-                            _last_error = True
-                        if not answer:
-                            answer = "I'm here, my love. Say the phrase to let me act."
-                else:
-                    # Unlocked (phrase observed) -- run the real brain on the text.
-                    # GUARD: run_task's cognition loop can stall on a slow/hung LLM
-                    # call (verified: direct LLMService.complete works, but the full
-                    # run_task path occasionally hangs). Bound it and fall back to the
-                    # fast, proven quick_reply so the terminal ALWAYS gets a brain
-                    # reply instead of a silent hang.
-                    from app.models.task import Task
-                    t0 = time.time()
-                    # Fast-path heuristic: for simple chat/greeting messages, use
-                    # quick_reply (single LLM call) instead of the full run_task
-                    # pipeline (intent detection + capability analysis + tool
-                    # acquisition + planning + multiple LLM calls). This cuts
-                    # typical reply time from 15-20s to 3-5s on CPU-only hosts.
-                    simple = _is_simple_chat(text)
-                    if simple:
-                        await send(type="workflow", stage="fast",
-                                   detail="simple message -> quick_reply")
-                        await send(type="workflow", stage="thinking",
-                                   detail="generating reply (this may take a few seconds on CPU)")
-                        try:
-                            answer = await asyncio.wait_for(
-                                orch.quick_reply(text), timeout=60)
-                        except (asyncio.TimeoutError, Exception) as e2:  # noqa: BLE001
-                            answer = f"[MOON error: {e2}]"
+                t0 = time.time()
+                # Always unlocked — run the real brain on the text.
+                # Fast-path heuristic: for simple chat/greeting messages, use
+                # quick_reply (single LLM call) instead of the full run_task
+                # pipeline (intent detection + capability analysis + tool
+                # acquisition + planning + multiple LLM calls). This cuts
+                # typical reply time from 15-20s to 3-5s on CPU-only hosts.
+                simple = _is_simple_chat(text)
+                if simple:
+                    await send(type="workflow", stage="fast",
+                               detail="simple message -> quick_reply")
+                    await send(type="workflow", stage="thinking",
+                               detail="generating reply (this may take a few seconds on CPU)")
+                    try:
+                        answer = await asyncio.wait_for(
+                            orch.quick_reply(text), timeout=60)
+                    except (asyncio.TimeoutError, Exception) as e2:  # noqa: BLE001
+                        answer = f"[MOON error: {e2}]"
                     else:
                         task = Task.create(text, agent_name="auto")
                         try:
@@ -1643,8 +1621,7 @@ async def ws_endpoint(ws: WebSocket):
                 if audio:
                     await send(type="audio", format="wav", data=audio)
                 await send(type="assistant_done",
-                           elapsed=round(time.time() - t0, 2) if not orch._lock.locked else 0.0,
-                           locked=orch._lock.locked)
+                           elapsed=round(time.time() - t0, 2))
             elif action == "exec":
                 # Real shell command from the operator allowlist, streamed live.
                 cmd = str(data.get("cmd", "")).strip()

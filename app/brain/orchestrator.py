@@ -116,7 +116,7 @@ class Orchestrator:
                 Path(__file__).resolve().parent.parent.parent
                 / "app" / "data" / "lock_state.json"
             )
-        self._lock = SessionLock(locked=True, state_file=lock_state_file)
+        self._lock = SessionLock(locked=False, state_file=lock_state_file)
         self._exec_mgr = None  # lazy ExecutionManager (spec 31); created on first task
 
     async def setup(self) -> None:
@@ -648,12 +648,7 @@ class Orchestrator:
         if self._llm is None or self._tools is None or self._context is None:
             raise RuntimeError("Orchestrator.setup() must be called first")
 
-        gate = self._lock.observe(task.prompt)
-        if gate is not None:
-            task.mark_running()
-            task.complete(gate, data={"locked": self._lock.locked})
-            return task
-
+        # MOON is always unlocked (lock mode removed) — no gate, proceed directly.
         task.mark_running()
         self._history.clear()
         self._route_intent(task)

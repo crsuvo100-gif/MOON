@@ -28,7 +28,6 @@ from fastapi.responses import JSONResponse
 from app.config.settings import get_settings
 from app.config.logging import get_logger
 from app.brain.orchestrator import Orchestrator, Task
-from app.brain.lock import SessionLock
 from app.brain.intent_detector import detect_intent
 from app.brain.tool_manager import ToolManager
 from app.runtime.event_bus import bus, EventType, Event
@@ -293,7 +292,7 @@ def _moon_status_impl(orch: Orchestrator) -> dict:
             pass
 
         # emotion
-        emotion = "calm" if orch._lock.locked else "engaged"
+        emotion = "engaged"
 
         pipeline = [
             {"stage": "INPUT", "active": True},
@@ -339,7 +338,7 @@ def _moon_status_impl(orch: Orchestrator) -> dict:
                 "system": True,
             },
             "emotion": emotion,
-            "locked": orch._lock.locked,
+            "locked": False,
             "uptime_s": int(time.time()) - int(_START_TIME),
             "session_id": "main",
         }
@@ -399,10 +398,9 @@ def _run_diagnostics(orch: Orchestrator) -> dict:
     except Exception as exc:
         checks.append({"name": "voice", "state": "WARN", "detail": str(exc)[:100]})
 
-    # lock
+    # lock — always PASS (MOON is permanently unlocked).
     try:
-        state = "LOCKED" if orch._lock.locked else "UNLOCKED"
-        checks.append({"name": "session_lock", "state": "PASS", "detail": state})
+        checks.append({"name": "session_lock", "state": "PASS", "detail": "UNLOCKED (lock mode removed)"})
     except Exception:
         checks.append({"name": "session_lock", "state": "WARN", "detail": "check failed"})
 
@@ -771,8 +769,9 @@ async def ws_endpoint(websocket: WebSocket):
                 continue
 
             if action == "wake":
-                notice = orch._lock.hear("moon")
-                await send(type="wake", detail=notice.get("notice", "Listening..."))
+                # MOON is always unlocked (lock mode removed) — the wake word is a
+                # friendly acknowledgement, not a security gate.
+                await send(type="wake", detail="Listening...")
                 continue
 
             if action == "voice":
@@ -893,7 +892,7 @@ async def ws_endpoint(websocket: WebSocket):
 
             if action == "security":
                 await send(type="security", token=bool(TERMINAL_TOKEN),
-                           locked=orch._lock.locked)
+                           locked=False)
                 continue
 
             if action == "automation":
@@ -920,14 +919,8 @@ async def ws_endpoint(websocket: WebSocket):
                     await send(type="error", detail="empty message")
                     continue
 
-                # lock check
-                notice = orch._lock.observe(text)
-                if notice:
-                    await send(type="assistant_start", detail="lock")
-                    await send(type="assistant_done",
-                               answer=notice, elapsed=0.1, locked=orch._lock.locked)
-                    continue
-
+                # MOON is always unlocked (lock mode removed) — no lock gating,
+                # so every message goes straight to the brain.
                 if _STOP_REQUESTED:
                     await send(type="notice", detail="Stop requested — message blocked.")
                     continue

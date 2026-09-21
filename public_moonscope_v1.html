@@ -107,18 +107,6 @@
     color: var(--dim);
     text-align: center;
   }
-  #unlock-btn {
-    background: var(--yellow);
-    color: #000;
-    border: none;
-    padding: 8px 16px;
-    font-family: inherit;
-    font-weight: bold;
-    cursor: pointer;
-    font-size: 12px;
-    margin-top: 10px;
-  }
-  #unlock-btn:hover { background: #f39c12; }
   #chat-input {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -177,10 +165,6 @@
     <div class="hud-section"><span class="hud-label">emotion</span><span class="hud-value" id="hud-emotion">● normal</span></div>
     <div class="hud-section"><span class="hud-label">lock</span><span class="hud-value" id="hud-lock">🔓 unlocked</span></div>
   </div>
-  <div style="margin-top:10px; font-size:11px; color:var(--dim);">
-    잠금 해제 구절: <code style="color:var(--yellow)">MOON love you 3000</code>
-    | <button id="unlock-btn" onclick="unlockMOON()">Unlock MOON</button>
-  </div>
 </div>
 
 <div class="panel">
@@ -206,7 +190,7 @@
       <div class="label">Memory</div>
       <div class="value" id="s-memory">short + long + episodic + knowledge</div>
     </div>
-    <div class="status-item" id="s-lock-status">
+    <div class="status-item ok">
       <div class="label">Lock</div>
       <div class="value" id="s-lock">🔓 Unlocked</div>
     </div>
@@ -298,12 +282,11 @@ function updateHUD(data) {
     document.getElementById("hud-emotion").textContent = "● " + label;
   }
   if (data.locked !== undefined) {
-    const locked = !!data.locked;
-    document.getElementById("hud-lock").textContent = locked ? "🔒 LOCKED" : "🔓 unlocked";
-    document.getElementById("s-lock").textContent = locked ? "🔒 Locked" : "🔓 Unlocked";
-    document.getElementById("s-lock-status").className = locked ? "status-item warn" : "status-item ok";
-    document.getElementById("status-badge").textContent = locked ? "● LOCKED" : "● ONLINE";
-    document.getElementById("status-badge").style.color = locked ? "var(--yellow)" : "var(--green)";
+    // MOON is always unlocked (lock mode removed) — show static unlocked state.
+    document.getElementById("hud-lock").textContent = "🔓 unlocked";
+    document.getElementById("s-lock").textContent = "🔓 Unlocked";
+    document.getElementById("status-badge").textContent = "● ONLINE";
+    document.getElementById("status-badge").style.color = "var(--green)";
   }
   if (data.agents) {
     document.getElementById("s-agents").textContent = data.agents + " connected";
@@ -379,18 +362,7 @@ function sendChat() {
 }
 
 function unlockMOON() {
-  fetch("http://127.0.0.1:8777/api/settings", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({unlock_phrase: "MOON love you 3000"})
-  })
-  .then(() => {
-    addEvent("system", "MOON unlock 요청 전송 — 잠금 해제 구절: MOON love you 3000");
-    document.getElementById("s-lock").textContent = "🔓 Unlocked (요청됨)";
-  })
-  .catch(() => {
-    addEvent("alert", "Unlock 요청 실패 — moonscope TUI에서 직접 입력");
-  });
+  addEvent("system", "MOON은 항상 unlocked 상태입니다 — 별도의 잠금 해제 절차 없음");
 }
 
 // 초기 연결
