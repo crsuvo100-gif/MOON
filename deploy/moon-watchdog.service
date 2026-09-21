@@ -1,0 +1,16 @@
+[Unit]
+Description=MOON Self-Heal Monitor (models, backend, git sync)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=__MOON_HOME__
+# Clear PYTHONPATH so the system Python can't shadow MOON's venv
+Environment=PYTHONPATH=
+ExecStart=__MOON_HOME__/.venv/bin/python __MOON_HOME__/scripts/moon_monitor.py
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

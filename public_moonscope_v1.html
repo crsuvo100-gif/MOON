@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOON — Neural Brain Command Center</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: #333333;
+    --yellow: #f1c40f;
+    --green: #2ecc71;
+    --red: #e74c3c;
+    --white: #e0e0e0;
+    --dim: #666666;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .header {
+    border-bottom: 2px solid var(--yellow);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .title { font-size: 24px; font-weight: bold; color: var(--yellow); }
+  .subtitle { font-size: 12px; color: var(--dim); }
+  .status-badge {
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 12px;
+    color: var(--green);
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+  .panel-title {
+    font-size: 14px;
+    color: var(--yellow);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+  }
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+  }
+  .status-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 10px;
+    border-radius: 3px;
+  }
+  .status-item .label { font-size: 10px; color: var(--dim); text-transform: uppercase; }
+  .status-item .value { font-size: 14px; color: var(--white); margin-top: 5px; }
+  .status-item.ok .value { color: var(--green); }
+  .status-item.warn .value { color: var(--yellow); }
+  .status-item.bad .value { color: var(--red); }
+  .hud-line {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 10px 15px;
+    font-size: 13px;
+    color: var(--white);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+  }
+  .hud-section { display: flex; align-items: center; gap: 5px; }
+  .hud-label { color: var(--dim); font-size: 10px; }
+  .hud-value { color: var(--white); }
+  .events {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 10px;
+    height: 150px;
+    overflow-y: auto;
+    font-size: 11px;
+    color: var(--dim);
+  }
+  .events .entry { padding: 2px 0; border-bottom: 1px solid var(--border); }
+  .events .entry.event { color: var(--yellow); }
+  .events .entry.alert { color: var(--red); }
+  .events .entry.normal { color: var(--green); }
+  .footer {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--dim);
+    text-align: center;
+  }
+  #chat-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--white);
+    padding: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    width: 100%;
+    margin-top: 10px;
+  }
+  #chat-input:focus { outline: none; border-color: var(--yellow); }
+  #send-btn {
+    background: var(--yellow);
+    color: #000;
+    border: none;
+    padding: 8px 16px;
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 12px;
+    margin-top: 10px;
+  }
+  #send-btn:hover { background: #f39c12; }
+  .chat-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 10px;
+    height: 200px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    font-size: 12px;
+  }
+  .chat-panel .msg { padding: 4px 0; border-bottom: 1px solid var(--border); }
+  .chat-panel .msg.user { color: var(--yellow); }
+  .chat-panel .msg.agent { color: var(--green); }
+  .chat-panel .msg.system { color: var(--dim); }
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="title">MOON — Neural Brain Command Center</div>
+    <div class="subtitle">Hermes-style terminal AI agent · moonscope v2.1.0</div>
+  </div>
+  <div class="status-badge" id="status-badge">● ONLINE</div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">◆ HUD Status</div>
+  <div class="hud-line" id="hud">
+    <div class="hud-section"><span class="hud-label">model</span><span class="hud-value" id="hud-model">qwen2.5:1.5b</span></div>
+    <div class="hud-section"><span class="hud-label">agent</span><span class="hud-value" id="hud-agent">auto</span></div>
+    <div class="hud-section"><span class="hud-label">session</span><span class="hud-value" id="hud-session">moonscope-—</span></div>
+    <div class="hud-section"><span class="hud-label">mem</span><span class="hud-value" id="hud-mem">—</span></div>
+    <div class="hud-section"><span class="hud-label">cpu</span><span class="hud-value" id="hud-cpu">—</span></div>
+    <div class="hud-section"><span class="hud-label">emotion</span><span class="hud-value" id="hud-emotion">● normal</span></div>
+    <div class="hud-section"><span class="hud-label">lock</span><span class="hud-value" id="hud-lock">🔓 unlocked</span></div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">◆ Brain Core Status</div>
+  <div class="status-grid">
+    <div class="status-item ok">
+      <div class="label">Backend</div>
+      <div class="value" id="s-backend">HEALTHY</div>
+    </div>
+    <div class="status-item ok">
+      <div class="label">LLM (Ollama)</div>
+      <div class="value" id="s-llm">qwen2.5:1.5b @ 127.0.0.1:11434</div>
+    </div>
+    <div class="status-item ok">
+      <div class="label">Agents</div>
+      <div class="value" id="s-agents">39 connected</div>
+    </div>
+    <div class="status-item ok">
+      <div class="label">Tools</div>
+      <div class="value" id="s-tools">43 registered</div>
+    </div>
+    <div class="status-item ok">
+      <div class="label">Memory</div>
+      <div class="value" id="s-memory">short + long + episodic + knowledge</div>
+    </div>
+    <div class="status-item ok">
+      <div class="label">Lock</div>
+      <div class="value" id="s-lock">🔓 Unlocked</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-title">◆ Chat (Live)</div>
+  <div class="chat-panel" id="chat-panel">
+    <div class="msg system">MOON moonscope — Hermes-style TUI. Model: qwen2.5:1.5b. Type /help for commands.</div>
+  </div>
+  <input type="text" id="chat-input" placeholder="> Type your message or /command..." />
+  <button id="send-btn" onclick="sendChat()">Send</button>
+</div>
+
+<div class="panel">
+  <div class="panel-title">◆ Events Timeline</div>
+  <div class="events" id="events-timeline">
+    <div class="entry normal">[system] MOON moonscope initialized</div>
+    <div class="entry normal">[system] Backend connected @ 127.0.0.1:8777</div>
+    <div class="entry normal">[system] 39 agent brains loaded</div>
+    <div class="entry normal">[system] 43 tools registered</div>
+  </div>
+</div>
+
+<div class="footer">
+  MOON — autonomous AI agent system · moonscope TUI + backend + LLM · 
+  unlocked for direct access · <a href="https://github.com/crsuvo100-gif/MOON" style="color:var(--yellow)">GitHub</a>
+</div>
+
+<script>
+// moonscope 백엔드 연결 (WebSocket + REST)
+const WS_URL = "ws://127.0.0.1:8777/ws/events";
+let ws = null;
+
+function connectWS() {
+  try {
+    ws = new WebSocket(WS_URL);
+    ws.onopen = () => {
+      addEvent("system", "WebSocket 연결됨");
+      fetchBrainStatus();
+    };
+    ws.onmessage = (evt) => {
+      const msg = JSON.parse(evt.data);
+      if (msg.type === "event") {
+        addEvent(msg.detail || "event", msg.agent_id || "");
+      } else if (msg.type === "status") {
+        updateHUD(msg);
+        updateBrainStatus(msg);
+      }
+    };
+    ws.onclose = () => {
+      addEvent("system", "WebSocket 연결 끊김 — 재연결 시도...");
+      setTimeout(connectWS, 5000);
+    };
+    ws.onerror = () => {
+      addEvent("alert", "WebSocket 오류");
+    };
+  } catch(e) {
+    addEvent("alert", "WebSocket 연결 불가: " + e.message);
+  }
+}
+
+function fetchBrainStatus() {
+  fetch("http://127.0.0.1:8777/api/brain-status")
+    .then(r => r.json())
+    .then(data => {
+      updateHUD(data);
+      updateBrainStatus(data);
+    })
+    .catch(() => {});
+}
+
+function updateHUD(data) {
+  if (data.model) document.getElementById("hud-model").textContent = data.model;
+  if (data.agent_list && data.agent_list.length > 0) {
+    document.getElementById("hud-agent").textContent = data.agent_list[0].name || "auto";
+  }
+  if (data.uptime_fmt) document.getElementById("hud-session").textContent = "up " + data.uptime_fmt;
+  if (data.memory) {
+    const mem = data.memory;
+    document.getElementById("hud-mem").textContent = (mem.long_term || 0) + " entries";
+  }
+  if (data.system) {
+    document.getElementById("hud-cpu").textContent = (data.system.cpu || 0) + "%";
+  }
+  if (data.emotion) {
+    const label = typeof data.emotion === "object" ? data.emotion.label || "normal" : data.emotion;
+    document.getElementById("hud-emotion").textContent = "● " + label;
+  }
+  if (data.locked !== undefined) {
+    // MOON is always unlocked (lock mode removed) — show static unlocked state.
+    document.getElementById("hud-lock").textContent = "🔓 unlocked";
+    document.getElementById("s-lock").textContent = "🔓 Unlocked";
+    document.getElementById("status-badge").textContent = "● ONLINE";
+    document.getElementById("status-badge").style.color = "var(--green)";
+  }
+  if (data.agents) {
+    document.getElementById("s-agents").textContent = data.agents + " connected";
+  }
+  if (data.n_tools) {
+    document.getElementById("s-tools").textContent = data.n_tools + " registered";
+  }
+}
+
+function updateBrainStatus(data) {
+  // brain status 항목들 업데이트
+  const items = {
+    "s-backend": data.status || "HEALTHY",
+  };
+  for (const [id, val] of Object.entries(items)) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+}
+
+function addEvent(detail, agent) {
+  const timeline = document.getElementById("events-timeline");
+  const entry = document.createElement("div");
+  entry.className = "entry event";
+  let text = "[" + new Date().toLocaleTimeString() + "] " + detail;
+  if (agent) text += " (agent: " + agent + ")";
+  entry.textContent = text;
+  timeline.appendChild(entry);
+  timeline.scrollTop = timeline.scrollHeight;
+  // 50개 이상 시 오래된 것 제거
+  while (timeline.children.length > 50) {
+    timeline.removeChild(timeline.firstChild);
+  }
+}
+
+function sendChat() {
+  const input = document.getElementById("chat-input");
+  const text = input.value.trim();
+  if (!text) return;
+  // 사용자 메시지 추가
+  const panel = document.getElementById("chat-panel");
+  const msg = document.createElement("div");
+  msg.className = "msg user";
+  msg.textContent = "You: " + text;
+  panel.appendChild(msg);
+  panel.scrollTop = panel.scrollHeight;
+  
+  // 백엔드로 전송 (간단히 /api/agents/coordinator/run 사용)
+  fetch("http://127.0.0.1:8777/api/agents/coordinator/run", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({task: text})
+  })
+  .then(r => r.json())
+  .then(data => {
+    const result = data.result || "No response";
+    const msg2 = document.createElement("div");
+    msg2.className = "msg agent";
+    msg2.textContent = "MOON: " + result;
+    panel.appendChild(msg2);
+    panel.scrollTop = panel.scrollHeight;
+    addEvent("MOON 응답: " + result.substring(0, 80));
+  })
+  .catch(err => {
+    const msg3 = document.createElement("div");
+    msg3.className = "msg system";
+    msg3.textContent = "시스템: 백엔드 연결 오류 — moonscope TUI에서 직접 채팅 시도";
+    panel.appendChild(msg3);
+    panel.scrollTop = panel.scrollHeight;
+  });
+  
+  input.value = "";
+}
+
+function unlockMOON() {
+  addEvent("system", "MOON은 항상 unlocked 상태입니다 — 별도의 잠금 해제 절차 없음");
+}
+
+// 초기 연결
+connectWS();
+// 30초마다 brain-status 폴백
+setInterval(fetchBrainStatus, 30000);
+// Enter 키로 채팅 전송
+document.getElementById("chat-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendChat();
+});
+</script>
+</body>
+</html>

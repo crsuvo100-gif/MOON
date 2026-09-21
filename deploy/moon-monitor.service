@@ -1,0 +1,16 @@
+[Unit]
+Description=MOON Deep Operational Monitor (real-execution health proof)
+After=network-online.target moon-terminal.service
+Wants=network-online.target
+Requires=moon-terminal.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=__MOON_HOME__
+Environment=PYTHONPATH=
+ExecStart=__MOON_HOME__/.venv/bin/python __MOON_HOME__/scripts/moon_deep_monitor.py
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

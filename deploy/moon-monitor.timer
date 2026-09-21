@@ -1,0 +1,10 @@
+[Unit]
+Description=MOON Deep Operational Monitor timer (runs every 15 minutes)
+
+[Timer]
+OnBootSec=90
+OnUnitActiveSec=900
+Unit=moon-monitor.service
+
+[Install]
+WantedBy=timers.target

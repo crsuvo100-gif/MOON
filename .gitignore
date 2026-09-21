@@ -1,0 +1,38 @@
+# Git ignore patterns for MOON project
+# Runtime data that should never be committed
+
+# moonscope runtime state
+app/data/
+app/memory/episodes.json
+logs/
+
+# terminal_moon runtime state
+terminal_moon/data/
+terminal_moon/memory/
+terminal_moon/logs/
+
+# Capabilities runtime data
+capabilities/
+connections/
+
+# Agent runtime data
+data/
+data/agents/
+data/executions.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Secrets
+.env
+.env.*
