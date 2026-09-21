@@ -1,24 +1,5 @@
-# Git ignore patterns for MOON project
+# Moon_Twin — Git ignore patterns
 # Runtime data that should never be committed
-
-# moonscope runtime state
-app/data/
-app/memory/episodes.json
-logs/
-
-# terminal_moon runtime state
-terminal_moon/data/
-terminal_moon/memory/
-terminal_moon/logs/
-
-# Capabilities runtime data
-capabilities/
-connections/
-
-# Agent runtime data
-data/
-data/agents/
-data/executions.db
 
 # Python
 __pycache__/
@@ -33,6 +14,15 @@ dist/
 venv/
 env/
 
-# Secrets
+# Secrets / local config
 .env
 .env.*
+
+# SQLite memory (runtime)
+moon_memory_*.db
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import sqlite3
 import json
+import os
 import time
 from pathlib import Path
 from typing import Any, Optional
@@ -278,7 +279,7 @@ if __name__ == "__main__":
     mem.log_agent_event(sid, "code", "write a function", intent_route="code")
     print("Agent events:", mem.get_agent_events(sid))
 
-    mem.set_memory(sid, "user_name", "MOON")
+    mem.set_memory(sid, "user_name", "Moon_Twin")
     print("Memory:", mem.get_all_memory(sid))
 
     print("All OK")

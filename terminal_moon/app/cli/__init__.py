@@ -1,3 +1,0 @@
-"""
-MOON Terminal CLI package.
-"""

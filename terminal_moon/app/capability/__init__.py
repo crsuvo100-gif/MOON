@@ -1,3 +1,0 @@
-"""
-MOON Terminal capability package.
-"""

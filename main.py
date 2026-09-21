@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MOON TWIN — Standalone Moon Agent System
+Moon_Twin — Standalone Agent System
 
 A self-contained AI agent system with:
 - Multi-agent persona engine (general, code, security, research, voice, admin, creative, monitor)
@@ -73,7 +73,7 @@ def main():
     parser = argparse.ArgumentParser(
         prog="moon_twin",
         description=(
-            "MOON TWIN — Standalone Moon Agent System\n"
+            "Moon_Twin — Standalone Agent System\n"
             "Multi-agent persona engine with Hermes-desktop-terminal replica."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,

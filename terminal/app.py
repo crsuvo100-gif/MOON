@@ -1,5 +1,5 @@
 """
-MOON Terminal — Hermes desktop terminal replica for Moon_Twin.
+Moon_Twin Terminal — Hermes desktop terminal replica for Moon_Twin.
 
 Interactive TUI REPL with:
 - Agent selection (agent: prefix + /agent listing)
@@ -83,7 +83,7 @@ class MoonTerminal:
 
     Provides an interactive terminal session with:
     - Welcome banner + status dashboard
-    - Interactive REPL for chatting with MOON agents
+    - Interactive REPL for chatting with Moon_Twin agents
     - /agent command to list available agents
     - agent:<name> prefix for per-prompt agent selection
     - Tool execution
@@ -111,14 +111,14 @@ class MoonTerminal:
     # ------------------------------------------------------------------
 
     def show_banner(self):
-        """Display the MOON terminal welcome banner."""
+        """Display the Moon_Twin terminal welcome banner."""
         if HAS_RICH:
             banner = Panel(
                 Text.assemble(
                     ("╔", "bold magenta"),
                     ("══════════════════════════════════════════╗", "bold magenta"),
                     ("╔", "bold magenta"),
-                    ("═══ MOON TERMINAL ════════════════════════╗", "bold cyan"),
+                    ("═══ MOON_TWIN TERMINAL ════════════════════════╗", "bold cyan"),
                     ("║", "bold magenta"),
                     ("  Moon_Twin Agent System", "bold white"),
                     ("║", "bold magenta"),
@@ -126,14 +126,14 @@ class MoonTerminal:
                     ("║", "bold magenta"),
                     ("╚══════════════════════════════════════════╝", "bold magenta"),
                 ),
-                title="[bold red]MOON[/bold red]",
+                title="[bold red]MOON_TWIN[/bold red]",
                 border_style="magenta",
                 padding=(1, 2),
             )
             cprint(banner)
         else:
             cprint("╔══════════════════════════════════════════╗")
-            cprint("║  MOON TERMINAL — Moon_Twin Agent System  ║")
+            cprint("║  MOON_TWIN TERMINAL — Moon_Twin Agent System  ║")
             cprint("║  v1.0.0 | /home/meow/Moon_Twin          ║")
             cprint("╚══════════════════════════════════════════╝")
         cprint()
@@ -214,7 +214,7 @@ class MoonTerminal:
         arg = parts[1] if len(parts) > 1 else ""
 
         if cmd in ("/quit", "/exit", "/q"):
-            cprint("[bold red]Goodbye. MOON signing off.[/bold red]")
+            cprint("[bold red]Goodbye. Moon_Twin signing off.[/bold red]")
             self.running = False
             return False
 
@@ -410,12 +410,12 @@ class MoonTerminal:
 # ---------------------------------------------------------------------------
 
 def main():
-    """CLI entry for moon_terminal."""
+    """CLI entry for moon_twin_terminal."""
     import argparse
 
     parser = argparse.ArgumentParser(
-        prog="moon_terminal",
-        description="MOON Terminal — Hermes desktop terminal replica for Moon_Twin",
+        prog="moon_twin_terminal",
+        description="Moon_Twin Terminal — Hermes desktop terminal replica for Moon_Twin",
     )
     parser.add_argument(
         "message",

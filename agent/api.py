@@ -1,5 +1,5 @@
 """
-MOON Agent API — FastAPI server for /api/moon-agent integration.
+Moon_Twin Agent API — standalone API server for /api/moon-agent integration.
 
 Exposes:
 - POST /api/moon-agent    — Process a message through the agent engine
@@ -54,7 +54,7 @@ except ImportError:
 # ASGI application
 # ---------------------------------------------------------------------------
 
-class MoonAgentAPI:
+class MoonTwinAPI:
     """
     ASGI application for /api/moon-agent.
 
@@ -193,7 +193,7 @@ class MoonAgentAPI:
         """Health check endpoint."""
         health = {
             "status": "healthy",
-            "service": "moon-agent-api",
+            "service": "moon-twin-agent-api",
             "version": "1.0.0",
             "agent_count": len(self.engine.list_agents()),
             "lock_state": "unlocked",
@@ -208,6 +208,34 @@ class MoonAgentAPI:
             "agents": agents,
             "count": len(agents),
         })
+
+    # -- Data-returning variants (for Starlette route handlers) --
+
+    def _health_data(self) -> dict:
+        return {
+            "status": "healthy",
+            "service": "moon-twin-agent-api",
+            "version": "1.0.0",
+            "agent_count": len(self.engine.list_agents()),
+            "lock_state": "unlocked",
+        }
+
+    def _list_agents_data(self) -> dict:
+        agents = self.engine.list_agents()
+        return {
+            "agents": agents,
+            "count": len(agents),
+        }
+
+    def _route_query_data(self, query: str) -> dict:
+        return api_agent_router(query)
+
+    def _get_memory_data(self) -> dict:
+        memory = self.engine.get_memory()
+        return {
+            "memory": memory,
+            "count": len(memory),
+        }
 
     async def _process_message(self, scope: Scope, receive: Receive, send: Send):
         """Process a message through the agent engine."""
@@ -276,6 +304,32 @@ class MoonAgentAPI:
 
         await self._send_json(scope, send, result)
 
+    async def _process_message_data(self, body: dict) -> dict:
+        """Process a message and return result dict (no ASGI send)."""
+        message = body.get("message", "")
+        if not message:
+            return {"error": "Missing message", "detail": "POST body must include 'message' field"}
+        session_id = body.get("session_id")
+        explicit_agent = body.get("agent")
+        if not explicit_agent:
+            parsed_agent, clean_message = self.engine.parse_agent_prefix(message)
+            if parsed_agent:
+                explicit_agent = parsed_agent
+        else:
+            clean_message = message
+        result = await self.engine.process_message(
+            message, session_id=session_id, explicit_agent=explicit_agent,
+        )
+        selected = self.engine.get_agent(result["agent"])
+        response_text = await self.engine.generate_response(selected, result["message"])
+        result["response"] = response_text
+        tools_requested = body.get("tools", [])
+        if tools_requested:
+            for tool_name in tools_requested:
+                tool_result = await self.engine.run_tool(tool_name, {})
+                result.setdefault("tools_used", []).append({"tool": tool_name, "result": tool_result})
+        return result
+
     async def _route_query(self, scope: Scope, send: Send, query: str):
         """Route a query to an agent."""
         result = api_agent_router(query)
@@ -330,6 +384,20 @@ class MoonAgentAPI:
             "session_id": session_id,
         })
 
+    def _set_memory_data(self, body: dict) -> dict:
+        """Set a memory entry and return result dict (no ASGI send)."""
+        key = body.get("key")
+        value = body.get("value")
+        session_id = body.get("session_id", "default")
+        if not key:
+            return {"error": "Missing key"}
+        self.engine._memory.append({
+            "session": session_id,
+            "key": key,
+            "value": value,
+        })
+        return {"status": "written", "key": key, "session_id": session_id}
+
     async def _not_found(self, scope: Scope, send: Send):
         """404 response."""
         await self._send_json(scope, send, {
@@ -353,8 +421,8 @@ class MoonAgentAPI:
 
 if HAS_ASGI:
     async def _starlette_handle(request: Request):
-        """Starlette adapter for the MoonAgentAPI."""
-        api = MoonAgentAPI()
+        """Starlette adapter for the MoonTwinAPI."""
+        api = MoonTwinAPI()
         scope = request.scope
         receive = request._receive
         send = request._send
@@ -363,51 +431,38 @@ if HAS_ASGI:
         await api.handle_request(scope, receive, send)
 
     async def health_route(request: Request):
-        api = MoonAgentAPI()
-        scope = request.scope
-        receive = request._receive
-        send = request._send
-        await api._health(scope, send)
-        return Response("", media_type="application/json")
+        api = MoonTwinAPI()
+        data = api._health_data()
+        return JSONResponse(content=data)
 
     async def agents_route(request: Request):
-        api = MoonAgentAPI()
-        scope = request.scope
-        receive = request._receive
-        send = request._send
-        await api._list_agents(scope, send)
-        return Response("", media_type="application/json")
+        api = MoonTwinAPI()
+        data = api._list_agents_data()
+        return JSONResponse(content=data)
 
     async def message_route(request: Request):
-        api = MoonAgentAPI()
-        scope = request.scope
-        receive = request._receive
-        send = request._send
+        api = MoonTwinAPI()
         if request.method == "GET":
-            await api._list_agents(scope, send)
+            data = api._list_agents_data()
         else:
-            await api._process_message(scope, receive, send)
-        return Response("", media_type="application/json")
+            body = await request.json() if request.body else {}
+            data = await api._process_message_data(body)
+        return JSONResponse(content=data)
 
     async def route_route(request: Request):
-        api = MoonAgentAPI()
-        scope = request.scope
-        receive = request._receive
-        send = request._send
+        api = MoonTwinAPI()
         query = request.query_params.get("query", "")
-        await api._route_query(scope, send, query)
-        return Response("", media_type="application/json")
+        data = api._route_query_data(query)
+        return JSONResponse(content=data)
 
     async def memory_route(request: Request):
-        api = MoonAgentAPI()
-        scope = request.scope
-        receive = request._receive
-        send = request._send
+        api = MoonTwinAPI()
         if request.method == "GET":
-            await api._get_memory(scope, send)
+            data = api._get_memory_data()
         else:
-            await api._set_memory(scope, receive, send)
-        return Response("", media_type="application/json")
+            body = await request.json() if request.body else {}
+            data = api._set_memory_data(body)
+        return JSONResponse(content=data)
 
     app = Starlette(
         routes=[
@@ -426,7 +481,7 @@ if HAS_ASGI:
 
 async def bare_asgi_app(scope: Scope, receive: Receive, send: Send):
     """Bare ASGI application without Starlette."""
-    api = MoonAgentAPI()
+    api = MoonTwinAPI()
     await api.handle_request(scope, receive, send)
 
 
@@ -517,8 +572,8 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        prog="moon_agent_api",
-        description="MOON Agent API server — /api/moon-agent integration endpoint",
+        prog="moon_twin_api",
+        description="Moon_Twin Agent API server — /api/moon-agent integration endpoint",
     )
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
     parser.add_argument("--port", type=int, default=8778, help="Port to listen on")
@@ -529,7 +584,7 @@ if __name__ == "__main__":
     if args.test:
         # Self-test
         print("╔══════════════════════════════════════════╗")
-        print("║  MOON AGENT API — SELF TEST              ║")
+        print("║  MOON_TWIN AGENT API — SELF TEST          ║")
         print("╚══════════════════════════════════════════╝")
         print()
 

@@ -1,5 +1,5 @@
 """
-MOON Agent — standalone agent engine with persona injection,
+Moon_Twin Agent — standalone agent engine with persona injection,
 per-prompt agent selection (agent: prefix), intent→agent routing,
 and /api/moon-agent integration endpoint.
 """
@@ -45,7 +45,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
         name="general",
         description="General-purpose assistant — handles everyday questions, conversation, and broad tasks.",
         system_prompt=(
-            "You are MOON, a helpful AI assistant. Answer clearly and concisely. "
+            "You are Moon_Twin, a helpful AI assistant. Answer clearly and concisely. "
             "You have access to tools when needed. Be direct and useful."
         ),
         tools=["system_info", "memory_read", "memory_write"],
@@ -54,7 +54,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
         name="code",
         description="Code specialist — writes, reviews, debugs, and explains code across languages.",
         system_prompt=(
-            "You are MOON Code Agent. You excel at writing, reviewing, debugging, and explaining code. "
+            "You are Moon_Twin Code Agent. You excel at writing, reviewing, debugging, and explaining code. "
             "Provide complete, runnable examples. Explain your reasoning. Use tools to inspect files when needed."
         ),
         tools=["system_info", "file_read", "file_write", "shell"],
@@ -63,7 +63,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
         name="security",
         description="Security & red-team agent — offensive security, penetration testing, and threat analysis.",
         system_prompt=(
-            "You are MOON Security Agent. You specialize in offensive security, penetration testing methodology, "
+            "You are Moon_Twin Security Agent. You specialize in offensive security, penetration testing methodology, "
             "vulnerability analysis, and red-team operations. Always stay within authorized targets. "
             "Be thorough, technical, and practical."
         ),
@@ -73,7 +73,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
         name="research",
         description="Research agent — searches, summarizes, and synthesizes external information.",
         system_prompt=(
-            "You are MOON Research Agent. You excel at finding, verifying, and synthesizing information "
+            "You are Moon_Twin Research Agent. You excel at finding, verifying, and synthesizing information "
             "from multiple sources. Cite your sources. Prefer primary sources. Be rigorous."
         ),
         tools=["web_search", "web_extract", "memory_read"],
@@ -82,7 +82,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
         name="voice",
         description="Voice & TTS agent — handles speech synthesis, voice cloning, and audio tasks.",
         system_prompt=(
-            "You are MOON Voice Agent. You manage speech synthesis, voice cloning, and audio processing. "
+            "You are Moon_Twin Voice Agent. You manage speech synthesis, voice cloning, and audio processing. "
             "You coordinate with the voice engine to produce natural speech."
         ),
         tools=["voice_speak", "voice_clone"],
@@ -91,7 +91,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
         name="admin",
         description="System administration agent — manages services, configurations, and infrastructure.",
         system_prompt=(
-            "You are MOON Admin Agent. You handle system administration, service management, "
+            "You are Moon_Twin Admin Agent. You handle system administration, service management, "
             "configuration changes, and infrastructure operations. Be precise and cautious with destructive actions."
         ),
         tools=["system_info", "shell", "service_control"],
@@ -100,7 +100,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
         name="creative",
         description="Creative agent — generates content, designs, ascii art, and creative writing.",
         system_prompt=(
-            "You are MOON Creative Agent. You produce original creative content: writing, ASCII art, "
+            "You are Moon_Twin Creative Agent. You produce original creative content: writing, ASCII art, "
             "design concepts, and visual descriptions. Be imaginative and distinctive."
         ),
         tools=["ascii_art", "image_gen"],
@@ -109,7 +109,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
         name="monitor",
         description="Monitoring & diagnostics agent — checks system health, logs, and performance.",
         system_prompt=(
-            "You are MOON Monitor Agent. You diagnose system health, analyze logs, check service status, "
+            "You are Moon_Twin Monitor Agent. You diagnose system health, analyze logs, check service status, "
             "and report on performance. Be systematic and data-driven."
         ),
         tools=["system_info", "log_read", "health_check"],
@@ -124,8 +124,8 @@ BUILTIN_AGENTS: list[AgentPersona] = [
 INTENT_ROUTING: list[tuple[str, str]] = [
     # (keyword pattern, agent name)
     (r"\b(code|program|script|debug|function|class|import|def |write code|refactor|algorithm|bug|fix|error|exception|traceback|syntax|compile)\b", "code"),
-    (r"\b(security|penetration|exploit|vulnerability|hack|red.?team|payload|audit|nmap|port.?scan|network.?scan|scan|recon|osint)\b", "security"),
-    (r"\b(search|research|find|wiki|google|article|paper|source|citation|web|news|summary|summarize|explain|quantum)\b", "research"),
+    (r"\b(security|penetration|exploit|vulnerability|vulnerabilities|hack|red.?team|payload|audit|nmap|port.?scan|network.?scan|scan|recon|osint|pen.?test)\b", "security"),
+    (r"\b(search|research|find|wiki|google|article|paper|source|citation|web|news|summary|summarize|explain|quantum|information|learn)\b", "research"),
     (r"\b(speak|voice|tts|audio|sound|talk|say|pronounce)\b", "voice"),
     (r"\b(health|status|monitor|log|check|up|down|crash|ping|uptime|load|disk|memory|cpu)\b", "monitor"),
     (r"\b(install|service|config|deploy|restart|kill|process|daemon|systemd|firewall|dns|network|mount|storage|nginx|systemctl)\b", "admin"),
@@ -149,7 +149,7 @@ def route_intent(query: str) -> str:
 
 class AgentEngine:
     """
-    MOON Agent Engine.
+    Moon_Twin Agent Engine.
 
     Features:
     - Per-prompt agent selection via `agent:<name>` prefix
@@ -326,7 +326,7 @@ class AgentEngine:
 
         if llm_client is None:
             # Fallback: return a placeholder indicating LLM integration needed
-            return f"[MOON Agent: {agent.name}] {system[:80]}... — LLM client not connected. Message: {message[:100]}"
+            return f"[Moon_Twin Agent: {agent.name}] {system[:80]}... — LLM client not connected. Message: {message[:100]}"
 
         # Build messages array with persona injection
         messages = [
@@ -341,7 +341,7 @@ class AgentEngine:
             )
             return resp.choices[0].message.content
         except Exception as e:
-            return f"[MOON Agent: {agent.name}] Error: {e}"
+            return f"[Moon_Twin Agent: {agent.name}] Error: {e}"
 
 
 # ---------------------------------------------------------------------------
@@ -359,7 +359,7 @@ def cmd_agent_list() -> None:
     """Print all registered agents (for /agent command)."""
     agents = default_engine.list_agents()
     print("╔══════════════════════════════════════════╗")
-    print("║  MOON AGENTS                              ║")
+    print("║  MOON_TWIN AGENTS                         ║")
     print("╠══════════════════════════════════════════╣")
     for a in agents:
         status = "✓" if a["enabled"] else "✗"
@@ -570,7 +570,7 @@ if __name__ == "__main__":
 
     async def demo():
         print("╔══════════════════════════════════════════╗")
-        print("║  MOON AGENT — STANDALONE DEMO            ║")
+        print("║  MOON_TWIN AGENT — STANDALONE DEMO        ║")
         print("╚══════════════════════════════════════════╝")
         print()
 
@@ -586,7 +586,7 @@ if __name__ == "__main__":
             "agent:code write a hello world function",
             "agent:security scan this network",
             "agent:research find information about AI",
-            "hello moon, how are you?",
+            "hello moon_twin, how are you?",
             "agent:unknown test",
         ]
         for t in tests:
@@ -602,7 +602,7 @@ if __name__ == "__main__":
             "find vulnerabilities in this system",
             "search for recent AI papers",
             "speak the answer out loud",
-            "restart the moon service",
+            "restart the moon_twin service",
             "draw a logo for my app",
             "check system health",
             "what is the weather today?",
@@ -614,7 +614,7 @@ if __name__ == "__main__":
 
         # Test tool execution
         print("=== Tool Execution ===")
-        result = asyncio.run(default_engine.run_tool("system_info", {}))
+        result = await default_engine.run_tool("system_info", {})
         print(f"  system_info: {result}")
         print()
 
