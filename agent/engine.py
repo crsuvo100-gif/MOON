@@ -125,7 +125,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
 # Simple keyword-based routing (extendable)
 INTENT_ROUTING: list[tuple[str, str]] = [
     # (keyword pattern, agent name)
-    (r"\b(code|program|script|debug|function|class|import|def |write code|refactor|algorithm|bug|fix|error|exception|traceback|syntax|compile)\b", "code"),
+    (r"\b(code|program|script|debug|function|class|import|def |write code|refactor|algorithm|bug|fix|error|exception|traceback|syntax|compile|python|py |pip|module|package)\b", "code"),
     (r"\b(security|penetration|exploit|vulnerability|vulnerabilities|hack|red.?team|payload|audit|nmap|port.?scan|network.?scan|scan|recon|osint|pen.?test)\b", "security"),
     (r"\b(search|research|find|wiki|google|article|paper|source|citation|web|news|summary|summarize|explain|quantum|information|learn)\b", "research"),
     (r"\b(speak|voice|tts|audio|sound|talk|say|pronounce)\b", "voice"),
