@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any, Callable, Awaitable
 from dataclasses import dataclass, field
 
+from agent.llm import OllamaClient, create_client, tool_def
+
 # ---------------------------------------------------------------------------
 # Agent persona definitions
 # ---------------------------------------------------------------------------
@@ -159,13 +161,18 @@ class AgentEngine:
     - Integration endpoint compatible with /api/moon-agent
     """
 
-    def __init__(self, personas: list[AgentPersona] | None = None):
+    def __init__(
+        self,
+        personas: list[AgentPersona] | None = None,
+        llm: OllamaClient | None = None,
+    ):
         self.personas: dict[str, AgentPersona] = {}
         for p in (personas or BUILTIN_AGENTS):
             self.personas[p.name] = p
         self._tool_handlers: dict[str, Callable[[dict], Awaitable[dict]]] = {}
         self._memory: list[dict] = []
         self._session_id: str | None = None
+        self._llm = llm or create_client()
 
     # -- Persona management --
 
@@ -298,50 +305,159 @@ class AgentEngine:
         else:
             self._memory.clear()
 
-    # -- LLM integration hook --
+    # -- LLM integration (real Ollama-backed) --
+
+    def _build_tool_defs(self, tool_names: list[str]) -> list[dict]:
+        """Build OpenAI-style tool definitions for the given tool names."""
+        defs = []
+        # Known tool parameter schemas
+        schemas = {
+            "system_info": {
+                "type": "object",
+                "properties": {},
+                "description": "Get system information (OS, hostname, Python version).",
+            },
+            "memory_read": {
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID to read memory for."},
+                    "limit": {"type": "integer", "description": "Max entries to return."},
+                },
+            },
+            "memory_write": {
+                "type": "object",
+                "properties": {
+                    "data": {"type": "object", "description": "Data to store."},
+                    "session_id": {"type": "string", "description": "Session ID."},
+                },
+            },
+            "network_scan": {
+                "type": "object",
+                "properties": {
+                    "targets": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of host IPs to scan, e.g. ['127.0.0.1'].",
+                    },
+                    "ports": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": "List of port numbers to scan, e.g. [22, 80, 443].",
+                    },
+                },
+            },
+            "security_tools": {
+                "type": "object",
+                "properties": {
+                    "technique": {
+                        "type": "string",
+                        "description": "Security technique to run: info, audit, vulnerability-scan, port-scan.",
+                    },
+                },
+            },
+            "file_read": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "File path to read."},
+                },
+                "required": ["path"],
+            },
+            "file_write": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "File path to write."},
+                    "content": {"type": "string", "description": "Content to write."},
+                },
+                "required": ["path", "content"],
+            },
+            "shell": {
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string", "description": "Shell command to execute."},
+                },
+                "required": ["command"],
+            },
+        }
+
+        for name in tool_names:
+            handler = self._tool_handlers.get(name)
+            if handler:
+                schema = schemas.get(name, {
+                    "type": "object",
+                    "properties": {},
+                    "additionalProperties": True,
+                })
+                defs.append(
+                    tool_def(
+                        name=name,
+                        description=f"Execute the '{name}' tool. {schema.get('description', '')}",
+                        parameters=schema,
+                    )
+                )
+        return defs
 
     async def generate_response(
         self,
         agent: AgentPersona,
         message: str,
-        llm_client: Any = None,
-        model: str = "qwen3:0.6b",
     ) -> str:
         """
-        Generate a response using the agent's persona and an LLM client.
+        Generate a response using the engine's Ollama-backed LLM client.
 
-        This is the integration point for the actual LLM. The agent's
-        system_prompt is injected as the system message.
+        Injects the agent's system_prompt, supports tool-calling if the agent
+        has tools registered, and feeds tool results back to the LLM.
 
         Args:
             agent: The selected agent persona.
             message: The user's message (after prefix removal).
-            llm_client: An OpenAI-compatible client (optional).
-            model: Model name to use.
+            model: Optional model name override.
 
         Returns:
             The generated response text.
         """
         system = agent.system_prompt
+        tool_names = agent.tools or []
+        tool_defs = self._build_tool_defs(tool_names) if tool_names else None
 
-        if llm_client is None:
-            # Fallback: return a placeholder indicating LLM integration needed
-            return f"[Moon_Twin Agent: {agent.name}] {system[:80]}... — LLM client not connected. Message: {message[:100]}"
-
-        # Build messages array with persona injection
-        messages = [
-            {"role": "system", "content": system},
-            {"role": "user", "content": message},
-        ]
-
-        try:
-            resp = await llm_client.chat.completions.create(
-                model=model,
-                messages=messages,
+        if tool_defs:
+            # Use tool-calling loop
+            result = await self._llm.chat_with_tools(
+                message=message,
+                system=system,
+                tools=tool_defs,
+                tool_executor=self._execute_tool_call,
+                max_iterations=5,
             )
-            return resp.choices[0].message.content
-        except Exception as e:
-            return f"[Moon_Twin Agent: {agent.name}] Error: {e}"
+            return result.get("content", "")
+        else:
+            # Simple chat
+            result = await self._llm.chat(
+                message=message,
+                system=system,
+            )
+            return result.get("content", "")
+
+    async def _execute_tool_call(self, tool_call: dict) -> dict:
+        """Execute a single tool call from the LLM."""
+        func = tool_call.get("function", {})
+        name = func.get("name", "")
+        args_str = func.get("arguments", "{}")
+        try:
+            args = json.loads(args_str) if isinstance(args_str, str) else args_str
+        except (json.JSONDecodeError, TypeError):
+            args = {}
+        # Post-process: some LLMs send arrays/objects as JSON strings
+        # Deep-parse any string values that look like JSON
+        if isinstance(args, dict):
+            for key, value in args.items():
+                if isinstance(value, str):
+                    try:
+                        parsed = json.loads(value)
+                        if isinstance(parsed, (dict, list)):
+                            args[key] = parsed
+                    except (json.JSONDecodeError, ValueError):
+                        pass  # Not JSON, leave as string
+        return await self.run_tool(name, args)
 
 
 # ---------------------------------------------------------------------------
