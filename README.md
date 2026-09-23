@@ -53,8 +53,9 @@ moon_twin_api --test      # Run API self-test
 Moon_Twin/
 ├── main.py              # CLI entry point (moon_twin)
 ├── agent/
-│   ├── engine.py        # Agent engine: personas, routing, tools, LLM hook
+│   ├── engine.py        # Agent engine: personas, routing, tools, real LLM
 │   ├── api.py           # Starlette ASGI API server (/api/moon-agent)
+│   ├── llm.py           # OllamaClient: LLM integration + tool-calling + streaming
 │   └── memory.py        # SQLite session memory store
 ├── terminal/
 │   └── app.py           # Hermes-desktop-terminal replica TUI
@@ -70,6 +71,7 @@ Moon_Twin/
 - `rich` — terminal UI
 - `starlette` + `uvicorn` — ASGI API server
 - `websockets` — WebSocket client/server
+- `openai` — Ollama-compatible client
 - Python stdlib: `asyncio`, `socket`, `sqlite3`, `subprocess`, `platform`
 
 ## Separation
