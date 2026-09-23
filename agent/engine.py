@@ -377,6 +377,20 @@ class AgentEngine:
                 },
                 "required": ["command"],
             },
+            "web_search": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Search query string."},
+                },
+                "required": ["query"],
+            },
+            "web_extract": {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "URL to fetch and extract text from."},
+                },
+                "required": ["url"],
+            },
         }
 
         for name in tool_names:
@@ -666,6 +680,60 @@ async def _tool_shell(args: dict) -> dict:
     except Exception as e:
         return {"error": str(e), "command": cmd}
 
+async def _tool_web_search(args: dict) -> dict:
+    """Search using Wikipedia's free API (no API key needed). Returns articles matching the query."""
+    import urllib.request
+    import urllib.parse
+    import json
+    import re as _re
+    query = args.get("query", "")
+    if not query:
+        return {"error": "No query provided"}
+    try:
+        url = "https://en.wikipedia.org/w/api.php?" + urllib.parse.urlencode({
+            "action": "query",
+            "list": "search",
+            "srsearch": query,
+            "format": "json",
+            "srlimit": "5",
+        })
+        req = urllib.request.Request(url, headers={"User-Agent": "Moon_Twin/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        results = []
+        for item in data.get("query", {}).get("search", []):
+            snippet = item.get("snippet", "")
+            snippet = _re.sub(r"<[^>]+>", "", snippet).strip()
+            results.append({
+                "title": item.get("title", ""),
+                "url": "https://en.wikipedia.org/wiki/" + urllib.parse.quote(item.get("title", ""), safe=""),
+                "snippet": snippet[:300],
+            })
+        return {"query": query, "results": results, "count": len(results), "source": "wikipedia"}
+    except Exception as e:
+        return {"error": str(e), "query": query}
+
+
+async def _tool_web_extract(args: dict) -> dict:
+    """Fetch a URL and extract readable text content."""
+    import urllib.request
+    import re
+    url = args.get("url", "")
+    if not url:
+        return {"error": "No URL provided"}
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Moon_Twin/1.0"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            html = resp.read().decode("utf-8", errors="replace")
+        text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
+        text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
+        text = re.sub(r"<[^>]+>", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        return {"url": url, "content": text[:10000], "chars": len(text)}
+    except Exception as e:
+        return {"error": str(e), "url": url}
+
+
 # Register built-in tools
 default_engine.register_tool("system_info", _tool_system_info)
 default_engine.register_tool("memory_read", _tool_memory_read)
@@ -675,6 +743,8 @@ default_engine.register_tool("security_tools", _tool_security_tools)
 default_engine.register_tool("file_read", _tool_file_read)
 default_engine.register_tool("file_write", _tool_file_write)
 default_engine.register_tool("shell", _tool_shell)
+default_engine.register_tool("web_search", _tool_web_search)
+default_engine.register_tool("web_extract", _tool_web_extract)
 
 
 # ---------------------------------------------------------------------------
