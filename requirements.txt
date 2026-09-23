@@ -1,16 +1,7 @@
-# Moon_Twin — dependencies
-# Minimal pure-Python deps for the agent engine + TUI + API server.
-
-# Terminal UI (Hermes-desktop-terminal replica)
 rich>=13.7
-
-# API server (Starlette + Uvicorn)
 starlette>=0.27
 uvicorn[standard]>=0.27
-
-# WebSocket support (terminal <-> API)
 websockets>=10.0
-
-# Testing
+openai>=1.0
 pytest>=8.0
 pytest-asyncio>=0.23
