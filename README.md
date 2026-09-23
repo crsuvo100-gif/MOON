@@ -7,6 +7,13 @@ other project.
 ## What it is
 
 - **8 agent personas**: general, code, security, research, voice, admin, creative, monitor
+- **Real LLM integration**: Ollama-backed (OpenAI-compatible) on localhost:11434.
+  Models: qwen3:0.6b (default), qwen3:1.7b, qwen2.5:1.5b/3b, deepseek-r1:1.5b/8b, and more.
+  Configurable via env: `MOON_TWIN_MODEL`, `MOON_TWIN_OLLAMA_URL`,
+  `MOON_TWIN_TEMPERATURE`, `MOON_TWIN_MAX_TOKENS`, `MOON_TWIN_TIMEOUT`.
+- **Tool-calling**: LLM decides when to call tools (file_read, file_write, shell,
+  network_scan, system_info, etc.) and receives results back — multi-step reasoning.
+- **Streaming**: WebSocket `/api/ws` streams tokens as the LLM generates.
 - **Per-prompt agent selection**: `agent:<name> <message>` prefix syntax
 - **Intent→agent routing**: keyword-based automatic routing
 - **Tool framework**: system_info, network_scan, security_tools, file_read, file_write, shell, memory_read, memory_write
