@@ -50,7 +50,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "You are MOON, a helpful AI assistant. Answer clearly and concisely. "
             "You have access to tools when needed. Be direct and useful."
         ),
-        tools=["system_info", "memory_read", "memory_write", "python_executor", "github_feed"],
+        tools=["system_info", "memory_read", "memory_write", "python_executor", "github_feed", "plan", "reflect"],
     ),
     AgentPersona(
         name="code",
@@ -59,7 +59,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "You are MOON Code Agent. You excel at writing, reviewing, debugging, and explaining code. "
             "Provide complete, runnable examples. Explain your reasoning. Use tools to inspect files when needed."
         ),
-        tools=["system_info", "file_read", "file_write", "shell", "python_executor"],
+        tools=["system_info", "file_read", "file_write", "shell", "python_executor", "tool_acquire", "self_evolve"],
     ),
     AgentPersona(
         name="security",
@@ -421,6 +421,36 @@ class AgentEngine:
                     "capability": {"type": "string", "description": "Capability keyword: youtube, web scraping, pdf, image, ocr, etc."},
                 },
                 "required": ["capability"],
+            },
+            "tool_acquire": {
+                "type": "object",
+                "properties": {
+                    "capability": {"type": "string", "description": "Capability to install: youtube, web scraping, pdf, image, data, chart, translate, excel, yaml, qr."},
+                },
+                "required": ["capability"],
+            },
+            "self_evolve": {
+                "type": "object",
+                "properties": {
+                    "source": {"type": "string", "description": "URL or local file path to ingest into knowledge base."},
+                    "max_chars": {"type": "integer", "description": "Max chars to ingest (default 8000)."},
+                },
+                "required": ["source"],
+            },
+            "reflect": {
+                "type": "object",
+                "properties": {
+                    "prompt": {"type": "string", "description": "The original prompt/question."},
+                    "answer": {"type": "string", "description": "The answer to critique."},
+                },
+                "required": ["prompt", "answer"],
+            },
+            "plan": {
+                "type": "object",
+                "properties": {
+                    "goal": {"type": "string", "description": "The goal to decompose into steps."},
+                },
+                "required": ["goal"],
             },
         }
 
@@ -892,6 +922,187 @@ async def _tool_github_feed(args: dict) -> dict:
         return {"error": f"[github_feed error: {exc}]"}
 
 
+# ---------------------------------------------------------------------------
+# ADVANCED FEATURES (ported from original MOON's advanced subsystems)
+# ---------------------------------------------------------------------------
+
+TOOL_CATALOG: dict[str, dict] = {
+    "youtube": {"pip": "yt-dlp", "import": "yt_dlp", "cap": "download audio/video from YouTube"},
+    "video": {"pip": "yt-dlp", "import": "yt_dlp", "cap": "download/process video"},
+    "web scraping": {"pip": "beautifulsoup4", "import": "bs4", "cap": "parse HTML"},
+    "html parse": {"pip": "beautifulsoup4", "import": "bs4", "cap": "parse HTML"},
+    "image": {"pip": "Pillow", "import": "PIL", "cap": "image processing"},
+    "pdf": {"pip": "pypdf", "import": "pypdf", "cap": "read PDFs"},
+    "data": {"pip": "pandas", "import": "pandas", "cap": "data analysis"},
+    "chart": {"pip": "matplotlib", "import": "matplotlib", "cap": "charts/plots"},
+    "translate": {"pip": "deep-translator", "import": "deep_translator", "cap": "translation"},
+    "excel": {"pip": "openpyxl", "import": "openpyxl", "cap": "xlsx files"},
+    "yaml": {"pip": "pyyaml", "import": "yaml", "cap": "YAML config"},
+    "qr": {"pip": "qrcode", "import": "qrcode", "cap": "generate QR codes"},
+}
+
+
+def _importable(name: str) -> bool:
+    try:
+        __import__(name)
+        return True
+    except Exception:
+        return False
+
+
+async def _tool_tool_acquire(args: dict) -> dict:
+    """Install a Python package from catalog and optionally generate a tool.
+
+    Usage: tool_acquire with capability="web scraping" (installs beautifulsoup4).
+    Returns what was installed and whether it's usable.
+    """
+    capability = args.get("capability", "")
+    cap = capability.lower()
+    for key, spec in TOOL_CATALOG.items():
+        if key in cap:
+            already = _importable(spec["import"])
+            if not already:
+                import subprocess as _sp
+                import sys as _sys
+                try:
+                    _sp.run(
+                        [_sys.executable, "-m", "pip", "install", "--quiet", spec["pip"]],
+                        check=False, timeout=180,
+                        stdout=_sp.DEVNULL, stderr=_sp.DEVNULL,
+                    )
+                except Exception as exc:
+                    return {"installed": False, "capability": capability, "error": str(exc)}
+            now = _importable(spec["import"])
+            return {
+                "installed": now,
+                "capability": capability,
+                "package": spec["pip"],
+                "import": spec["import"],
+                "already_available": already,
+            }
+    return {"installed": False, "capability": capability, "error": "No catalog match. Try: youtube, web scraping, pdf, image, data, chart, translate, excel, yaml, qr"}
+
+
+async def _tool_self_evolve(args: dict) -> dict:
+    """Ingest a URL or local file into MOON's knowledge base (bounded self-evolution).
+
+    Usage: self_evolve with source="https://example.com/article" or source="/path/to/file.md"
+    """
+    import re as _re
+    from urllib.parse import urlparse as _urlparse
+    source = args.get("source", "")
+    max_chars = args.get("max_chars", 8000)
+    if not source:
+        return {"status": "error", "message": "supply a URL or local path to learn from"}
+    text = ""
+    if _urlparse(source).scheme in ("http", "https"):
+        try:
+            import urllib.request as _ur
+            req = _ur.Request(source, headers={"User-Agent": "MOON/1.0"})
+            with _ur.urlopen(req, timeout=20) as resp:
+                text = _re.sub(r"<[^>]+>", " ", resp.read().decode(errors="replace"))
+                text = _re.sub(r"\s+", " ", text).strip()
+        except Exception as exc:
+            return {"status": "error", "message": f"fetch failed: {exc}"}
+    else:
+        try:
+            from pathlib import Path as _Path
+            p = _Path(source)
+            if p.is_file():
+                text = p.read_text(errors="replace")
+            elif p.is_dir():
+                text = "\n".join(f.read_text(errors="replace") for f in list(p.glob("*.md"))[:10] if f.is_file())
+        except Exception as exc:
+            return {"status": "error", "message": f"read failed: {exc}"}
+    if not text:
+        return {"status": "error", "message": "no text extracted"}
+    text = text[:max_chars]
+    default_engine._memory.append({
+        "session": "self_evolve",
+        "data": {"source": source, "chars": len(text), "learned": text[:500]},
+        "timestamp": __import__("asyncio").get_event_loop().time(),
+    })
+    return {
+        "status": "learned",
+        "source": source,
+        "chars": len(text),
+        "message": f"Ingested {len(text)} chars from {source} into MOON's knowledge.",
+    }
+
+
+async def _tool_reflect(args: dict) -> dict:
+    """Self-reflect: critique an answer against a prompt, suggest improvements.
+
+    Usage: reflect with prompt="..." and answer="..."
+    Uses LLM when available, heuristic fallback when not.
+    """
+    prompt = args.get("prompt", "")
+    answer = args.get("answer", "")
+    if default_engine._llm is not None and answer:
+        try:
+            resp = await default_engine._llm.chat(
+                message=(
+                    "Critique the ANSWER against the PROMPT. List concrete "
+                    "problems only (missing parts, factual errors, vagueness). "
+                    "If it is good, reply exactly SATISFACTORY. Otherwise list "
+                    "each issue on its own line.\n\nPROMPT: " + prompt
+                    + "\n\nANSWER: " + answer
+                ),
+                system="You are a critical reviewer. Be concise.",
+            )
+            text = (resp.get("content") or "").strip()
+            if text.upper().startswith("SATISFACTORY"):
+                return {"satisfactory": True, "improvements": []}
+            improvements = [l.strip("-*1234567890. )") for l in text.splitlines() if l.strip()]
+            return {"satisfactory": not improvements, "improvements": improvements[:10]}
+        except Exception:
+            pass
+    improvements = []
+    if not answer or len(answer) < 5:
+        improvements.append("answer is too short / empty")
+    if not prompt:
+        improvements.append("no prompt to reflect against")
+    return {"satisfactory": len(improvements) == 0, "improvements": improvements}
+
+
+async def _tool_plan(args: dict) -> dict:
+    """Decompose a goal into an ordered plan of sub-steps.
+
+    Usage: plan with goal="write a web scraper that extracts product prices"
+    Uses LLM when available, generic fallback when not.
+    """
+    goal = args.get("goal", "")
+    if not goal:
+        return {"steps": [], "error": "no goal specified"}
+    if default_engine._llm is not None:
+        try:
+            resp = await default_engine._llm.chat(
+                message=(
+                    "Break the following goal into a concise, ordered list of "
+                    "actionable sub-steps (each one line, no numbering symbols). "
+                    "Keep it under 8 steps. Goal: " + goal
+                ),
+                system="You are a planner. Be practical and concise.",
+            )
+            text = (resp.get("content") or "").strip()
+            steps = [s.strip("0123456789. )-") for s in text.splitlines()]
+            steps = [s for s in steps if s]
+            if steps:
+                return {"steps": steps, "goal": goal}
+        except Exception:
+            pass
+    return {
+        "steps": [
+            f"Analyze: {goal}",
+            "Identify required tools and information",
+            "Execute sub-tasks in order",
+            "Validate the result",
+            "Report final answer",
+        ],
+        "goal": goal,
+    }
+
+
 # Register built-in tools
 default_engine.register_tool("system_info", _tool_system_info)
 default_engine.register_tool("memory_read", _tool_memory_read)
@@ -907,6 +1118,10 @@ default_engine.register_tool("python_executor", _tool_python_executor)
 default_engine.register_tool("system_command", _tool_system_command)
 default_engine.register_tool("docker", _tool_docker)
 default_engine.register_tool("github_feed", _tool_github_feed)
+default_engine.register_tool("tool_acquire", _tool_tool_acquire)
+default_engine.register_tool("self_evolve", _tool_self_evolve)
+default_engine.register_tool("reflect", _tool_reflect)
+default_engine.register_tool("plan", _tool_plan)
 
 
 # ---------------------------------------------------------------------------
