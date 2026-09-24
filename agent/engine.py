@@ -50,7 +50,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "You are MOON, a helpful AI assistant. Answer clearly and concisely. "
             "You have access to tools when needed. Be direct and useful."
         ),
-        tools=["system_info", "memory_read", "memory_write"],
+        tools=["system_info", "memory_read", "memory_write", "python_executor", "github_feed"],
     ),
     AgentPersona(
         name="code",
@@ -59,7 +59,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "You are MOON Code Agent. You excel at writing, reviewing, debugging, and explaining code. "
             "Provide complete, runnable examples. Explain your reasoning. Use tools to inspect files when needed."
         ),
-        tools=["system_info", "file_read", "file_write", "shell"],
+        tools=["system_info", "file_read", "file_write", "shell", "python_executor"],
     ),
     AgentPersona(
         name="security",
@@ -78,7 +78,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "You are MOON Research Agent. You excel at finding, verifying, and synthesizing information "
             "from multiple sources. Cite your sources. Prefer primary sources. Be rigorous."
         ),
-        tools=["web_search", "web_extract", "memory_read"],
+        tools=["web_search", "web_extract", "memory_read", "github_feed"],
     ),
     AgentPersona(
         name="voice",
@@ -390,6 +390,37 @@ class AgentEngine:
                     "url": {"type": "string", "description": "URL to fetch and extract text from."},
                 },
                 "required": ["url"],
+            },
+            "python_executor": {
+                "type": "object",
+                "properties": {
+                    "code": {"type": "string", "description": "Python code to execute."},
+                    "timeout": {"type": "integer", "description": "Timeout in seconds (default 30)."},
+                },
+                "required": ["code"],
+            },
+            "system_command": {
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string", "description": "System command to run (guarded)."},
+                    "timeout": {"type": "integer", "description": "Timeout in seconds (default 30)."},
+                },
+                "required": ["command"],
+            },
+            "docker": {
+                "type": "object",
+                "properties": {
+                    "subcommand": {"type": "string", "description": "Docker subcommand: ps, images, run, exec, logs, build."},
+                    "args": {"type": "string", "description": "Arguments for the subcommand."},
+                },
+                "required": ["subcommand"],
+            },
+            "github_feed": {
+                "type": "object",
+                "properties": {
+                    "capability": {"type": "string", "description": "Capability keyword: youtube, web scraping, pdf, image, ocr, etc."},
+                },
+                "required": ["capability"],
             },
         }
 
@@ -734,6 +765,133 @@ async def _tool_web_extract(args: dict) -> dict:
         return {"error": str(e), "url": url}
 
 
+# ---------------------------------------------------------------------------
+# ADVANCED TOOLS
+# ---------------------------------------------------------------------------
+
+async def _tool_python_executor(args: dict) -> dict:
+    """Run a bounded Python snippet and return stdout (async, time-limited)."""
+    import asyncio as _asyncio
+    import sys as _sys
+    code = args.get("code", "")
+    timeout = args.get("timeout", 30)
+    if not code:
+        return {"output": "[no code provided]"}
+    try:
+        proc = await _asyncio.create_subprocess_exec(
+            _sys.executable, "-c", code,
+            stdout=_asyncio.subprocess.PIPE, stderr=_asyncio.subprocess.PIPE,
+        )
+        out, err = await _asyncio.wait_for(proc.communicate(), timeout=timeout)
+        stdout = (out or b"").decode(errors="replace")[:2000]
+        stderr = (err or b"").decode(errors="replace")[:500]
+        return {
+            "output": stdout + ("\n" + stderr if stderr else ""),
+            "returncode": proc.returncode,
+        }
+    except Exception as exc:
+        return {"error": f"[python error: {exc}]"}
+
+
+async def _tool_system_command(args: dict) -> dict:
+    """Run a controlled system command (guarded against dangerous ops)."""
+    import asyncio as _asyncio
+    command = args.get("command", "")
+    timeout = args.get("timeout", 30)
+    _REFUSE = ("rm -rf", "shutdown", "reboot", "dd if=", "mkfs", "chmod 777 /")
+    if not command:
+        return {"output": "[no command provided]"}
+    low = command.lower()
+    if any(d in low for d in _REFUSE):
+        return {"output": "[refused: potentially dangerous command]", "refused": True}
+    try:
+        proc = await _asyncio.create_subprocess_shell(
+            command, stdout=_asyncio.subprocess.PIPE, stderr=_asyncio.subprocess.PIPE,
+        )
+        out, err = await _asyncio.wait_for(proc.communicate(), timeout=timeout)
+        stdout = (out or b"").decode(errors="replace")[:2000]
+        stderr = (err or b"").decode(errors="replace")[:500]
+        return {
+            "output": stdout + ("\n" + stderr if stderr else ""),
+            "returncode": proc.returncode,
+        }
+    except Exception as exc:
+        return {"error": f"[system_command error: {exc}]"}
+
+
+async def _tool_docker(args: dict) -> dict:
+    """Docker operations: ps, images, run, exec, logs, build (if docker CLI available)."""
+    import shutil
+    import subprocess
+    subcommand = args.get("subcommand", "ps")
+    docker_args = args.get("args", "")
+    if not shutil.which("docker"):
+        return {"output": "[docker] docker CLI not found on this host.", "available": False}
+    try:
+        r = subprocess.run(
+            ["docker", subcommand] + (docker_args.split() if docker_args else []),
+            capture_output=True, text=True, timeout=120,
+        )
+        output = (r.stdout or r.stderr or "(no output)")[:2000]
+        return {"output": output, "available": True, "returncode": r.returncode}
+    except Exception as exc:
+        return {"error": f"[docker] error: {exc}", "available": True}
+
+
+async def _tool_github_feed(args: dict) -> dict:
+    """Search public GitHub for tools matching a capability keyword and pull the best match.
+
+    Usage: github_feed with capability="youtube downloader", "web scraper", etc.
+    Returns the best-matching repo info and a download URL.
+    """
+    import json
+    import urllib.request
+    import urllib.parse
+    capability = args.get("capability", "")
+    search_queries = {
+        "youtube": "youtube downloader in:name,readme language:python",
+        "video": "video downloader in:name language:python",
+        "audio download": "audio downloader in:name language:python",
+        "web scraping": "web scraper in:name language:python",
+        "html parse": "html parser in:name language:python",
+        "browser automation": "browser automation playwright in:name language:python",
+        "image": "image processing in:name language:python",
+        "ocr": "ocr tesseract in:name language:python",
+        "pdf": "pdf parser in:name language:python",
+        "data": "data analysis pandas in:name language:python",
+        "csv": "csv toolkit in:name language:python",
+        "plot": "chart plotting in:name language:python",
+        "chart": "chart generator in:name language:python",
+        "speech": "speech recognition in:name language:python",
+        "translate": "translation api in:name language:python",
+        "excel": "excel xlsx in:name language:python",
+        "qr": "qr code generator in:name language:python",
+        "scraper": "scraper in:name language:python",
+    }
+    query = search_queries.get(capability.lower(), capability)
+    if not query:
+        return {"error": "No capability specified. Try: youtube, web scraping, pdf, image, ocr, etc."}
+    try:
+        url = f"https://api.github.com/search/repositories?q={urllib.parse.quote(query)}&sort=stars&per_page=3"
+        req = urllib.request.Request(url, headers={"User-Agent": "MOON/1.0", "Accept": "application/vnd.github+json"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.load(resp)
+        items = data.get("items", [])
+        results = []
+        for item in items[:3]:
+            results.append({
+                "name": item.get("name", ""),
+                "full_name": item.get("full_name", ""),
+                "description": (item.get("description") or "")[:200],
+                "stars": item.get("stargazers_count", 0),
+                "url": item.get("html_url", ""),
+                "clone_url": item.get("clone_url", ""),
+            })
+        return {"results": results, "count": len(results), "query": query}
+    except Exception as exc:
+        return {"error": f"[github_feed error: {exc}]"}
+
+
 # Register built-in tools
 default_engine.register_tool("system_info", _tool_system_info)
 default_engine.register_tool("memory_read", _tool_memory_read)
@@ -745,6 +903,10 @@ default_engine.register_tool("file_write", _tool_file_write)
 default_engine.register_tool("shell", _tool_shell)
 default_engine.register_tool("web_search", _tool_web_search)
 default_engine.register_tool("web_extract", _tool_web_extract)
+default_engine.register_tool("python_executor", _tool_python_executor)
+default_engine.register_tool("system_command", _tool_system_command)
+default_engine.register_tool("docker", _tool_docker)
+default_engine.register_tool("github_feed", _tool_github_feed)
 
 
 # ---------------------------------------------------------------------------
