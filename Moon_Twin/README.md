@@ -1,0 +1,88 @@
+# MOON — Standalone AI Agent System
+
+A self-contained AI agent system. Runs on its own port (:8778), its own
+virtualenv, and its own codebase. Fully independent — no connection to any
+other project.
+
+## What it is
+
+- **8 agent personas**: general, code, security, research, voice, admin, creative, monitor
+- **Real LLM integration**: Ollama-backed (OpenAI-compatible) on localhost:11434.
+  Models: qwen3:0.6b (default), qwen3:1.7b, qwen2.5:1.5b/3b, deepseek-r1:1.5b/8b, and more.
+  Configurable via env: `MOON_MODEL`, `MOON_OLLAMA_URL`,
+  `MOON_TEMPERATURE`, `MOON_MAX_TOKENS`, `MOON_TIMEOUT`.
+- **Tool-calling**: LLM decides when to call tools (file_read, file_write, shell,
+  network_scan, system_info, etc.) and receives results back — multi-step reasoning.
+- **Streaming**: WebSocket `/api/ws` streams tokens as the LLM generates.
+- **Per-prompt agent selection**: `agent:<name> <message>` prefix syntax
+- **Intent→agent routing**: keyword-based automatic routing
+- **47 tools**: system_info, memory_read, memory_write, network_scan, security_tools,
+  file_read, file_write, shell, web_search, web_extract, python_executor,
+  system_command, docker, github_feed, tool_acquire, self_evolve, reflect,
+  plan, log_reader, http_request, git_ops, email_sender, archive, dns_lookup,
+  template_render, data_viz, encryption, data_export, yaml_ops, qr_generator,
+  rest_api_framework, pdf_reader, ocr, image_processing, browser, preprocess,
+  ssh_client, geoip_lookup, password_strength, steganography, cve_search,
+  malware_scan, threat_intel, authorized_scan, recon_report, packet_capture,
+  port_scanner
+- **SQLite-backed session memory**
+- **Hermes-desktop-terminal replica TUI**: interactive REPL with command palette
+- **REST + WebSocket API**: `/api/moon-agent` on port :8778
+
+## Entry points
+
+```bash
+moon_twin                 # Interactive terminal REPL
+moon_twin --list          # List all agents
+moon_twin --route "query" # Show which agent handles a query
+moon_twin "message"       # Process a single message (non-interactive)
+moon_twin --json "msg"    # JSON output mode
+moon_twin --agent code "write hello"  # Force a specific agent
+moon_twin_api             # Start /api/moon-agent server on :8778
+moon_twin_api --test      # Run API self-test
+```
+
+## API endpoints (port :8778)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/health` | Health check |
+| GET | `/api/moon-agent` | List all agents |
+| POST | `/api/moon-agent` | Process a message |
+| GET | `/api/moon-agent/route?query=<q>` | Route a query |
+| GET | `/api/moon-agent/agents` | List agents (alias) |
+| GET | `/api/moon-agent/memory` | Get memory |
+| POST | `/api/moon-agent/memory` | Set memory |
+| WS | `/api/ws` | Real-time WebSocket |
+
+## Layout
+
+```
+Moon_Twin/
+├── main.py              # CLI entry point (moon_twin)
+├── agent/
+│   ├── engine.py        # Agent engine: personas, routing, tools, real LLM
+│   ├── api.py           # Starlette ASGI API server (/api/moon-agent)
+│   ├── llm.py           # OllamaClient: LLM integration + tool-calling + streaming
+│   └── memory.py        # SQLite session memory store
+├── terminal/
+│   └── app.py           # Hermes-desktop-terminal replica TUI
+├── .venv/               # Python virtualenv (gitignored)
+├── requirements.txt     # Dependencies
+└── README.md
+```
+
+## Dependencies
+
+- Python 3.10+
+- `rich` — terminal UI
+- `starlette` + `uvicorn` — ASGI API server
+- `websockets` — WebSocket client/server
+- `openai` — Ollama-compatible client
+- Python stdlib: `asyncio`, `socket`, `sqlite3`, `subprocess`, `platform`
+
+## Separation
+
+MOON's code imports **only from itself** (`agent.engine`, `terminal.app`).
+It does not import from any external project.
+MOON runs on `127.0.0.1:8778`.

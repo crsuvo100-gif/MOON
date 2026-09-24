@@ -1,0 +1,28 @@
+# Moon_Twin — Git ignore patterns
+# Runtime data that should never be committed
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Secrets / local config
+.env
+.env.*
+
+# SQLite memory (runtime)
+moon_memory_*.db
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
