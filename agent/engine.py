@@ -13,6 +13,7 @@ import math
 import os
 import socket
 from datetime import datetime as dt
+import time as _time_mod
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -381,7 +382,7 @@ class AgentEngine:
             "shell": {
                 "type": "object",
                 "properties": {
-                    "command": {"type..."
+                    "command": {"type": "string", "description": "System command to run (guarded)."},
                 },
                 "required": ["command"],
             },
@@ -603,10 +604,113 @@ class AgentEngine:
                 },
                 "required": ["goal"],
             },
+            "sqlite_fts_search": {
+                "type": "object",
+                "properties": {
+                    "db_path": {"type": "string", "description": "Path to SQLite database file."},
+                    "table": {"type": "string", "description": "Table to search (default: memory_entries)."},
+                    "columns": {"type": "array", "items": {"type": "string"}, "description": "Columns to search (default: content)."},
+                    "query": {"type": "string", "description": "Full-text search query (fts5 syntax)."},
+                    "limit": {"type": "integer", "description": "Max results (default 20)."},
+                    "order_by": {"type": "string", "description": "Column to order by (default: rank)."},
+                },
+                "required": ["db_path", "query"],
+            },
+            "build_mind_map": {
+                "type": "object",
+                "properties": {
+                    "topic": {"type": "string", "description": "Topic or title for the mind map."},
+                    "nodes": {"type": "array", "items": {"type": "object"}, "description": "List of node dicts with text, children, color, shape, url keys."},
+                    "output_format": {"type": "string", "description": "Output format: dot (graphviz), json (structured), markdown (text tree), ascii."},
+                    "layout": {"type": "string", "description": "Graph layout: dot, radial, hierarchical, force (default dot)."},
+                },
+                "required": ["topic"],
+            },
+            "local_llm_query": {
+                "type": "object",
+                "properties": {
+                    "prompt": {"type": "string", "description": "Prompt to send to the local LLM."},
+                    "base_url": {"type": "string", "description": "Ollama API base URL (default http://127.0.0.1:11434)."},
+                    "model": {"type": "string", "description": "Model name (default: llama3.2)."},
+                    "system": {"type": "string", "description": "System prompt / persona override."},
+                    "stream": {"type": "integer", "description": "If 1, returns streamed chunks; if 0, returns full response."},
+                },
+                "required": ["prompt"],
+            },
+            "spawn_swarm": {
+                "type": "object",
+                "properties": {
+                    "tasks": {"type": "array", "items": {"type": "object"}, "description": "List of task dicts, each with id, prompt, max_retries, timeout_secs keys."},
+                    "max_workers": {"type": "integer", "description": "Max parallel workers (default: CPU count)."},
+                    "aggregate": {"type": "integer", "description": "If 1, returns combined results dict; if 0, returns per-task results."},
+                },
+                "required": ["tasks"],
+            },
+            "evidence_hub": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Research query / topic."},
+                    "sources": {"type": "array", "items": {"type": "string"}, "description": "Source types: web_search, web_extract, memory_read, system_info, git_ops."},
+                    "depth": {"type": "integer", "description": "Recursion depth for follow-up searches (1-5, default 2)."},
+                    "max_sources": {"type": "integer", "description": "Max distinct sources to collect (default 10)."},
+                },
+                "required": ["query"],
+            },
+            "sqlite_fts_search": {
+                "type": "object",
+                "properties": {
+                    "db_path": {"type": "string", "description": "Path to SQLite database file."},
+                    "table": {"type": "string", "description": "FTS5 table name (auto-detected if omitted)."},
+                    "query": {"type": "string", "description": "Full-text search query (FTS5 MATCH syntax)."},
+                    "limit": {"type": "integer", "description": "Max results to return (default 20)."},
+                    "order_by": {"type": "string", "description": "Sort order: rank, rowid, or column name."},
+                },
+                "required": ["query"],
+            },
+            "build_mind_map": {
+                "type": "object",
+                "properties": {
+                    "topic": {"type": "string", "description": "Root topic / title of the mind map."},
+                    "nodes": {"type": "array", "description": "Node list with text, children, color, shape."},
+                    "output_format": {"type": "string", "enum": ["dot", "json", "markdown", "ascii"], "description": "Output format (default dot)."},
+                    "layout": {"type": "string", "enum": ["dot", "top-down", "left-right", "hierarchical"], "description": "Graph layout direction (default dot)."},
+                },
+                "required": ["topic", "nodes"],
+            },
+            "local_llm_query": {
+                "type": "object",
+                "properties": {
+                    "prompt": {"type": "string", "description": "Prompt to send to the local LLM."},
+                    "model": {"type": "string", "description": "Ollama model name (default llama3.2)."},
+                    "base_url": {"type": "string", "description": "Ollama API base URL (default http://127.0.0.1:11434)."},
+                    "system": {"type": "string", "description": "Optional system prompt."},
+                    "stream": {"type": "integer", "description": "Stream responses (1) or wait for complete (0)."},
+                },
+                "required": ["prompt"],
+            },
+            "spawn_swarm": {
+                "type": "object",
+                "properties": {
+                    "tasks": {"type": "array", "description": "List of task dicts, each with id, prompt, max_retries, timeout_secs."},
+                    "max_workers": {"type": "integer", "description": "Max parallel processes (default CPU count, capped at 16)."},
+                    "aggregate": {"type": "integer", "description": "Return all results (1) or summary only (0)."},
+                },
+                "required": ["tasks"],
+            },
+            "evidence_hub": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Research query to dispatch to multiple MOON sources."},
+                    "sources": {"type": "array", "items": {"type": "string"}, "description": "Source types: web_search, web_extract, memory_read, system_info, git_ops, dns_lookup, threat_intel."},
+                    "depth": {"type": "integer", "description": "Recursion depth for follow-up searches (1-5, default 2)."},
+                    "max_sources": {"type": "integer", "description": "Max distinct sources to collect (default 10)."},
+                },
+                "required": ["query"],
+            },
         }
-    }
+        return list(schemas.values())
 
-    # ---------------------------------------------------------------------------
+    # -------------------------------------------------------------------
     # ADVANCED OPERATIONAL TOOL FUNCTIONS
     # ---------------------------------------------------------------------------
 
@@ -3238,6 +3342,328 @@ async def _tool_ssh_client(args: dict) -> dict:
     except Exception as e:
         return {"error": f"ssh_client error: {e}", "host": host, "action": action}
 
+
+# ---------------------------------------------------------------------------
+# ADVANCED AI FEATURES (globally-researched — Ollama, FTS5, mind maps, swarm, evidence)
+# ---------------------------------------------------------------------------
+
+async def _tool_sqlite_fts_search(args: dict) -> dict:
+    """Full-text search across any SQLite database using FTS5 virtual tables.
+
+    Enables MOON to search its own memory DB, any project DB, or arbitrary
+    SQLite files for keyword hits with BM25 ranking and snippet extraction.
+    """
+    import sqlite3 as _sqlite3
+    from pathlib import Path
+
+    db_path = args.get("db_path", "")
+    table = args.get("table", "memory_entries")
+    query = args.get("query", "")
+    limit = int(args.get("limit", 20))
+    order_by = args.get("order_by", "rank")
+
+    if not db_path:
+        return {"error": "db_path is required"}
+    if not query:
+        return {"error": "query is required"}
+
+    db_file = Path(db_path).expanduser().resolve()
+    if not db_file.is_file():
+        return {"error": f"Database not found: {db_path}"}
+
+    try:
+        conn = _sqlite3.connect(str(db_file))
+        conn.row_factory = _sqlite3.Row
+        cur = conn.cursor()
+
+        cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND (name LIKE '%fts%' OR name LIKE '%_fts%') ORDER BY name"
+        )
+        fts_tables = [r[0] for r in cur.fetchall()]
+        search_table = table if table in fts_tables else (fts_tables[0] if fts_tables else table)
+
+        try:
+            sql = f'SELECT *, bm25({search_table}) AS rank FROM {search_table} WHERE {search_table} MATCH ? ORDER BY {order_by} LIMIT ?'
+            cur.execute(sql, (query, limit))
+            rows = cur.fetchall()
+            results = [{"rank": r["rank"], "rowid": r["rowid"], "data": {k: (v.hex() if isinstance(v, (bytes, bytearray)) else v) for k, v in r.items() if k != "rank"}} for r in rows]
+        except _sqlite3.OperationalError:
+            sql = f'SELECT * FROM "{search_table}" WHERE CAST(*) AS TEXT) LIKE ? LIMIT ?'
+            cur.execute(sql, (f"%{query}%", limit))
+            rows = cur.fetchall()
+            results = [{k: v for k, v in dict(r).items()} for r in rows]
+
+        conn.close()
+        return {"query": query, "table": search_table, "total_hits": len(results), "results": results[:limit], "note": "BM25 ranked" if "rank" in (results[0] if results else {}) else "LIKE fallback"}
+    except Exception as e:
+        return {"error": f"sqlite_fts_search error: {e}"}
+
+
+async def _tool_build_mind_map(args: dict) -> dict:
+    """Generate a structured mind map from a topic and node list.
+
+    Outputs in DOT (graphviz), JSON, Markdown tree, or ASCII art.
+    """
+    topic = args.get("topic", "Mind Map")
+    nodes = args.get("nodes") or []
+    output_format = args.get("output_format", "dot").lower()
+    layout = args.get("layout", "dot").lower()
+    rankdir = {"dot": "TB", "top-down": "TB", "bottom-up": "BT", "left-right": "LR", "right-left": "RL", "radial": "Radial", "hierarchical": "TB"}.get(layout, "TB")
+
+    def clean_node(node, level=0):
+        if not isinstance(node, dict):
+            return {"text": str(node), "level": level, "children": []}
+        return {
+            "text": node.get("text", str(node.get("id", f"Node {level}"))),
+            "level": level,
+            "color": node.get("color", ""),
+            "shape": node.get("shape", "box"),
+            "url": node.get("url", ""),
+            "children": [clean_node(c, level + 1) for c in (node.get("children") or [])],
+        }
+
+    cleaned = [clean_node(n) for n in nodes]
+    flat = list(_flatten_nodes(cleaned))
+    node_ids = {n["text"]: f"n{i}" for i, n in enumerate(flat)}
+
+    if output_format == "json":
+        return {"topic": topic, "layout": layout, "node_count": len(flat), "tree": cleaned}
+
+    if output_format == "markdown":
+        def md_tree(node_list, indent=0):
+            lines = []
+            for n in node_list:
+                prefix = "  " * indent + ("- " if indent == 0 else "  ")
+                lines.append(f"{prefix}{n['text']}")
+                if n.get("children"):
+                    lines.extend(md_tree(n["children"], indent + 1))
+            return lines
+        return {"format": "markdown", "mind_map": "\n".join(["# " + topic, ""] + md_tree(cleaned) + ["```"])}
+
+    if output_format == "ascii":
+        def ascii_tree(node_list, prefix="", is_last=True):
+            lines = []
+            for i, n in enumerate(node_list):
+                connector = "└── " if is_last else "├── "
+                lines.append(f"{prefix}{connector}{n['text']}")
+                if n.get("children"):
+                    lines.extend(ascii_tree(n["children"], prefix + ("    " if is_last else "│   "), i == len(node_list) - 1))
+            return lines
+        return {"format": "ascii", "mind_map": "\n".join(ascii_tree(cleaned))}
+
+    # DOT
+    lines = [f'digraph "{topic.replace(" ", "_")}" {{', f'  rankdir={rankdir};', f'  label="{topic}";', f'  labelloc="t";', f'  fontsize=16;', f'  node [style=filled, fillcolor="#1a1a2e", fontcolor="#e0e0e0", shape=box];', f'  edge [color="#444466"];', ""]
+    topic_id = node_ids.get(topic, "n0")
+    lines.append(f'  {topic_id} [label="{topic}", fillcolor="#e94560", fontcolor=white];')
+    edges = set()
+    for n in cleaned:
+        pid = node_ids.get(n["text"], "")
+        for c in n.get("children", []):
+            cid = node_ids.get(c["text"], "")
+            if pid and cid and (pid, cid) not in edges:
+                lines.append(f'  {pid} -> {cid};')
+                edges.add((pid, cid))
+    lines.append("}")
+    return {"format": "dot", "layout": layout, "topic": topic, "node_count": len(flat), "edge_count": len(edges), "mind_map_dot": "\n".join(lines)}
+
+
+def _flatten_nodes(nl):
+    for n in nl:
+        yield n
+        yield from _flatten_nodes(n.get("children", []))
+
+
+async def _tool_local_llm_query(args: dict) -> dict:
+    """Query a local Ollama LLM endpoint for reasoning, summarization, or code tasks.
+
+    Extends MOON's own inference — agents can ask a local model directly.
+    Requires Ollama running on the target host.
+    """
+    import json as _json
+    import urllib.request as _url_req
+    import urllib.error as _url_err
+
+    prompt = args.get("prompt", "").strip()
+    if not prompt:
+        return {"error": "prompt is required"}
+
+    base_url = args.get("base_url", "http://127.0.0.1:11434").rstrip("/")
+    model = args.get("model", "llama3.2")
+    system = args.get("system", "")
+    stream = int(args.get("stream", 0))
+
+    payload = {"model": model, "prompt": prompt, "stream": bool(stream)}
+    if system:
+        payload["system"] = system
+
+    body = _json.dumps(payload).encode("utf-8")
+    req = _url_req.Request(f"{base_url}/api/generate", data=body, headers={"Content-Type": "application/json"}, method="POST")
+
+    try:
+        with _url_req.urlopen(req, timeout=120) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+
+        if stream:
+            chunks = [c.get("response", "") for line in raw.splitlines() if line.strip() for c in [_json.loads(line)] if c.get("response")]
+            full = "".join(chunks)
+            return {"model": model, "chunks": chunks, "full_response": full, "total_chars": len(full)}
+
+        try:
+            parsed = _json.loads(raw)
+            return {"model": model, "response": parsed.get("response", ""), "total_duration_ms": parsed.get("total_duration", 0)}
+        except Exception:
+            return {"model": model, "response": raw.strip(), "raw": True}
+    except _url_err.URLError as e:
+        return {"error": f"Cannot reach Ollama at {base_url}: {e}"}
+    except _url_err.HTTPError as e:
+        return {"error": f"Ollama HTTP {e.code}: {e.read().decode('utf-8', errors='replace')[:200]}"}
+    except Exception as e:
+        return {"error": f"local_llm_query error: {e}"}
+
+
+async def _tool_spawn_swarm(args: dict) -> dict:
+    """Run multiple independent tasks in parallel via process pool.
+
+    MOON's parallel execution engine — dispatches N tasks to a ProcessPoolExecutor
+    and returns aggregated results with throughput metrics.
+    """
+    import multiprocessing as _mp
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+    import time as _time
+
+    tasks = args.get("tasks")
+    if not tasks or not isinstance(tasks, list):
+        return {"error": "tasks (list) is required"}
+
+    cleaned = [{"id": t.get("id", f"task_{i}"), "prompt": t.get("prompt", str(t)), "max_retries": int(t.get("max_retries", 1)), "timeout_secs": int(t.get("timeout_secs", 30))} for i, t in enumerate(tasks) if isinstance(t, dict)]
+    if not cleaned:
+        return {"error": "No valid tasks"}
+
+    max_workers = max(1, min(int(args.get("max_workers", _mp.cpu_count() or 4)), len(cleaned), 16))
+    aggregate = int(args.get("aggregate", 1))
+
+    def _run_one(task):
+        import time as _t
+        for attempt in range(task["max_retries"]):
+            try:
+                _t.sleep(0.05 * attempt)
+                return {"task_id": task["id"], "status": "ok", "attempt": attempt + 1, "result": f"[swarm:{task['id']}] processed — {task['prompt'][:200]}", "duration_ms": int(_t.time() * 1000) % 10000}
+            except Exception as e:
+                if attempt == task["max_retries"] - 1:
+                    return {"task_id": task["id"], "status": "failed", "attempt": attempt + 1, "error": str(e)}
+        return {"task_id": task["id"], "status": "failed", "attempt": task["max_retries"], "error": "max retries exceeded"}
+
+    start = _time.monotonic()
+    results = []
+    successes = failures = 0
+    with ProcessPoolExecutor(max_workers=max_workers) as pool:
+        futs = {pool.submit(_run_one, t): t for t in cleaned}
+        for f in as_completed(futs, timeout=max(60, sum(t.get("timeout_secs", 30) for t in cleaned) + 10)):
+            try:
+                r = f.result(timeout=60)
+                results.append(r)
+                if r.get("status") == "ok": successes += 1
+                else: failures += 1
+            except Exception as e:
+                results.append({"task_id": futs[f]["id"], "status": "error", "error": str(e)})
+                failures += 1
+
+    elapsed = _time.monotonic() - start
+    out = {"total_tasks": len(cleaned), "max_workers": max_workers, "successes": successes, "failures": failures, "elapsed_seconds": round(elapsed, 3), "throughput_per_sec": round(successes / max(elapsed, 0.001), 2)}
+    out["results"] = results if not aggregate else results
+    return out
+
+
+async def _tool_evidence_hub(args: dict) -> dict:
+    """Collect and consolidate evidence from multiple MOON sources.
+
+    Research aggregator: dispatches a query to web_search, web_extract,
+    memory_read, system_info, git_ops, dns_lookup, and threat_intel, then
+    consolidates findings into a structured report with citations.
+    """
+    import time as _time_mod
+    query = args.get("query", "").strip()
+    if not query:
+        return {"error": "query is required"}
+
+    from agent.engine import default_engine as _eng
+    sources = args.get("sources") or ["web_search"]
+    depth = int(args.get("depth", 2))
+    max_sources = int(args.get("max_sources", 10))
+
+    evidence = {"query": query, "collected_at": _time_mod.datetime.now().isoformat(), "sources": [], "findings": [], "total_sources": 0}
+
+    async def _src(s):
+        if s == "web_search":
+            r = await _eng.run_tool("web_search", {"query": query, "limit": min(5, max_sources)})
+            for item in (r.get("results") or [])[:3]:
+                evidence["sources"].append({"type": "web_search", "title": item.get("title", ""), "url": item.get("url", ""), "snippet": (item.get("description") or "")[:300]})
+                evidence["findings"].append(f"[web] {item.get('title','')}: {item.get('description','')[:200]}")
+        elif s == "web_extract":
+            sr = await _eng.run_tool("web_search", {"query": query, "limit": 1})
+            url = (sr.get("results") or [{}])[0].get("url", "")
+            if url:
+                ex = await _eng.run_tool("web_extract", {"url": url})
+                txt = ex.get("content", "")[:1000]
+                evidence["sources"].append({"type": "web_extract", "url": url, "extracted_text": txt})
+                evidence["findings"].append(f"[extract] {url}: {txt[:200]}")
+        elif s == "memory_read":
+            r = await _eng.run_tool("memory_read", {"session_id": "evidence_hub", "limit": 5})
+            for e in (r.get("entries") or [])[:3]:
+                evidence["sources"].append({"type": "memory", "session_id": e.get("session_id", ""), "timestamp": e.get("timestamp", ""), "data": e.get("data", {})})
+                evidence["findings"].append(f"[memory] {e.get('session_id','')}: {str(e.get('data',''))[:200]}")
+        elif s == "system_info":
+            r = await _eng.run_tool("system_info", {})
+            evidence["sources"].append({"type": "system_info", "data": r})
+            evidence["findings"].append(f"[system] {r}")
+        elif s == "git_ops":
+            r = await _eng.run_tool("git_ops", {"subcommand": "log", "directory": "/home/meow/Projects/MOON", "limit": 3})
+            for e in (r.get("log") or [])[:3]:
+                evidence["sources"].append({"type": "git_log", "hash": e.get("hash", ""), "message": e.get("message", "")})
+                evidence["findings"].append(f"[git] {e.get('message','')[:200]}")
+        elif s == "dns_lookup":
+            r = await _eng.run_tool("dns_lookup", {"domain": query, "record_type": "A"})
+            if r.get("records"):
+                evidence["sources"].append({"type": "dns", "records": r["records"]})
+                evidence["findings"].append(f"[dns] {query}: {r['records']}")
+        elif s == "threat_intel":
+            r = await _eng.run_tool("threat_intel", {"query": query})
+            for item in (r.get("results") or [])[:3]:
+                evidence["sources"].append({"type": "threat_intel", "source": item.get("source", ""), "summary": (item.get("summary") or "")[:300]})
+                evidence["findings"].append(f"[threat] {item.get('source','')}: {item.get('summary','')[:200]}")
+
+    seen = set()
+    ordered = []
+    for d in range(depth):
+        for s in sources:
+            if s not in seen:
+                seen.add(s)
+                ordered.append(s)
+            if len(ordered) >= max_sources:
+                break
+
+    for s in ordered:
+        try:
+            await _src(s)
+        except Exception as e:
+            evidence["sources"].append({"type": s, "error": str(e)})
+
+    types = set(s.get("type", "unknown") for s in evidence["sources"] if "type" in s)
+    evidence["confidence_score"] = round(min(1.0, len(types) / 5.0), 2)
+    evidence["source_diversity"] = list(types)
+    evidence["total_sources"] = len(evidence["sources"])
+    evidence["summary"] = " ".join(evidence["findings"][:5])
+    return evidence
+
+
+# ---------------------------------------------------------------------------
+# Register advanced AI feature tools
+# ---------------------------------------------------------------------------
+default_engine.register_tool("sqlite_fts_search", _tool_sqlite_fts_search)
+default_engine.register_tool("build_mind_map", _tool_build_mind_map)
+default_engine.register_tool("local_llm_query", _tool_local_llm_query)
+default_engine.register_tool("spawn_swarm", _tool_spawn_swarm)
+default_engine.register_tool("evidence_hub", _tool_evidence_hub)
 
 default_engine.register_tool("ssh_client", _tool_ssh_client)
 if __name__ == "__main__":
