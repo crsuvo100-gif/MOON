@@ -130,7 +130,7 @@ INTENT_ROUTING: list[tuple[str, str]] = [
     (r"\b(search|research|find|wiki|google|article|paper|source|citation|web|news|summary|summarize|explain|quantum|information|learn)\b", "research"),
     (r"\b(speak|voice|tts|audio|sound|talk|say|pronounce)\b", "voice"),
     (r"\b(health|status|monitor|log|check|up|down|crash|ping|uptime|load|disk|memory|cpu)\b", "monitor"),
-    (r"\b(install|service|config|deploy|restart|kill|process|daemon|systemd|firewall|dns|network|mount|storage|nginx|systemctl)\b", "admin"),
+    (r"\b(install|service|services|config|deploy|restart|kill|process|daemon|systemd|firewall|dns|network|mount|storage|nginx|systemctl|manage)\b", "admin"),
     (r"\b(draw|ascii|art|design|create|generate|logo|image|visual|paint)\b", "creative"),
     (r"\b(hello|hi|help|status|what|who|how|why|when|where|cancel|reservation|dinner|lunch)\b", "general"),
 ]
