@@ -12,7 +12,7 @@ import json
 import math
 import os
 import socket
-import datetime as dt
+from datetime import datetime as dt
 import urllib.request
 import urllib.parse
 import urllib.error
