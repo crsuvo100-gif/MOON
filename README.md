@@ -16,7 +16,15 @@ other project.
 - **Streaming**: WebSocket `/api/ws` streams tokens as the LLM generates.
 - **Per-prompt agent selection**: `agent:<name> <message>` prefix syntax
 - **Intent→agent routing**: keyword-based automatic routing
-- **18 tools**: system_info, network_scan, security_tools, file_read, file_write, shell, memory_read, memory_write, web_search, web_extract, **python_executor** (run Python code), **system_command** (guarded OS commands), **docker** (Docker operations), **github_feed** (GitHub tool search), **tool_acquire** (auto-install Python packages), **self_evolve** (ingest knowledge from URLs/files), **reflect** (self-critique answers), **plan** (goal decomposition)
+- **47 tools**: system_info, memory_read, memory_write, network_scan, security_tools,
+  file_read, file_write, shell, web_search, web_extract, python_executor,
+  system_command, docker, github_feed, tool_acquire, self_evolve, reflect,
+  plan, log_reader, http_request, git_ops, email_sender, archive, dns_lookup,
+  template_render, data_viz, encryption, data_export, yaml_ops, qr_generator,
+  rest_api_framework, pdf_reader, ocr, image_processing, browser, preprocess,
+  ssh_client, geoip_lookup, password_strength, steganography, cve_search,
+  malware_scan, threat_intel, authorized_scan, recon_report, packet_capture,
+  port_scanner
 - **SQLite-backed session memory**
 - **Hermes-desktop-terminal replica TUI**: interactive REPL with command palette
 - **REST + WebSocket API**: `/api/moon-agent` on port :8778
