@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Moon_Twin — Standalone Agent System
+MOON — Standalone Agent System
 
 A self-contained AI agent system with:
 - Multi-agent persona engine (general, code, security, research, voice, admin, creative, monitor)
@@ -20,13 +20,13 @@ Entry points:
     moon_twin <message>              Process a single message (non-interactive)
     moon_twin --agent/-a <name> <message>  Use a specific agent
     moon_twin --json/-j <message>   JSON output mode
-    moon_twin_agent_api              Start /api/moon-agent server on :8778
-    moon_twin_agent_api --test       Run self-test
+    moon_twin_api              Start /api/moon-agent server on :8778
+    moon_twin_api --test       Run self-test
 
 System CLI: /home/meow/.local/bin/moon_twin
          → cd /home/meow/Moon_Twin && exec .venv/bin/python main.py "$@"
 
-Author: MOON / Moon_Twin
+Author: MOON
 Version: 1.0.0
 """
 
@@ -60,7 +60,7 @@ from terminal.app import MoonTerminal
 # ---------------------------------------------------------------------------
 
 __version__ = "1.0.0"
-__author__ = "MOON / Moon_Twin"
+__author__ = "MOON / MOON"
 
 
 # ---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ def main():
     parser = argparse.ArgumentParser(
         prog="moon_twin",
         description=(
-            "Moon_Twin — Standalone Agent System\n"
+            "MOON — Standalone Agent System\n"
             "Multi-agent persona engine with Hermes-desktop-terminal replica."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -85,8 +85,8 @@ Examples:
   moon_twin "agent:code write hello"    Non-interactive: use code agent
   moon_twin "hello moon"               Non-interactive: auto-routed
   moon_twin --json "agent:research AI"  JSON output mode
-  moon_twin_agent_api --test           Run API self-test
-  moon_twin_agent_api                  Start /api/moon-agent on :8778
+  moon_twin_api --test           Run API self-test
+  moon_twin_api                  Start /api/moon-agent on :8778
         """,
     )
 

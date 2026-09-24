@@ -1,5 +1,5 @@
 """
-Moon_Twin Agent API — standalone API server for /api/moon-agent integration.
+MOON Agent API — standalone API server for /api/moon-agent integration.
 
 Exposes:
 - POST /api/moon-agent    — Process a message through the agent engine
@@ -193,7 +193,7 @@ class MoonTwinAPI:
         """Health check endpoint."""
         health = {
             "status": "healthy",
-            "service": "moon-twin-agent-api",
+            "service": "moon-agent-api",
             "version": "1.0.0",
             "agent_count": len(self.engine.list_agents()),
             "lock_state": "unlocked",
@@ -214,7 +214,7 @@ class MoonTwinAPI:
     def _health_data(self) -> dict:
         return {
             "status": "healthy",
-            "service": "moon-twin-agent-api",
+            "service": "moon-agent-api",
             "version": "1.0.0",
             "agent_count": len(self.engine.list_agents()),
             "lock_state": "unlocked",
@@ -573,7 +573,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         prog="moon_twin_api",
-        description="Moon_Twin Agent API server — /api/moon-agent integration endpoint",
+        description="MOON Agent API server — /api/moon-agent integration endpoint",
     )
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
     parser.add_argument("--port", type=int, default=8778, help="Port to listen on")
@@ -584,7 +584,7 @@ if __name__ == "__main__":
     if args.test:
         # Self-test
         print("╔══════════════════════════════════════════╗")
-        print("║  MOON_TWIN AGENT API — SELF TEST          ║")
+        print("║  MOON AGENT API — SELF TEST          ║")
         print("╚══════════════════════════════════════════╝")
         print()
 

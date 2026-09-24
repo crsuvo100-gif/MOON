@@ -1,4 +1,4 @@
-# Moon_Twin — Standalone AI Agent System
+# MOON — Standalone AI Agent System
 
 A self-contained AI agent system. Runs on its own port (:8778), its own
 virtualenv, and its own codebase. Fully independent — no connection to any
@@ -9,8 +9,8 @@ other project.
 - **8 agent personas**: general, code, security, research, voice, admin, creative, monitor
 - **Real LLM integration**: Ollama-backed (OpenAI-compatible) on localhost:11434.
   Models: qwen3:0.6b (default), qwen3:1.7b, qwen2.5:1.5b/3b, deepseek-r1:1.5b/8b, and more.
-  Configurable via env: `MOON_TWIN_MODEL`, `MOON_TWIN_OLLAMA_URL`,
-  `MOON_TWIN_TEMPERATURE`, `MOON_TWIN_MAX_TOKENS`, `MOON_TWIN_TIMEOUT`.
+  Configurable via env: `MOON_MODEL`, `MOON_OLLAMA_URL`,
+  `MOON_TEMPERATURE`, `MOON_MAX_TOKENS`, `MOON_TIMEOUT`.
 - **Tool-calling**: LLM decides when to call tools (file_read, file_write, shell,
   network_scan, system_info, etc.) and receives results back — multi-step reasoning.
 - **Streaming**: WebSocket `/api/ws` streams tokens as the LLM generates.
@@ -61,7 +61,6 @@ Moon_Twin/
 │   └── app.py           # Hermes-desktop-terminal replica TUI
 ├── .venv/               # Python virtualenv (gitignored)
 ├── requirements.txt     # Dependencies
-├── .env.example         # Example env config (gitignored)
 └── README.md
 ```
 
@@ -76,6 +75,6 @@ Moon_Twin/
 
 ## Separation
 
-Moon_Twin's code imports **only from itself** (`agent.engine`, `terminal.app`).
+MOON's code imports **only from itself** (`agent.engine`, `terminal.app`).
 It does not import from any external project.
-Moon_Twin runs on `127.0.0.1:8778`.
+MOON runs on `127.0.0.1:8778`.

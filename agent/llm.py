@@ -1,5 +1,5 @@
 """
-Moon_Twin LLM Client — Ollama-backed (OpenAI-compatible) LLM integration.
+MOON LLM Client — Ollama-backed (OpenAI-compatible) LLM integration.
 
 Provides:
 - OllamaClient: wraps openai.AsyncOpenAI pointed at local Ollama
@@ -26,11 +26,11 @@ except ImportError:
 # Default configuration (override via env or kwargs)
 # ---------------------------------------------------------------------------
 
-DEFAULT_OLLAMA_URL = os.getenv("MOON_TWIN_OLLAMA_URL", "http://127.0.0.1:11434/v1")
-DEFAULT_MODEL = os.getenv("MOON_TWIN_MODEL", "qwen3:0.6b")
-DEFAULT_TEMPERATURE = float(os.getenv("MOON_TWIN_TEMPERATURE", "0.7"))
-DEFAULT_MAX_TOKENS = int(os.getenv("MOON_TWIN_MAX_TOKENS", "4096"))
-DEFAULT_TIMEOUT = float(os.getenv("MOON_TWIN_TIMEOUT", "60"))
+DEFAULT_OLLAMA_URL = os.getenv("MOON_OLLAMA_URL", "http://127.0.0.1:11434/v1")
+DEFAULT_MODEL = os.getenv("MOON_MODEL", "qwen3:0.6b")
+DEFAULT_TEMPERATURE = float(os.getenv("MOON_TEMPERATURE", "0.7"))
+DEFAULT_MAX_TOKENS = int(os.getenv("MOON_MAX_TOKENS", "4096"))
+DEFAULT_TIMEOUT = float(os.getenv("MOON_TIMEOUT", "60"))
 
 
 # ---------------------------------------------------------------------------

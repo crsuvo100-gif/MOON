@@ -1,5 +1,5 @@
 """
-MOON Memory — SQLite-backed session memory store for Moon_Twin.
+MOON Memory — SQLite-backed session memory store for MOON.
 
 Replicates Hermes state.py pattern: persistent session storage with
 conversation history, agent selection logs, and memory consolidation.
@@ -18,7 +18,7 @@ from contextlib import contextmanager
 
 class MoonMemory:
     """
-    Persistent memory store for Moon_Twin agent sessions.
+    Persistent memory store for MOON agent sessions.
 
     Stores:
     - Conversation messages (per session)
@@ -279,7 +279,7 @@ if __name__ == "__main__":
     mem.log_agent_event(sid, "code", "write a function", intent_route="code")
     print("Agent events:", mem.get_agent_events(sid))
 
-    mem.set_memory(sid, "user_name", "Moon_Twin")
+    mem.set_memory(sid, "user_name", "MOON")
     print("Memory:", mem.get_all_memory(sid))
 
     print("All OK")
