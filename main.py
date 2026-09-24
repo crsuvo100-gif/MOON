@@ -409,6 +409,8 @@ def main() -> None:
     sub.add_parser("update", help="Safe update: git pull --ff-only + pip install -e . --upgrade")
     sub.add_parser("version", help="Print MOON version")
     sub.add_parser("monitor", help="Run health monitor + self-heal (backend, models, git sync)")
+    sub.add_parser("agent", help="Moon_Twin standalone agent CLI (interactive, message, --list, --route, --json)")
+    sub.add_parser("api", help="Launch Moon_Twin API server (default :8778)")
     args, remaining = ap.parse_known_args()
     _ensure_default_peer()
     if args.cmd == "run":
@@ -474,6 +476,45 @@ def main() -> None:
         raise SystemExit(_tg_main())
     elif args.cmd == "version":
         _cmd_version()
+    elif args.cmd == "agent":
+        # Moon_Twin standalone agent CLI — integrated into root MOON.
+        #   moon agent                    → interactive agent session
+        #   moon agent "hello"           → send message
+        #   moon agent --list             → list agents
+        #   moon agent --route "query"   → smart route
+        #   moon agent --json             → JSON output
+        import subprocess as _sp
+        import sys as _sys3
+
+        twin_root = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  "Moon_Twin")
+        twin_venv_py = os.path.join(twin_root, ".venv", "bin", "python")
+        py = twin_venv_py if os.path.exists(twin_venv_py) else sys.executable
+        _sp.run([py, "main.py"] + _sys3.argv[2:],
+                cwd=twin_root, env=dict(os.environ))
+        raise SystemExit(0)
+
+    elif args.cmd == "api":
+        # Moon_Twin API server — integrated into root MOON.
+        #   moon api                     → start API on :8778
+        #   moon api --port 9000         → custom port
+        import argparse as _ap
+        import subprocess as _sp4
+        import sys as _sys4
+
+        aparser = _ap.ArgumentParser(prog="moon api")
+        aparser.add_argument("--port", type=int, default=8778)
+        aparser.add_argument("--host", default="0.0.0.0")
+        aargs, _ = aparser.parse_known_args(_sys4.argv[2:])
+        twin_root = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  "Moon_Twin")
+        twin_venv_py = os.path.join(twin_root, ".venv", "bin", "python")
+        py = twin_venv_py if os.path.exists(twin_venv_py) else sys.executable
+        _sp4.run([py, "-m", "agent.api",
+                  "--host", aargs.host, "--port", str(aargs.port)],
+                 cwd=twin_root, env=dict(os.environ))
+        raise SystemExit(0)
+
     else:
         # No subcommand (bare `moon`) -> moonscope TUI (default terminal).
         from app.tui import main as tui_main
