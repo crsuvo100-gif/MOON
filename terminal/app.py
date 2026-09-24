@@ -91,12 +91,13 @@ class MoonTerminal:
     - Exit handling
     """
 
-    def __init__(self, engine: AgentEngine | None = None):
+    def __init__(self, engine: AgentEngine | None = None, interactive: bool = False):
         self.engine = engine or default_engine
         self.session_id = f"session-{os.getpid()}-{id(self)}"
         self.running = True
         self.message_count = 0
-        self._setup_signal_handlers()
+        if interactive:
+            self._setup_signal_handlers()
 
     def _setup_signal_handlers(self):
         """Handle Ctrl+C and termination signals gracefully."""

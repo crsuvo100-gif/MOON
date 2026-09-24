@@ -160,7 +160,7 @@ Examples:
         return 0
 
     # -- Interactive REPL --
-    terminal = MoonTerminal()
+    terminal = MoonTerminal(interactive=True)
     import asyncio
     asyncio.run(terminal.run())
     return 0
