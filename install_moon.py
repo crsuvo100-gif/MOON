@@ -449,14 +449,14 @@ sys.exit(0 if result else 1)
 # 9. Systemd service (optional)
 # ---------------------------------------------------------------------------
 def install_service(root: Path) -> None:
-    svc_src = root / "deploy" / "moon-terminal.service"
+    svc_src = root / "deploy" / "moon-agent.service"
     if not svc_src.exists():
-        _warn("deploy/moon-terminal.service not found — skipping service install")
+        _warn("deploy/moon-agent.service not found — skipping service install")
         return
     if platform.system() != "Linux" or not shutil.which("systemctl"):
         _warn("systemd not available — skipping service")
         return
-    svc_dest = Path.home() / ".config" / "systemd" / "user" / "moon-terminal.service"
+    svc_dest = Path.home() / ".config" / "systemd" / "user" / "moon.service"
     svc_dest.parent.mkdir(parents=True, exist_ok=True)
     content = svc_src.read_text(encoding="utf-8")
     # __INSTALL_PATH__/MOON is the installer's anchor (used in deploy/template).
@@ -467,9 +467,9 @@ def install_service(root: Path) -> None:
     content = content.replace("/home/meow/Projects/MOON", str(root))
     svc_dest.write_text(content, encoding="utf-8")
     _run(["systemctl", "--user", "daemon-reload"], check=False)
-    _run(["systemctl", "--user", "enable", "moon-terminal.service"], check=False)
+    _run(["systemctl", "--user", "enable", "moon.service"], check=False)
     _ok(f"systemd user service installed: {svc_dest}")
-    _warn("MOON does NOT auto-start the UI. Run `moon terminal` (or `moon`) to open the HUD.")
+    _warn("MOON does NOT auto-start the UI. Run `moon` to open the terminal agent.")
 
 # ---------------------------------------------------------------------------
 # Main

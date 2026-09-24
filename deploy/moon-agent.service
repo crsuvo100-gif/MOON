@@ -1,0 +1,17 @@
+[Unit]
+Description=MOON AI Agent — Standalone Agent System
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=__INSTALL_PATH__/MOON/Moon_Twin
+ExecStart=__INSTALL_PATH__/MOON/Moon_Twin/.venv/bin/python -m agent.api --host 0.0.0.0 --port 8778
+Environment=PYTHONPATH=
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
