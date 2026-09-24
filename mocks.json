@@ -1,0 +1,63 @@
+app/
+audit_report_20260823.md
+deploy/
+docs/
+hermes_terminal_reference.md
+install.sh
+install_moon.py
+install_moon_full.py
+main.py
+mocks.json
+models/
+moon/
+moon-tui-monitor.py
+moon_memory_374831.db
+moon_ui/
+moonscope_monitor.py
+moonscope_tui.py
+moonscope_tui_monitor.py
+plugins/
+public_moonscope_v1.html
+pyproject.toml
+requirements-optional.txt
+requirements.txt
+run-monitor.sh
+scripts/
+setup_wizard.py
+systemd/
+terminal_moon/
+terminal_moon_monitor.sh
+tests/
+tmux_start.sh
+tools/
+uninstall_moon.py
+verify_operational.sh
+video_research_task.md
+voices/
+skills
+.git/
+.github/
+.gitignore
+.hermes/
+.pytest_cache/{
+  "GET /api/health": {
+    "status": 200,
+    "body": { "ok": true }
+  },
+  "GET /api/users": {
+    "status": 200,
+    "body": [
+      { "id": 1, "name": "Ada Lovelace" },
+      { "id": 2, "name": "Alan Turing" }
+    ]
+  },
+  "GET /api/users/:id": {
+    "status": 200,
+    "body": { "id": ":id", "name": "Dynamic User" }
+  },
+  "POST /api/users": {
+    "status": 201,
+    "delay": 300,
+    "body": { "id": 99, "created": true }
+  }
+}
