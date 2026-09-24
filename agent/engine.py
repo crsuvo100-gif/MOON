@@ -12,7 +12,7 @@ import json
 import math
 import os
 import socket
-import datetime
+import datetime as dt
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -2927,7 +2927,7 @@ async def _tool_recon_report(args: dict) -> dict:
         items = json.loads(findings) if isinstance(findings, str) else findings
     except Exception:
         items = []
-    timestamp = datetime.now().isoformat()
+    timestamp = dt.now().isoformat()
     if format_type == "markdown":
         md = f"# {title}\n\n**Generated**: {timestamp}\n\n## Summary\n\n| Category | Count |\n|----------|-------|\n"
         cats = {}
