@@ -123,7 +123,7 @@ class MoonTwinAPI:
 
     async def _handle_websocket(self, scope: Scope, receive: Receive, send: Send):
         """Handle WebSocket connections."""
-        ws = WebSocket(scope)
+        ws = WebSocket(scope, receive, send)
         await ws.accept()
 
         try:
@@ -154,8 +154,14 @@ class MoonTwinAPI:
                     "session_id": session_id,
                 })
 
-        except Exception:
-            await ws.close()
+        except WebSocketDisconnect:
+            pass  # Normal client disconnect — no cleanup needed
+        except Exception as exc:
+            print(f"[WS] error: {exc}")
+            try:
+                await ws.close()
+            except Exception:
+                pass
 
     # -- HTTP response helpers --
 
@@ -464,6 +470,14 @@ if HAS_ASGI:
             data = api._set_memory_data(body)
         return JSONResponse(content=data)
 
+    async def ws_route(websocket):
+        """WebSocket route — real-time agent chat."""
+        api = MoonTwinAPI()
+        scope = websocket.scope
+        receive = websocket._receive
+        send = websocket._send
+        await api._handle_websocket(scope, receive, send)
+
     app = Starlette(
         routes=[
             Route("/api/health", health_route, methods=["GET"]),
@@ -471,6 +485,7 @@ if HAS_ASGI:
             Route("/api/moon-agent/route", route_route, methods=["GET"]),
             Route("/api/moon-agent/agents", agents_route, methods=["GET"]),
             Route("/api/moon-agent/memory", memory_route, methods=["GET", "POST"]),
+            WebSocketRoute("/api/ws", ws_route),
         ],
     )
 

@@ -533,11 +533,11 @@
   <span class="sep">|</span>
   <span id="clock">—</span>
   <span class="sep">|</span>
-  <a href="http://127.0.0.1:8777/api/health" target="_blank">health</a>
+   <a href="http://127.0.0.1:8778/api/health" target="_blank">health</a>
   <span class="sep">·</span>
-  <a href="http://127.0.0.1:8777/openapi.json" target="_blank">openapi.json</a>
+  <a href="http://127.0.0.1:8778/openapi.json" target="_blank">openapi.json</a>
   <span class="sep">·</span>
-  <a href="http://127.0.0.1:8777/api/events" target="_blank">events</a>
+  <a href="http://127.0.0.1:8778/api/events" target="_blank">events</a>
 </footer>
 
 <div id="toast" style="display:none" class="toast"></div>
@@ -552,7 +552,7 @@ let openapi = null;
 let endpointDetailTimeout = null;
 
 const $ = (s) => document.querySelector(s);
-const API = 'http://127.0.0.1:8777';
+const API = 'http://127.0.0.1:8778';
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 function toast(msg) {
@@ -812,7 +812,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 function connectWS() {
   if (ws && ws.readyState === WebSocket.OPEN) return;
   try {
-    ws = new WebSocket(API + '/ws/events');
+    ws = new WebSocket(API.replace('http', 'ws') + '/api/ws');
     ws.binaryType = 'arraybuffer';
 
     ws.onopen = () => {
@@ -820,7 +820,7 @@ function connectWS() {
       $('#wsDisconnect').style.display = 'inline-block';
       $('#wsLed').classList.add('on');
       $('#wsStatusText').textContent = 'connected';
-      toast('WS connected to /ws/events');
+      toast('WS connected to /api/ws');
     };
 
     ws.onmessage = (ev) => {
