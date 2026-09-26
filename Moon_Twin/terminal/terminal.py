@@ -427,9 +427,17 @@ class MoonTerminal:
             return "[bold yellow]Usage:[/bold yellow] !tool &lt;tool_name&gt; [json_args]"
         tool_name = parts[1].split()[0]
         args_str = parts[1][len(tool_name):].strip()
-        try:
-            args = json.loads(args_str) if args_str else {}
-        except json.JSONDecodeError:
+        # Try JSON args first; if not valid JSON, treat remaining text as positional arg
+        if args_str:
+            try:
+                args = json.loads(args_str)
+            except json.JSONDecodeError:
+                # Positional: map to all common parameter names so whichever
+                # the tool reads first gets the value
+                args = {}
+                for key in ('hostname', 'input', 'domain', 'query', 'url', 'target', 'name'):
+                    args[key] = args_str
+        else:
             args = {}
 
         sys.path.insert(0, str(Path("/home/meow/Projects/MOON/Moon_Twin")))
