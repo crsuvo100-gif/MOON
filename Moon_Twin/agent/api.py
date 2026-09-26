@@ -331,9 +331,16 @@ class MoonTwinAPI:
         result["response"] = response_text
         tools_requested = body.get("tools", [])
         if tools_requested:
-            for tool_name in tools_requested:
-                tool_result = await self.engine.run_tool(tool_name, {})
-                result.setdefault("tools_used", []).append({"tool": tool_name, "result": tool_result})
+            for item in tools_requested:
+                if isinstance(item, dict):
+                    tool_name = item.get("name", "")
+                    tool_args = item.get("args", {}) or {}
+                else:
+                    tool_name = str(item)
+                    tool_args = {}
+                if tool_name:
+                    tool_result = await self.engine.run_tool(tool_name, tool_args)
+                    result.setdefault("tools_used", []).append({"tool": tool_name, "result": tool_result})
         return result
 
     async def _route_query(self, scope: Scope, send: Send, query: str):

@@ -59,7 +59,10 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "You are MOON, a helpful AI assistant. Answer clearly and concisely. "
             "You have access to tools when needed. Be direct and useful."
         ),
-        tools=["system_info", "memory_read", "memory_write", "python_executor", "github_feed", "plan", "reflect"],
+        tools=["system_info", "memory_read", "memory_write", "python_executor",
+               "github_feed", "plan", "reflect", "log_reader", "http_request",
+               "dns_lookup", "template_render", "archive", "data_export",
+               "yaml_ops", "qr_generator", "pdf_reader", "browser", "preprocess"],
     ),
     AgentPersona(
         name="code",
@@ -68,7 +71,9 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "You are MOON Code Agent. You excel at writing, reviewing, debugging, and explaining code. "
             "Provide complete, runnable examples. Explain your reasoning. Use tools to inspect files when needed."
         ),
-        tools=["system_info", "file_read", "file_write", "shell", "python_executor", "tool_acquire", "self_evolve"],
+        tools=["system_info", "file_read", "file_write", "shell", "python_executor",
+               "tool_acquire", "self_evolve", "log_reader", "http_request",
+               "git_ops", "data_export", "yaml_ops", "pdf_reader", "browser", "preprocess"],
     ),
     AgentPersona(
         name="security",
@@ -78,7 +83,10 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "vulnerability analysis, and red-team operations. Always stay within authorized targets. "
             "Be thorough, technical, and practical."
         ),
-        tools=["system_info", "network_scan", "security_tools"],
+        tools=["system_info", "network_scan", "security_tools", "geoip_lookup",
+               "password_strength", "steganography", "cve_search", "malware_scan",
+               "threat_intel", "authorized_scan", "recon_report", "packet_capture",
+               "port_scanner", "ssh_client", "dns_lookup", "http_request", "log_reader"],
     ),
     AgentPersona(
         name="research",
@@ -87,7 +95,9 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "You are MOON Research Agent. You excel at finding, verifying, and synthesizing information "
             "from multiple sources. Cite your sources. Prefer primary sources. Be rigorous."
         ),
-        tools=["web_search", "web_extract", "memory_read", "github_feed"],
+        tools=["web_search", "web_extract", "memory_read", "github_feed",
+               "http_request", "dns_lookup", "pdf_reader", "browser", "preprocess",
+               "cve_search", "threat_intel"],
     ),
     AgentPersona(
         name="voice",
@@ -96,7 +106,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "You are MOON Voice Agent. You manage speech synthesis, voice cloning, and audio processing. "
             "You coordinate with the voice engine to produce natural speech."
         ),
-        tools=["voice_speak", "voice_clone"],
+        tools=["voice_speak", "voice_clone", "system_info"],
     ),
     AgentPersona(
         name="admin",
@@ -105,7 +115,8 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "You are MOON Admin Agent. You handle system administration, service management, "
             "configuration changes, and infrastructure operations. Be precise and cautious with destructive actions."
         ),
-        tools=["system_info", "shell", "service_control"],
+        tools=["system_info", "shell", "service_control", "log_reader",
+               "http_request", "git_ops", "docker", "system_command"],
     ),
     AgentPersona(
         name="creative",
@@ -114,7 +125,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "You are MOON Creative Agent. You produce original creative content: writing, ASCII art, "
             "design concepts, and visual descriptions. Be imaginative and distinctive."
         ),
-        tools=["ascii_art", "image_gen"],
+        tools=["ascii_art", "image_gen", "system_info", "template_render", "qr_generator"],
     ),
     AgentPersona(
         name="monitor",
@@ -123,7 +134,8 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "You are MOON Monitor Agent. You diagnose system health, analyze logs, check service status, "
             "and report on performance. Be systematic and data-driven."
         ),
-        tools=["system_info", "log_read", "health_check"],
+        tools=["system_info", "log_reader", "health_check", "http_request",
+               "dns_lookup", "system_command"],
     ),
 ]
 
@@ -1759,6 +1771,307 @@ async def _tool_github_feed(args: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# MISSING TOOL IMPLEMENTATIONS + TOOL_BUNDLER + API_HANDLER + AGENT_ROUTER
+# ---------------------------------------------------------------------------
+
+async def _tool_voice_speak(args: dict) -> dict:
+    """Speak text aloud using the system TTS engine (Edge TTS / espeak fallback)."""
+    import subprocess
+    import shutil
+    text = args.get("text", "")
+    if not text:
+        return {"error": "text is required"}
+    voice = args.get("voice", "en-US")
+    espeak = shutil.which("espeak")
+    if espeak:
+        subprocess.run([espeak, "-v", voice.split("-")[0] if "-" in voice else "en",
+                        "-s", str(args.get("speed", 150)), text],
+                       capture_output=True, timeout=30)
+        return {"status": "spoken", "text": text[:100], "engine": "espeak"}
+    try:
+        import edge_tts
+        comm = edge_tts.Communicate(text, voice)
+        out = args.get("output") or f"/tmp/moon_voice.mp3"
+        await comm.save(out)
+        return {"status": "saved", "text": text[:100], "output": out}
+    except ImportError:
+        return {"error": "No TTS engine. Install edge-tts or espeak.", "text": text[:100]}
+
+async def _tool_voice_clone(args: dict) -> dict:
+    """Clone a voice from a WAV file and speak text in that voice."""
+    import shutil
+    source = args.get("source", "")
+    text = args.get("text", "")
+    if not source or not text:
+        return {"error": "source (WAV path) and text are required"}
+    inference = shutil.which("inference")
+    if not inference:
+        return {"error": "voice_clone requires the inference CLI.", "source": source}
+    out = args.get("output") or f"/tmp/moon_cloned_{hash(text) % 10000}.wav"
+    try:
+        subprocess.run([inference, "--audio", source, "--text", text, "--output", out],
+                       capture_output=True, timeout=120)
+        return {"status": "cloned_and_spoken", "source": source, "output": out, "text": text[:100]}
+    except Exception as e:
+        return {"error": f"voice_clone error: {e}", "source": source}
+
+async def _tool_ascii_art(args: dict) -> dict:
+    """Generate ASCII art from text using pyfiglet or a fallback renderer."""
+    text = args.get("text", "")
+    if not text:
+        return {"error": "text is required"}
+    try:
+        import pyfiglet
+        result = pyfiglet.figlet_format(text, font=args.get("font", "standard"))
+        return {"ascii": result, "text": text, "font": args.get("font", "standard")}
+    except ImportError:
+        return {"error": "pyfiglet not installed. Install: pip install pyfiglet"}
+    except Exception as e:
+        lines = ["+" + "-" * (len(text) * 2 + 2) + "+",
+                 f"|  {text}  |",
+                 "+" + "-" * (len(text) * 2 + 2) + "+"]
+        return {"ascii": "\n".join(lines), "text": text, "font": "fallback"}
+
+async def _tool_image_gen(args: dict) -> dict:
+    """Generate an image from a text prompt using a DALL-E API or local generator."""
+    prompt = args.get("prompt", "")
+    if not prompt:
+        return {"error": "prompt is required"}
+    api_key = args.get("api_key", "")
+    output = args.get("output", "/tmp/moon_generated_image.png")
+    if api_key:
+        try:
+            import urllib.request, json
+            url = "https://api.openai.com/v1/images/generations"
+            body = json.dumps({"prompt": prompt, "n": 1, "size": "1024x1024"}).encode()
+            req = urllib.request.Request(url, data=body,
+                                         headers={"Authorization": f"Bearer {api_key}",
+                                                  "Content-Type": "application/json"},
+                                         method="POST")
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read())
+            image_url = data["data"][0]["url"]
+            urllib.request.urlretrieve(image_url, output)
+            return {"status": "generated", "prompt": prompt[:100], "output": output}
+        except Exception as e:
+            return {"error": f"DALL-E API error: {e}", "prompt": prompt[:100]}
+    return {"status": "prompt_received", "prompt": prompt[:100],
+            "note": "API key required for image generation. Output path: " + output}
+
+async def _tool_service_control(args: dict) -> dict:
+    """Control systemd services: status, start, stop, restart, enable, disable."""
+    import subprocess
+    import shutil
+    action = args.get("action", "status")
+    service = args.get("service", "")
+    if not service:
+        return {"error": "service name is required"}
+    systemctl = shutil.which("systemctl")
+    if not systemctl:
+        return {"error": "systemctl not found", "service": service}
+    try:
+        if action == "status":
+            r = subprocess.run([systemctl, "is-active", service],
+                               capture_output=True, text=True, timeout=10)
+            return {"service": service, "status": r.stdout.strip(), "action": "status"}
+        if action in ("start", "stop", "restart", "enable", "disable"):
+            r = subprocess.run([systemctl, action, service],
+                               capture_output=True, text=True, timeout=30)
+            return {"service": service, "action": action,
+                    "stdout": r.stdout[:500], "stderr": r.stderr[:500],
+                    "returncode": r.returncode}
+        return {"error": f"unknown action: {action}", "service": service}
+    except Exception as e:
+        return {"error": f"service_control error: {e}", "service": service}
+
+async def _tool_health_check(args: dict) -> dict:
+    """Check system health: CPU, memory, disk, listening ports, service status."""
+    import shutil
+    import subprocess
+    import json as _json
+    checks = {}
+    try:
+        with open("/proc/loadavg") as f:
+            p = f.read().split()
+            checks["cpu_load"] = {"1min": float(p[0]), "5min": float(p[1]), "15min": float(p[2])}
+    except Exception:
+        checks["cpu_load"] = "unavailable"
+    try:
+        with open("/proc/meminfo") as f:
+            lines = f.readlines()
+            mem = {}
+            for line in lines:
+                if "MemTotal" in line: mem["total_kb"] = int(line.split()[1])
+                if "MemAvailable" in line: mem["available_kb"] = int(line.split()[1])
+            if "total_kb" in mem:
+                used = mem["total_kb"] - mem.get("available_kb", 0)
+                checks["memory"] = {"used_kb": used, "total_kb": mem["total_kb"],
+                                    "used_pct": round(100 * used / mem["total_kb"], 1)}
+    except Exception:
+        checks["memory"] = "unavailable"
+    try:
+        r = subprocess.run(["df", "-h", "/"], capture_output=True, text=True, timeout=10)
+        if r.returncode == 0:
+            parts = r.stdout.strip().split("\n")[1].split()
+            checks["disk"] = {"filesystem": parts[0], "size": parts[1],
+                              "used": parts[2], "available": parts[3],
+                              "use_pct": parts[4], "mount": parts[5]}
+    except Exception:
+        checks["disk"] = "unavailable"
+    ss = shutil.which("ss") or shutil.which("netstat")
+    if ss:
+        try:
+            r = subprocess.run([ss, "-tlnp"], capture_output=True, text=True, timeout=10)
+            if r.returncode == 0:
+                checks["listening_ports"] = [l.strip() for l in r.stdout.split("\n")[1:] if l.strip()]
+        except Exception:
+            checks["listening_ports"] = "unavailable"
+    checks["docker_available"] = bool(shutil.which("docker"))
+    try:
+        req = urllib.request.Request("http://127.0.0.1:11434/api/tags",
+                                      headers={"User-Agent": "MOON/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = _json.loads(resp.read())
+            checks["ollama"] = {"available": True, "models": len(data.get("models", []))}
+    except Exception:
+        checks["ollama"] = {"available": False}
+    if shutil.which("systemctl"):
+        try:
+            r = subprocess.run(["systemctl", "is-active", "moon.service"],
+                               capture_output=True, text=True, timeout=10)
+            checks["moon_service"] = r.stdout.strip()
+        except Exception:
+            checks["moon_service"] = "check_failed"
+    return {"health_check": checks, "timestamp": __import__("time").time()}
+
+async def _tool_log_read(args: dict) -> dict:
+    """Alias for log_reader — redirects to log_reader."""
+    return await default_engine.run_tool("log_reader", args)
+
+assert _tool_voice_speak
+assert _tool_voice_clone
+assert _tool_ascii_art
+assert _tool_image_gen
+assert _tool_service_control
+assert _tool_health_check
+assert _tool_log_read
+
+# ---- tool_bundler ----
+
+async def _tool_tool_bundler(args: dict) -> dict:
+    """Execute multiple tools in sequence and bundle their results.
+
+    Usage: tool_bundler with tools=[{"name": "system_info", "args": {}},
+                                     {"name": "dns_lookup", "args": {"hostname": "example.com"}}]
+    """
+    tools = args.get("tools") or []
+    if not tools or not isinstance(tools, list):
+        return {"error": "tools (list of {name, args}) is required"}
+    results = []
+    for item in tools:
+        name = item.get("name", "")
+        tool_args = item.get("args", {}) or {}
+        if not name:
+            results.append({"error": "tool name required"})
+            continue
+        try:
+            r = await default_engine.run_tool(name, tool_args)
+            results.append({"tool": name, "status": "ok", "result": r})
+        except Exception as e:
+            results.append({"tool": name, "status": "error", "error": str(e)})
+    return {"bundled_results": results, "count": len(results),
+            "successes": sum(1 for r in results if r.get("status") == "ok")}
+
+assert _tool_tool_bundler
+
+# ---- api_handler ----
+
+async def _tool_api_handler(args: dict) -> dict:
+    """Make REST API calls: GET/POST/PUT/DELETE/PATCH with headers, body, parsing.
+
+    Usage: api_handler with url, method, headers, body, expect (json|text|bytes).
+    """
+    import urllib.request
+    import urllib.parse
+    import urllib.error
+    url = args.get("url", "")
+    method = (args.get("method") or "GET").upper()
+    headers = args.get("headers") or {}
+    body = args.get("body")
+    expect = args.get("expect", "json")
+    timeout = int(args.get("timeout", 30))
+    if not url:
+        return {"error": "url is required"}
+    try:
+        body_bytes = None
+        if body is not None:
+            if isinstance(body, dict):
+                body_bytes = json.dumps(body).encode()
+                headers.setdefault("Content-Type", "application/json")
+            elif isinstance(body, str):
+                body_bytes = body.encode()
+            else:
+                body_bytes = bytes(body)
+        req = urllib.request.Request(url, data=body_bytes, headers=headers, method=method)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read()
+            status = resp.status
+            ct = resp.headers.get("Content-Type", "")
+            if expect == "json":
+                try:
+                    parsed = json.loads(raw.decode(errors="replace"))
+                    return {"status": status, "url": url, "json": parsed, "content_type": ct}
+                except (json.JSONDecodeError, ValueError):
+                    return {"status": status, "url": url, "raw": raw.decode(errors="replace")[:10000], "content_type": ct}
+            elif expect == "bytes":
+                return {"status": status, "url": url, "bytes": raw[:10000],
+                        "bytes_length": len(raw), "content_type": ct}
+            else:
+                return {"status": status, "url": url, "text": raw.decode(errors="replace")[:10000],
+                        "content_type": ct}
+    except urllib.error.HTTPError as e:
+        return {"error": f"HTTP {e.code}: {e.reason}", "url": url,
+                "status": e.code, "body": e.read().decode(errors="replace")[:2000]}
+    except Exception as e:
+        return {"error": str(e), "url": url}
+
+assert _tool_api_handler
+
+# ---- agent_router ----
+
+async def _tool_agent_router(args: dict) -> dict:
+    """Route a query to a specific agent and return the response.
+
+    Usage: agent_router with query and optional agent name (defaults to intent routing).
+    """
+    query = args.get("query", "")
+    agent_override = args.get("agent")
+    session_id = args.get("session_id")
+    if not query:
+        return {"error": "query is required"}
+    if agent_override:
+        persona = default_engine.get_agent(agent_override)
+        if not persona:
+            return {"error": f"agent '{agent_override}' not found",
+                    "available": [a.name for a in default_engine.list_agents()]}
+        selected = persona
+    else:
+        routed = route_intent(query)
+        selected = default_engine.get_agent(routed) or default_engine.get_agent("general")
+    result = await default_engine.process_message(query, session_id=session_id,
+                                                  explicit_agent=selected.name)
+    response_text = await default_engine.generate_response(selected, result["message"])
+    return {"agent": selected.name, "query": query, "response": response_text,
+            "session_id": result["session_id"], "persona": selected.to_dict()}
+
+assert _tool_agent_router
+
+# ---------------------------------------------------------------------------
+# TOOL_CATALOG (capability -> pip package lookup for tool_acquire)
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
 # ADVANCED FEATURES (ported from original MOON's advanced subsystems)
 # ---------------------------------------------------------------------------
 
@@ -1974,6 +2287,7 @@ async def _tool_log_reader(args: dict) -> dict:
     else:
         tail = all_lines[-lines:] if lines > 0 else all_lines
         text = "".join(tail)
+        return {"action": "tail", "path": path, "lines": len(tail), "content": text[:8192]}
 
 
 async def _tool_http_request(args: dict) -> dict:
@@ -3666,6 +3980,16 @@ default_engine.register_tool("spawn_swarm", _tool_spawn_swarm)
 default_engine.register_tool("evidence_hub", _tool_evidence_hub)
 
 default_engine.register_tool("ssh_client", _tool_ssh_client)
+default_engine.register_tool("tool_bundler", _tool_tool_bundler)
+default_engine.register_tool("api_handler", _tool_api_handler)
+default_engine.register_tool("agent_router", _tool_agent_router)
+default_engine.register_tool("voice_speak", _tool_voice_speak)
+default_engine.register_tool("voice_clone", _tool_voice_clone)
+default_engine.register_tool("ascii_art", _tool_ascii_art)
+default_engine.register_tool("image_gen", _tool_image_gen)
+default_engine.register_tool("service_control", _tool_service_control)
+default_engine.register_tool("health_check", _tool_health_check)
+default_engine.register_tool("log_read", _tool_log_read)
 if __name__ == "__main__":
     import asyncio
 
