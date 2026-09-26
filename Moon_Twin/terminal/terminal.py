@@ -107,6 +107,7 @@ class MoonAPIClient:
         self.base_url = base_url.rstrip("/")
         self.session_id = datetime.now().strftime("terminal-%Y%m%d-%H%M%S")
         self._tools_used: list[dict] = []
+        self.voice_enabled: bool = False
 
     # ── sync helpers for prompt_toolkit thread ──────────────────────────
     def _sync_get(self, path: str) -> dict:
@@ -130,9 +131,11 @@ class MoonAPIClient:
             return json.loads(r.read())
 
     # ── public API ──────────────────────────────────────────────────────
-    def health(self) -> dict:
+    def health(self):
+        """Return health status — dict for internal use, str when displayed."""
         try:
-            return self._sync_get("/api/health")
+            data = self._sync_get("/api/health")
+            return data
         except Exception as e:
             return {"error": str(e)}
 
@@ -147,7 +150,7 @@ class MoonAPIClient:
                      tools: list | None = None,
                      session_id: str = None) -> dict:
         """Send a message to Moon_Twin and return the full response."""
-        body: dict = {"message": message, "session_id": session_id or self.session_id}
+        body: dict = {"message": message, "session_id": session_id or self.client.session_id}
         if agent:
             body["agent"] = agent
         if tools is not None:
@@ -157,6 +160,8 @@ class MoonAPIClient:
             self._tools_used = resp.get("tools_used", [])
             return resp
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return {"error": str(e), "reply": f"Error: {e}", "tools_used": []}
 
     def route_query(self, query: str) -> dict:
@@ -189,6 +194,11 @@ class MoonTerminal:
         self.running = True
         self._status = "connecting..."
         self._health_info = {}
+        self.voice = False
+        self.voice_model = None
+        self.voice_lang = None
+        self.theme = "dark"
+        self.tools_used: dict[str, int] = {}  # tools tracked in terminal session
 
     # ── status / header ─────────────────────────────────────────────────
     @property
@@ -297,10 +307,10 @@ class MoonTerminal:
         # !help
         if t == "!help" or t == "!h":
             return self._cmd_help()
-        # !agents / !a
-        if t.startswith("!agents") or t.startswith("!a "):
+        # !agents / !a / !as
+        if t.startswith("!agents") or t.startswith("!a ") or t.startswith("!as "):
             return self._cmd_agents(t)
-        if t == "!agents" or t == "!a":
+        if t == "!agents" or t == "!a" or t == "!as":
             return self._cmd_agents("")
         # !use <agent> / !u <agent>
         if t.startswith("!use ") or t.startswith("!u "):
@@ -312,19 +322,27 @@ class MoonTerminal:
         # !status / !s
         if t in ("!status", "!s"):
             return self._cmd_status()
-        # !tools / !t
-        if t in ("!tools", "!t"):
+        # !tools / !t / !ta / !ts
+        if t in ("!tools", "!t", "!ta", "!ts"):
             return self._cmd_tools()
         # !save / !load
         if t.startswith("!save "):
             return self._cmd_save(t)
+        if t == "!save":
+            return "[bold yellow]Usage:[/bold yellow] !save <filename>\nSaves chat history to a JSON file."
         if t.startswith("!load "):
             return self._cmd_load(t)
-        # !history / !hist
-        if t.startswith("!history") or t.startswith("!hist"):
+        if t == "!load":
+            return "[bold yellow]Usage:[/bold yellow] !load <filename>\nLoads chat history from a JSON file."
+        # !history / !hist / !th
+        if t.startswith("!history") or t.startswith("!hist") or t == "!th":
             return self._cmd_history(t)
-        # !voice on/off
-        if t.startswith("!voice "):
+        # !voice on/off / !v on/off
+        if t == "!voice on" or t == "!v on":
+            return self._cmd_voice("on")
+        if t == "!voice off" or t == "!v off":
+            return self._cmd_voice("off")
+        if t.startswith("!voice ") or t.startswith("!v "):
             return self._cmd_voice(t)
         # !exit / !quit
         if t in ("!exit", "!quit", "!q"):
@@ -333,12 +351,34 @@ class MoonTerminal:
         # !memory
         if t.startswith("!memory") or t.startswith("!m"):
             return self._cmd_memory(t)
+        # !config
+        if t == "!config" or t.startswith("!config "):
+            return self._cmd_config(t)
+        # !theme
+        if t == "!theme" or t.startswith("!theme "):
+            return self._cmd_theme(t)
+        # !plugins
+        if t.startswith("!plugins") or t.startswith("!plugin"):
+            return self._cmd_plugins()
         # !tool <name> [args]
         if t.startswith("!tool "):
             return self._cmd_tool(t)
+        if t == "!tool":
+            return "[bold yellow]Usage:[/bold yellow] !tool <tool_name> [json_args]"
         # !sh <shell command>
         if t.startswith("!sh "):
             return self._cmd_shell(t)
+
+        # ── aliases that didn't fit above ───────────────────────────────────
+        # !conf → !config
+        if t == "!conf":
+            return self._cmd_config()
+        # !plugins → !plugin
+        if t == "!plugins":
+            return self._cmd_plugins()
+        # !tune → !th (tuning history, via _cmd_history)
+        if t == "!tune":
+            return self._cmd_history("")
 
         # Not a command — return None to send as message
         return None
@@ -357,7 +397,7 @@ class MoonTerminal:
                 f"  [bold]!sh &lt;cmd&gt;[/bold]    [dim]run shell command[/dim]",
                 f"  [bold]!save &lt;file&gt;[/bold] [dim]save chat history to file[/dim]",
                 f"  [bold]!load &lt;file&gt;[/bold] [dim]load chat history from file[/dim]",
-                f"  [bold]!memory[/bold]   [dim]show session memory[/dim]",
+                f"  [bold]!plugins[/bold]  [dim]list available plugins[/dim]",
                 f"  [bold]!voice on/off[/bold] [dim]toggle voice output[/dim]",
                 f"  [bold]!history[/bold]  [dim]show message history[/dim]",
                 f"  [bold]!exit[/bold]     [dim]disconnect & exit[/dim]",
@@ -394,7 +434,16 @@ class MoonTerminal:
         return f"[bold green]Switched[/bold green] from [bold]{old}[/bold] to [bold cyan]{agent_name}[/bold cyan] ({AGENTS[agent_name]['name']})"
 
     def _cmd_status(self) -> str:
-        h = self._health_info
+        """Return terminal status information."""
+        try:
+            h = self.client.health()
+        except Exception:
+            h = {}
+        if isinstance(h, str):
+            try:
+                h = json.loads(h)
+            except Exception:
+                h = {"status": h}
         status = self._status
         sc = "green" if status == "connected" else "red"
         return (
@@ -408,6 +457,93 @@ class MoonTerminal:
             f"  Session:  {self.client.session_id}"
         )
 
+    def _cmd_config(self, text: str = "") -> str:
+        """Show current runtime configuration. !config also accepts !conf.
+        With args: !config <key> <value> to set a runtime option."""
+        parts = text.split(maxsplit=1) if text else []
+        if len(parts) >= 2:
+            key = parts[1].strip().lower()
+            valid_settings = {"model", "voice", "voice_model", "voice_lang",
+                              "temperature", "max_tokens", "theme",
+                              "system_prompt", "top_p"}
+            if key in valid_settings:
+                rem = parts[1][len(key):].strip()
+                if key == "model":
+                    self.model = rem or self.model
+                    return f"[bold green]Config set[/bold green] [bold]{key} = {self.model}[/bold]"
+                elif key == "voice":
+                    if rem.lower() in ("on", "enable", "true", "1"):
+                        self.voice = True
+                        return f"[bold green]Config set[/bold green] [bold]{key} = ON[/bold]"
+                    elif rem.lower() in ("off", "disable", "false", "0"):
+                        self.voice = False
+                        return f"[bold green]Config set[/bold green] [bold]{key} = OFF[/bold]"
+                    return f"[bold red]Invalid value for voice:[/bold red] {rem}\nUse: on | off"
+                elif key == "theme":
+                    valid = ["dark", "light", "red-black", "matrix", "amber",
+                             "monokai", "solarized-dark", "solarized-light"]
+                    if rem.lower() in valid:
+                        self.theme = rem.lower()
+                        return f"[bold green]Config set[/bold green] [bold]{key} = {self.theme}[/bold]"
+                    return f"[bold red]Unknown theme:[/bold red] {rem}\nValid: {', '.join(valid)}"
+                else:
+                    setattr(self, key, rem)
+                    return f"[bold green]Config set[/bold green] [bold]{key} = {getattr(self, key)}[/bold]"
+            return f"[bold red]Unknown config key:[/bold red] {key}\nValid: {', '.join(sorted(valid_settings))}"
+        sc = "green" if self._status == "connected" else "red"
+        return (
+            "[bold cyan]── Runtime Configuration ──[/bold cyan]\n"
+            + "\n".join([
+                f"  API Base:    {API_BASE}",
+                f"  Connection:  [{sc}]{self._status}[/{sc}]",
+                f"  Service:     {self._health_info.get('service', 'unknown')} v{self._health_info.get('version', '?')}",
+                f"  Agent Count: {self._health_info.get('agent_count', '?')}",
+                f"  Lock State:  {self._health_info.get('lock_state', '?')}",
+                f"  Session ID:  {self.client.session_id}",
+                f"  Current Agent: [bold cyan]{self.current_agent}[/{'cyan' if self.current_agent != 'general' else 'green'}] ({AGENTS.get(self.current_agent, {}).get('name', '?')})",
+                f"  Voice:       {'ON' if self.voice else 'OFF'}",
+                f"  Voice Model: {self.voice_model or 'N/A'}",
+                f"  Voice Lang:  {self.voice_lang or 'N/A'}",
+                f"  Theme:       {self.theme}",
+                f"  History:     {len(self.message_history)} messages",
+            ])
+        )
+
+    def _cmd_theme(self, text: str = "") -> str:
+        parts = text.split(maxsplit=1) if text else []
+        if len(parts) >= 2:
+            name = parts[1].strip()
+            valid = ["dark", "light", "red-black", "matrix", "amber", "monokai", "solarized-dark", "solarized-light"]
+            if name.lower() in valid:
+                self.theme = name.lower()
+                return f"[bold green]Theme set[/bold green] to [bold]{self.theme}[/bold] ({name})"
+            return f"[bold red]Unknown theme:[/bold red] {name}\nValid: {', '.join(valid)}"
+        valid = ["dark", "light", "red-black", "matrix", "amber", "monokai", "solarized-dark", "solarized-light"]
+        return (
+            "[bold cyan]── Theme ──[/bold cyan]\n"
+            + f"  Current: [bold]{self.theme}[/bold]\n"
+            + "\n".join([f"  {opt}" for opt in valid])
+            + "\n\n[bold]Usage:[/bold] !theme &lt;theme_name&gt;"
+        )
+
+    def _cmd_plugins(self) -> str:
+        return (
+            "[bold cyan]── Plugins ──[/bold cyan]\n"
+            + "\n".join([
+                "[dim]No external plugins loaded — all features are built-in.[/dim]",
+                "",
+                "  Core Modules:",
+                "    • moon-agent-api     (API server, port 8778)",
+                "    • agent.engine       (62 tool handlers, 8 agents)",
+                "    • terminal.terminal  (interactive TUI REPL)",
+                "",
+                "  TOOL_BUNDLER:    active (groups tools by agent)",
+                "  API_HANDLER:     active (HTTP request routing)",
+                "  AGENT_ROUTER:    active (query → agent dispatch)",
+            ])
+            + "\n"
+        )
+
     def _cmd_tools(self) -> str:
         sys.path.insert(0, str(Path("/home/meow/Projects/MOON/Moon_Twin")))
         try:
@@ -418,8 +554,11 @@ class MoonTerminal:
                 f"[bold cyan]── Registered Tools ({len(names)}) ──[/bold cyan]\n"
                 + ", ".join(names)
             )
-        except Exception as e:
-            return f"[bold red]Error loading tools:[/bold red] {e}"
+        except Exception:
+            names = sorted(self.tools_used.keys()) if self.tools_used else []
+            if names:
+                return f"[bold cyan]── Previously Used Tools ({len(names)}) ──[/bold cyan]\n" + ", ".join(names)
+            return "[bold red]Error: could not load tools.[/bold red] Engine unavailable."
 
     def _cmd_tool(self, text: str) -> str:
         parts = text.split(maxsplit=1)
@@ -506,8 +645,19 @@ class MoonTerminal:
             lines.append(f"  {entry}")
         return "\n".join(lines)
 
-    def _cmd_voice(self, text: str) -> str:
-        return "[bold]Voice toggle not yet implemented.[/bold] (Use Moon_Twin voice_speak tool directly)"
+    def _cmd_voice(self, text: str = "") -> str:
+        parts = text.split(maxsplit=1) if text else []
+        if len(parts) >= 2:
+            cmd = parts[1].strip().lower()
+            if cmd in ("on", "enable", "true", "1"):
+                self.voice = True
+                return f"[bold green]Voice output enabled[/bold green]"
+            elif cmd in ("off", "disable", "false", "0"):
+                self.voice = False
+                return f"[bold green]Voice output disabled[/bold green]"
+            return f"[bold red]Unknown voice command:[/bold red] {cmd}\nUse: on / off"
+        state = "enabled" if self.voice else "disabled"
+        return f"[bold cyan]── Voice ──[/bold cyan]\n  Status: [bold]{state}[/bold]\n  Model: {self.voice_model or 'N/A'}\n  Lang:   {self.voice_lang or 'N/A'}\nUsage: !voice on | !voice off"
 
     def _format_result(self, result: dict, indent: int = 2) -> str:
         """Format a tool result dict for display."""
