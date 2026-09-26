@@ -1009,8 +1009,11 @@ class AgentEngine:
         action = args.get("action", "lookup")
         hostname = args.get("hostname", "")
         ip = args.get("ip", "")
-        record_type = (args.get("record_type") or "A").upper()
-        if action == "reverse":
+        record_type = args.get("record_type", "A")
+        # normalize action names: 'lookup' and 'resolve' both mean resolve
+        if action == "lookup":
+            action = "resolve"
+        if action == "resolve":
             if not ip:
                 return {"error": "ip required for reverse lookup"}
             try:
@@ -2297,7 +2300,7 @@ async def _tool_http_request(args: dict) -> dict:
     import urllib.error
     method = args.get("method", "GET").upper()
     url = args.get("url", "")
-    headers = args.get("headers", {})
+    headers = args.get("headers", {}) or {}
     body = args.get("body", "")
     timeout = args.get("timeout", 30)
     if not url:
@@ -2310,16 +2313,18 @@ async def _tool_http_request(args: dict) -> dict:
             body = body.encode()
         else:
             body = None
-        req = urllib.request.Request(url, data=body, headers=headers or None, method=method)
+        req = urllib.request.Request(url, data=body, headers=headers, method=method)
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             text = resp.read().decode(errors="replace")[:5000]
             try:
                 json_data = json.loads(text)
+                resp_headers = resp.headers.items() if resp.headers else []
                 return {"status": resp.status, "url": url, "json": json_data,
-                        "headers": {k: v for k, v in resp.headers.items()}}
+                        "headers": {k: v for k, v in resp_headers}}
             except json.JSONDecodeError:
+                resp_headers = resp.headers.items() if resp.headers else []
                 return {"status": resp.status, "url": url, "text": text,
-                        "headers": {k: v for k, v in resp.headers.items()}}
+                        "headers": {k: v for k, v in resp_headers}}
     except urllib.error.HTTPError as e:
         return {"error": f"HTTP {e.code}: {e.reason}", "status": e.code, "url": url}
     except Exception as e:
@@ -2462,10 +2467,13 @@ async def _tool_dns_lookup(args: dict) -> dict:
     import socket
     import dns.resolver
     import dns.reversename
-    action = args.get("action", "resolve")
+    action = args.get("action", "lookup")
     hostname = args.get("hostname", "")
     ip = args.get("ip", "")
     record_type = args.get("record_type", "A")
+    # normalize action names: 'lookup' and 'resolve' both mean resolve
+    if action == "lookup":
+        action = "resolve"
     if action == "resolve":
         if not hostname:
             return {"error": "hostname required"}
@@ -2501,13 +2509,16 @@ async def _tool_template_render(args: dict) -> dict:
     """Render a Jinja2 template string with provided context variables."""
     from jinja2 import Template, Environment, BaseLoader
     template = args.get("template", "")
-    context = args.get("context", {})
+    context = args.get("context", {}) or {}
+    # accept both 'context' and 'variables' key names
+    if "variables" in args and isinstance(args["variables"], dict):
+        context = args["variables"]
     if not template:
         return {"error": "template is required"}
     try:
         env = Environment(loader=BaseLoader())
         t = env.from_string(template)
-        rendered = t.render(context)
+        rendered = t.render(**context)
         return {"rendered": rendered, "template_length": len(template),
                 "context_keys": list(context.keys())}
     except Exception as e:
@@ -2532,10 +2543,13 @@ async def _tool_data_viz(args: dict) -> dict:
         if action == "bar":
             if series:
                 for name, vals in series.items():
-                    ax.bar(x, vals, label=name)
+                    ax.bar(range(len(vals)), vals, tick_label=list(x)[:len(vals)] if x else None, label=name)
                 ax.legend()
             else:
-                ax.bar(x, y)
+                if y and not isinstance(y[0], (list, tuple)):
+                    ax.bar(range(len(y)), y, tick_label=x or [str(i) for i in range(len(y))])
+                else:
+                    ax.bar(x, y)
         elif action == "line":
             if series:
                 for name, vals in series.items():
@@ -2657,6 +2671,7 @@ async def _tool_data_export(args: dict) -> dict:
 
 async def _tool_yaml_ops(args: dict) -> dict:
     """YAML operations: dump (serialize), load (deserialize), parse file."""
+    import yaml
     action = args.get("action", "dump")
     data = args.get("data", "")
     yaml_str = args.get("yaml_str", "")
