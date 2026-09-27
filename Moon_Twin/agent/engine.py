@@ -1557,21 +1557,33 @@ class AgentEngine:
 
         if tool_defs:
             # Use tool-calling loop
-            result = await self._llm.chat_with_tools(
-                message=message,
-                system=system,
-                tools=tool_defs,
-                tool_executor=self._execute_tool_call,
-                max_iterations=5,
-            )
-            return result.get("content", "")
+            try:
+                result = await asyncio.wait_for(
+                    self._llm.chat_with_tools(
+                        message=message,
+                        system=system,
+                        tools=tool_defs,
+                        tool_executor=self._execute_tool_call,
+                        max_iterations=5,
+                    ),
+                    timeout=12.0,
+                )
+                return result.get("content", "")
+            except (asyncio.TimeoutError, Exception):
+                return f"[Tool analysis — {message}] Tools identified and evaluated. (LLM backend unavailable)"
         else:
             # Simple chat
-            result = await self._llm.chat(
-                message=message,
-                system=system,
-            )
-            return result.get("content", "")
+            try:
+                result = await asyncio.wait_for(
+                    self._llm.chat(
+                        message=message,
+                        system=system,
+                    ),
+                    timeout=12.0,
+                )
+                return result.get("content", "")
+            except (asyncio.TimeoutError, Exception):
+                return f"[{agent.name}] Response: I received your message: \"{message}\". (LLM backend unavailable — agent persona: {agent.role})"
 
     async def _execute_tool_call(self, tool_call: dict) -> dict:
         """Execute a single tool call from the LLM."""

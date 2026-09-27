@@ -250,7 +250,8 @@ class MoonTwinAPI:
             "lock_state": "unlocked",
         }
 
-    def _list_agents_data(self) -> dict:
+    async def _list_agents_data_async(self) -> dict:
+        """List all agents — async-safe for event loop."""
         agents = self.engine.list_agents()
         return {
             "agents": agents,
@@ -271,11 +272,13 @@ class MoonTwinAPI:
         """Process a message through the agent engine."""
         # Read request body
         body = b""
-        while True:
+        more_body = True
+        while more_body:
             msg = await receive()
             if msg["type"] == "http.request":
                 body += msg.get("body", b"")
-                if not msg.get("more_body", False):
+                more_body = msg.get("more_body", False)
+                if not more_body:
                     break
 
         try:
@@ -347,14 +350,22 @@ class MoonTwinAPI:
                 explicit_agent = parsed_agent
         else:
             clean_message = message
+
         result = await self.engine.process_message(
-            message, session_id=session_id, explicit_agent=explicit_agent,
+            clean_message,
+            session_id=session_id,
+            explicit_agent=explicit_agent,
         )
+
         selected = self.engine.get_agent(result["agent"])
-        response_text = await self.engine.generate_response(selected, result["message"])
+        response_text = await self.engine.generate_response(
+            selected, clean_message
+        )
         result["response"] = response_text
+
         tools_requested = body.get("tools", [])
         if tools_requested:
+            result["tools_used"] = []
             for item in tools_requested:
                 if isinstance(item, dict):
                     tool_name = item.get("name", "")
@@ -364,7 +375,11 @@ class MoonTwinAPI:
                     tool_args = {}
                 if tool_name:
                     tool_result = await self.engine.run_tool(tool_name, tool_args)
-                    result.setdefault("tools_used", []).append({"tool": tool_name, "result": tool_result})
+                    result["tools_used"].append({
+                        "tool": tool_name,
+                        "result": tool_result,
+                    })
+
         return result
 
     async def _route_query(self, scope: Scope, send: Send, query: str):
@@ -380,12 +395,12 @@ class MoonTwinAPI:
             "count": len(memory),
         })
 
-    async def _get_memory_data(self) -> dict:
+    def _get_memory_data(self) -> dict:
         """Get memory entries (no ASGI send)."""
         memory = self.engine.get_memory()
         return {"memory": memory, "count": len(memory)}
 
-    async def _set_memory(self, scope: Scope, receive: Send, send: Send):
+    async def _set_memory(self, scope: Scope, receive: Receive, send: Send):
         """Set a memory entry."""
         body = b""
         while True:
@@ -476,7 +491,7 @@ class MoonTwinAPI:
             })
         await self._send_json(scope, send, {"tools": tools, "count": len(tools)})
 
-    async def _run_tool(self, scope: Scope, receive: Send, send: Send, tool_name: str):
+    async def _run_tool(self, scope: Scope, receive: Receive, send: Send, tool_name: str):
         """Run a specific tool by name."""
         tool_name = urllib.parse.unquote(tool_name)
         body = b""
@@ -500,7 +515,7 @@ class MoonTwinAPI:
         except Exception as e:
             await self._send_json(scope, send, {"error": str(e), "tool": tool_name}, status=500)
 
-    async def _process_agent(self, scope: Scope, receive: Send, send: Send, agent_name: str):
+    async def _process_agent(self, scope: Scope, receive: Receive, send: Send, agent_name: str):
         """Route a message to a specific agent."""
         agent_name = urllib.parse.unquote(agent_name)
         body = b""
@@ -567,11 +582,12 @@ class MoonTwinAPI:
 
     def _list_agents_data(self) -> dict:
         """List agents (sync variant — for Starlette route)."""
-        agents = []
-        for name, agent_data in self.engine.agents.items():
-            tool_names = list(agent_data.get("tools", {}).keys())
-            agents.append({
-                "name": name,
+        agents = self.engine.list_agents()
+        result = []
+        for agent_data in agents:
+            tool_names = agent_data.get("tools", [])
+            result.append({
+                "name": agent_data.get("name", ""),
                 "persona": agent_data.get("persona", ""),
                 "role": agent_data.get("role", ""),
                 "description": agent_data.get("description", "")[:200],
@@ -579,7 +595,7 @@ class MoonTwinAPI:
                 "tools": tool_names[:10],
                 "tools_total": len(tool_names),
             })
-        return {"agents": agents, "count": len(agents)}
+        return {"agents": result, "count": len(result)}
 # ---------------------------------------------------------------------------
 # Starlette wrapper (if available)
 # ---------------------------------------------------------------------------
@@ -613,6 +629,21 @@ if HAS_ASGI:
             body = await request.json() if request.body else {}
             data = await api._process_message_data(body)
         return JSONResponse(content=data)
+
+    async def ws_info_route(request: Request):
+        """GET /api/moon-agent/ws_info — WebSocket connection info."""
+        return JSONResponse(content={
+            "ws_endpoint": "/api/ws",
+            "protocol": "WebSocket",
+            "capabilities": [
+                "streaming_responses",
+                "tool_execution",
+                "agent_selection",
+                "memory_retrieval",
+                "multi_agent_routing"
+            ],
+            "message": "Connect to /api/ws for real-time communication"
+        })
 
     async def route_route(request: Request):
         api = MoonTwinAPI()
@@ -655,7 +686,12 @@ if HAS_ASGI:
         api = MoonTwinAPI()
         tool_name = request.path_params.get("tool_name", "")
         if request.method == "POST":
-            body = await request.json()
+            try:
+                body = await request.json()
+            except json.JSONDecodeError:
+                body = {}
+            if not isinstance(body, dict):
+                body = {}
             data = await api._run_tool_data_async(tool_name, body)
         else:
             data = {"error": "POST with JSON body required"}
@@ -664,7 +700,7 @@ if HAS_ASGI:
     async def agents_list_route(request: Request):
         """List all agents."""
         api = MoonTwinAPI()
-        data = api._list_agents_data()
+        data = await api._list_agents_data_async()
         return JSONResponse(content=data)
 
     async def agent_route(request: Request):
@@ -676,8 +712,14 @@ if HAS_ASGI:
             message = body.get("message", "")
             session_id = body.get("session_id", f"api-{agent_name}")
             data = await api._process_agent_data_async(agent_name, message, session_id)
+        elif request.method == "GET":
+            agents = await api._list_agents_data_async()
+            for a in agents["agents"]:
+                if a["name"] == agent_name:
+                    return JSONResponse(content=a)
+            data = {"error": f"Agent not found: {agent_name}"}
         else:
-            data = {"error": "POST with JSON body required"}
+            data = {"error": "POST or GET required"}
         return JSONResponse(content=data)
 
     async def clear_memory_route(request: Request):
@@ -696,13 +738,14 @@ if HAS_ASGI:
             Route("/api/moon-agent/agents", agents_route, methods=["GET"]),
             Route("/api/moon-agent/memory", memory_route, methods=["GET", "POST"]),
             WebSocketRoute("/api/ws", ws_route),
+            Route("/api/moon-agent/ws_info", ws_info_route, methods=["GET"]),
             # New endpoints
             Route("/api/tools", tools_list_route, methods=["GET", "POST"]),
             Route("/api/tools/{tool_name:str}", tool_run_route, methods=["POST"]),
             Route("/api/agents", agents_list_route, methods=["GET", "POST"]),
-            Route("/api/agents/{agent_name:str}", agent_route, methods=["POST"]),
+            Route("/api/agents/{agent_name:str}", agent_route, methods=["GET", "POST"]),
             Route("/api/moon-agent/agents", agents_list_route, methods=["GET", "POST"]),
-            Route("/api/moon-agent/agents/{agent_name:str}", agent_route, methods=["POST"]),
+            Route("/api/moon-agent/agents/{agent_name:str}", agent_route, methods=["GET", "POST"]),
             Route("/api/moon-agent/clear", clear_memory_route, methods=["POST"]),
         ],
     )
