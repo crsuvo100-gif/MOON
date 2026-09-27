@@ -54,6 +54,23 @@ from agent.tools_pro import (
     _tool_subprocess_run,
     _tool_http_multipart,
     _tool_random_data,
+    _tool_code_interpreter,
+    _tool_chain,
+    _tool_parallel,
+    _tool_structured_output,
+    _tool_reason,
+    _tool_report,
+    _tool_memory_lifecycle,
+    _tool_eval_runner,
+    _tool_timer,
+    _tool_rate_limit,
+    _tool_train_model,
+    _tool_body_check,
+    _tool_deep_analyze,
+    _tool_decision_matrix,
+    _tool_agent_loop,
+    _tool_sweeper,
+    _tool_win32_reg,
 )
 
 # ---------------------------------------------------------------------------
@@ -188,7 +205,8 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "Prefer concrete numbers and plots over vague statements."
         ),
         tools=["system_info", "python_executor", "data_export", "data_viz",
-               "resources", "expr_eval", "random_data",
+               "resources", "expr_eval", "random_data", "code_interpreter",
+               "train_model", "decision_matrix", "deep_analyze", "body_check",
                "sqlite_fts_search", "memory_read", "memory_write",
                "plan", "plan_and_execute", "spawn_swarm",
                "memory_vector_search", "memory_stats"],
@@ -208,6 +226,47 @@ BUILTIN_AGENTS: list[AgentPersona] = [
                "plan", "plan_and_execute", "spawn_swarm",
                "memory_vector_search", "memory_stats"],
     ),
+    AgentPersona(
+        name="writer",
+        description="Writing & content agent — drafts documents, reports, articles, copy, and structured text.",
+        system_prompt=(
+            "You are MOON Writer Agent. You produce clear, well-structured writing: documents, reports, articles, "
+            "emails, summaries, and creative copy. Adapt tone to the audience. Be precise, engaging, and well-organized."
+        ),
+        tools=["system_info", "file_read", "file_write", "template_render", "report",
+               "web_search", "web_extract", "http_request", "pdf_reader",
+               "memory_read", "memory_write",
+               "plan", "plan_and_execute", "spawn_swarm",
+               "memory_vector_search", "memory_stats"],
+    ),
+    AgentPersona(
+        name="data_scientist",
+        description="Data science agent — EDA, statistical modeling, ML training, feature engineering, and model evaluation.",
+        system_prompt=(
+            "You are MOON Data Scientist Agent. You perform exploratory data analysis, statistical testing, "
+            "feature engineering, and machine learning model training/evaluation. You use pandas, numpy, sklearn, "
+            "matplotlib, and plotly. Be rigorous, state assumptions, and report uncertainty."
+        ),
+        tools=["system_info", "python_executor", "data_export", "data_viz",
+               "resources", "expr_eval", "random_data", "code_interpreter",
+               "train_model", "decision_matrix", "deep_analyze", "body_check",
+               "sqlite_fts_search", "memory_read", "memory_write",
+               "plan", "plan_and_execute", "spawn_swarm",
+               "memory_vector_search", "memory_stats"],
+    ),
+    AgentPersona(
+        name="devops",
+        description="DevOps & infrastructure agent — CI/CD, containers, deployment pipelines, cloud provisioning, and infra-as-code.",
+        system_prompt=(
+            "You are MOON DevOps Agent. You handle CI/CD pipelines, containers, Kubernetes, "
+            "infrastructure-as-code, and cloud deployment. Be systematic, security-aware, and always prefer declarative over imperative."
+        ),
+        tools=["system_info", "shell", "subprocess_run", "http_request",
+               "git_ops", "service_control", "health_check", "log_reader",
+               "docker", "ssh_client", "user_preferences",
+               "plan", "plan_and_execute", "spawn_swarm",
+               "memory_vector_search", "memory_stats"],
+    ),
 ]
 
 # ---------------------------------------------------------------------------
@@ -224,9 +283,12 @@ INTENT_ROUTING: list[tuple[str, str]] = [
     (r"\b(health|status|monitor|log|check|up|down|crash|ping|uptime|load|disk|memory|cpu)\b", "monitor"),
     (r"\b(install|service|services|config|deploy|restart|kill|process|daemon|systemd|firewall|dns|network|mount|storage|nginx|systemctl|manage)\b", "admin"),
     (r"\b(draw|ascii|art|design|create|generate|logo|image|visual|paint)\b", "creative"),
-    (r"\b(data|chart|plot|graph|statistic|analyze|analysis|metric|kpi|dashboard|summary statistic|trend|regression|correlation|mean|median|std|variance|distribution|histogram|outlier)\b", "analyst"),
-    (r"\b(queue|enqueue|dequeue|workflow|dag|orchestrat|subprocess|multipart|upload|form-data|preference|user_pref|task_id|step|dependency|retry|timeout)\b", "operator"),
-    (r"\b(hello|hi|help|status|what|who|how|why|when|where|cancel|reservation|dinner|lunch)\b", "general"),
+    (r"\b(data|chart|plot|graph|statistic|analyze|analysis|metric|kpi|dashboard|summary statistic|trend|regression|correlation|mean|median|std|variance|distribution|histogram|outlier|train_model|decision_matrix|deep_analyze|body_check|code_interpreter|random_data)\b", "analyst"),
+    (r"\b(queue|enqueue|dequeue|workflow|dag|orchestrat|subprocess|multipart|upload|form-data|preference|user_pref|task_id|step|dependency|retry|timeout|chain|parallel|agent_loop|win32_reg|eval_runner|timer|rate_limit|memory_lifecycle)\b", "operator"),
+    (r"\b(hello|hi|help|status|what|who|how|why|when|where|cancel|reservation|dinner|lunch|report|structured_output|reason|timer)\b", "general"),
+    (r"\b(write|draft|article|document|report|email|content|copy|text|write|author|compose|editor|journal|blog|story)\b", "writer"),
+    (r"\b(train|model|machine learning|ml|sklearn|feature|epoch|accuracy|loss|regression|classifier|random_forest|predict|evaluate|data_scientist|decision_matrix|deep_analyze)\b", "data_scientist"),
+    (r"\b(deploy|ci|cd|kubernetes|k8s|docker|container|infrastructure|terraform|pipeline|cloud|aws|azure|gcp|provision|devops|ssh|registry|win32)\b", "devops"),
 ]
 
 
@@ -4077,7 +4139,6 @@ default_engine.register_tool("agent_handoff", _tool_agent_handoff)
 default_engine.register_tool("swarm_status", _tool_swarm_status)
 default_engine.register_tool("swarm_result", _tool_swarm_result)
 default_engine.register_tool("plan_and_execute", _tool_plan_and_execute)
-default_engine.register_tool("plan", _tool_plan)
 default_engine.register_tool("memory_vector_search", _tool_memory_vector_search)
 default_engine.register_tool("memory_stats", _tool_memory_stats)
 default_engine.register_tool("evidence_hub", _tool_evidence_hub)
@@ -4106,6 +4167,23 @@ default_engine.register_tool("expr_eval", _tool_expr_eval)
 default_engine.register_tool("subprocess_run", _tool_subprocess_run)
 default_engine.register_tool("http_multipart", _tool_http_multipart)
 default_engine.register_tool("random_data", _tool_random_data)
+default_engine.register_tool("code_interpreter", _tool_code_interpreter)
+default_engine.register_tool("chain", _tool_chain)
+default_engine.register_tool("parallel", _tool_parallel)
+default_engine.register_tool("structured_output", _tool_structured_output)
+default_engine.register_tool("reason", _tool_reason)
+default_engine.register_tool("report", _tool_report)
+default_engine.register_tool("memory_lifecycle", _tool_memory_lifecycle)
+default_engine.register_tool("eval_runner", _tool_eval_runner)
+default_engine.register_tool("timer", _tool_timer)
+default_engine.register_tool("rate_limit", _tool_rate_limit)
+default_engine.register_tool("train_model", _tool_train_model)
+default_engine.register_tool("body_check", _tool_body_check)
+default_engine.register_tool("deep_analyze", _tool_deep_analyze)
+default_engine.register_tool("decision_matrix", _tool_decision_matrix)
+default_engine.register_tool("agent_loop", _tool_agent_loop)
+default_engine.register_tool("sweeper", _tool_sweeper)
+default_engine.register_tool("win32_reg", _tool_win32_reg)
 if __name__ == "__main__":
     import asyncio
 
