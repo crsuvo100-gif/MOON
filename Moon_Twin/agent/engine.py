@@ -45,6 +45,16 @@ from agent.memory_semantic import (
     _tool_memory_stats,
     _ensure_corpus as _ensure_memory_corpus,
 )
+from agent.tools_pro import (
+    _tool_user_preferences,
+    _tool_task_queue,
+    _tool_workflow,
+    _tool_resources,
+    _tool_expr_eval,
+    _tool_subprocess_run,
+    _tool_http_multipart,
+    _tool_random_data,
+)
 
 # ---------------------------------------------------------------------------
 # Agent persona definitions
@@ -169,6 +179,35 @@ BUILTIN_AGENTS: list[AgentPersona] = [
                "spawn_swarm",
                "memory_vector_search", "memory_stats"],
     ),
+    AgentPersona(
+        name="analyst",
+        description="Data analyst agent — processes, visualizes, and interprets structured data and metrics.",
+        system_prompt=(
+            "You are MOON Analyst Agent. You excel at loading, cleaning, analyzing, and visualizing data. "
+            "You produce charts, summary statistics, trends, and data-driven insights. "
+            "Prefer concrete numbers and plots over vague statements."
+        ),
+        tools=["system_info", "python_executor", "data_export", "data_viz",
+               "resources", "expr_eval", "random_data",
+               "sqlite_fts_search", "memory_read", "memory_write",
+               "plan", "plan_and_execute", "spawn_swarm",
+               "memory_vector_search", "memory_stats"],
+    ),
+    AgentPersona(
+        name="operator",
+        description="Orchestration & automation agent — coordinates workflows, task queues, subprocess execution, and API integrations.",
+        system_prompt=(
+            "You are MOON Operator Agent. You coordinate complex multi-step workflows, manage background task "
+            "queues, run sandboxed subprocesses, orchestrate HTTP integrations, and maintain user preferences. "
+            "You think in DAGs, retries, timeouts, and idempotent operations. Be precise and systematic."
+        ),
+        tools=["system_info", "shell", "subprocess_run", "http_multipart", "http_request",
+               "task_queue", "workflow", "api_handler", "agent_router",
+               "service_control", "health_check", "log_reader",
+               "git_ops", "user_preferences",
+               "plan", "plan_and_execute", "spawn_swarm",
+               "memory_vector_search", "memory_stats"],
+    ),
 ]
 
 # ---------------------------------------------------------------------------
@@ -185,6 +224,8 @@ INTENT_ROUTING: list[tuple[str, str]] = [
     (r"\b(health|status|monitor|log|check|up|down|crash|ping|uptime|load|disk|memory|cpu)\b", "monitor"),
     (r"\b(install|service|services|config|deploy|restart|kill|process|daemon|systemd|firewall|dns|network|mount|storage|nginx|systemctl|manage)\b", "admin"),
     (r"\b(draw|ascii|art|design|create|generate|logo|image|visual|paint)\b", "creative"),
+    (r"\b(data|chart|plot|graph|statistic|analyze|analysis|metric|kpi|dashboard|summary statistic|trend|regression|correlation|mean|median|std|variance|distribution|histogram|outlier)\b", "analyst"),
+    (r"\b(queue|enqueue|dequeue|workflow|dag|orchestrat|subprocess|multipart|upload|form-data|preference|user_pref|task_id|step|dependency|retry|timeout)\b", "operator"),
     (r"\b(hello|hi|help|status|what|who|how|why|when|where|cancel|reservation|dinner|lunch)\b", "general"),
 ]
 
@@ -4057,6 +4098,14 @@ default_engine.register_tool("image_gen", _tool_image_gen)
 default_engine.register_tool("service_control", _tool_service_control)
 default_engine.register_tool("health_check", _tool_health_check)
 default_engine.register_tool("log_read", _tool_log_read)
+default_engine.register_tool("user_preferences", _tool_user_preferences)
+default_engine.register_tool("task_queue", _tool_task_queue)
+default_engine.register_tool("workflow", _tool_workflow)
+default_engine.register_tool("resources", _tool_resources)
+default_engine.register_tool("expr_eval", _tool_expr_eval)
+default_engine.register_tool("subprocess_run", _tool_subprocess_run)
+default_engine.register_tool("http_multipart", _tool_http_multipart)
+default_engine.register_tool("random_data", _tool_random_data)
 if __name__ == "__main__":
     import asyncio
 
