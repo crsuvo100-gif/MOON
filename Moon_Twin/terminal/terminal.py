@@ -321,8 +321,8 @@ class MoonTerminal:
         if t in ("!clear", "!c"):
             self.message_history.clear()
             return ""
-        # !status / !s
-        if t in ("!status", "!s"):
+        # !status / !s / !st
+        if t in ("!status", "!s", "!st"):
             return self._cmd_status()
         # !tools / !t / !ta / !ts
         if t in ("!tools", "!t", "!ta", "!ts"):
@@ -348,10 +348,10 @@ class MoonTerminal:
             return self._cmd_voice(t)
         if t == "!voice" or t == "!v":
             return self._cmd_voice("")
-        # !exit / !quit
-        if t in ("!exit", "!quit", "!q"):
+        # !exit / !quit / !q / !shutdown
+        if t in ("!exit", "!quit", "!q", "!shutdown"):
             self.running = False
-            return "[bold red]Disconnecting...[/bold red]"
+            return "[bold red]Shutting down...[/bold red]"
         # !memory
         if t.startswith("!memory") or t.startswith("!m"):
             return self._cmd_memory(t)
@@ -372,7 +372,7 @@ class MoonTerminal:
         if t == "!tool":
             return "[bold yellow]Usage:[/bold yellow] !tool <tool_name> [json_args]"
         # !sh <shell command>
-        if t == "!sh ":
+        if t.startswith("!sh "):
             return self._cmd_shell(t)
         if t == "!sh":
             return self._cmd_shell("")
