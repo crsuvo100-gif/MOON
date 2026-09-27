@@ -534,7 +534,7 @@ class MoonTwinAPI:
         await self._send_json(scope, send, {"status": "cleared", "count": 0})
 
     def _list_tools_data(self) -> dict:
-        """List tools (no ASGI send)."""
+        """List tools (sync variant — no ASGI)."""
         tools = []
         for name, handler in self.engine._tool_handlers.items():
             tools.append({
@@ -544,31 +544,42 @@ class MoonTwinAPI:
             })
         return {"tools": tools, "count": len(tools)}
 
-    def _run_tool_data(self, tool_name: str, args: dict) -> dict:
-        """Run a tool (no ASGI send)."""
+    async def _run_tool_data_async(self, tool_name: str, args: dict) -> dict:
+        """Run a tool (async variant — for use inside event loop)."""
         if tool_name not in self.engine._tool_handlers:
             return {"error": f"Unknown tool: {tool_name}"}
         try:
-            import asyncio as _asyncio
-            result = _asyncio.run(self.engine.run_tool(tool_name, args))
+            result = await self.engine.run_tool(tool_name, args)
             return {"tool": tool_name, "result": result}
         except Exception as e:
             return {"error": str(e), "tool": tool_name}
 
-    def _process_agent_data(self, agent_name: str, body: dict) -> dict:
-        """Process via agent (no ASGI send)."""
-        message = body.get("message", "")
+    async def _process_agent_data_async(self, agent_name: str, message: str, session_id: str = None) -> dict:
+        """Process via agent (async variant — for use inside event loop)."""
         if not message:
             return {"error": "Missing message"}
-        session_id = body.get("session_id", f"api-{agent_name}")
-        import asyncio as _asyncio
-        result = _asyncio.run(
-            self.engine.process_message(message, session_id=session_id, explicit_agent=agent_name)
-        )
+        session_id = session_id or f"api-{agent_name}"
+        result = await self.engine.process_message(message, session_id=session_id, explicit_agent=agent_name)
         selected = self.engine.get_agent(result["agent"])
-        response_text = _asyncio.run(self.engine.generate_response(selected, result["message"]))
+        response_text = await self.engine.generate_response(selected, result["message"])
         result["response"] = response_text
         return result
+
+    def _list_agents_data(self) -> dict:
+        """List agents (sync variant — for Starlette route)."""
+        agents = []
+        for name, agent_data in self.engine.agents.items():
+            tool_names = list(agent_data.get("tools", {}).keys())
+            agents.append({
+                "name": name,
+                "persona": agent_data.get("persona", ""),
+                "role": agent_data.get("role", ""),
+                "description": agent_data.get("description", "")[:200],
+                "tools_count": len(tool_names),
+                "tools": tool_names[:10],
+                "tools_total": len(tool_names),
+            })
+        return {"agents": agents, "count": len(agents)}
 # ---------------------------------------------------------------------------
 # Starlette wrapper (if available)
 # ---------------------------------------------------------------------------
@@ -634,9 +645,9 @@ if HAS_ASGI:
         if request.method == "GET":
             data = api._list_tools_data()
         else:
-            body = await request.json() if request.body else {}
+            body = await request.json()
             tool_name = body.get("name", "")
-            data = api._run_tool_data(tool_name, body.get("args", {}))
+            data = await api._run_tool_data_async(tool_name, body.get("args", {}))
         return JSONResponse(content=data)
 
     async def tool_run_route(request: Request):
@@ -644,8 +655,8 @@ if HAS_ASGI:
         api = MoonTwinAPI()
         tool_name = request.path_params.get("tool_name", "")
         if request.method == "POST":
-            body = await request.json() if request.body else {}
-            data = api._run_tool_data(tool_name, body)
+            body = await request.json()
+            data = await api._run_tool_data_async(tool_name, body)
         else:
             data = {"error": "POST with JSON body required"}
         return JSONResponse(content=data)
@@ -661,8 +672,10 @@ if HAS_ASGI:
         api = MoonTwinAPI()
         agent_name = request.path_params.get("agent_name", "")
         if request.method == "POST":
-            body = await request.json() if request.body else {}
-            data = api._process_agent_data(agent_name, body)
+            body = await request.json()
+            message = body.get("message", "")
+            session_id = body.get("session_id", f"api-{agent_name}")
+            data = await api._process_agent_data_async(agent_name, message, session_id)
         else:
             data = {"error": "POST with JSON body required"}
         return JSONResponse(content=data)
