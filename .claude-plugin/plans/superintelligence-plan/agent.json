@@ -1,0 +1,22 @@
+{
+  "title": "MOON Agent — Self-Improving Superintelligence Pipeline",
+  "color": "#9d00ff",
+  "version": "0.1.0",
+  "description": "An AI agent that builds and improves itself through iterative self-revision.",
+  "readme": "MOON-SUPERINTELLIGENCE.md",
+  "license": "MIT",
+  "python_minimum_version": "3.10",
+  "environment_check": [
+    "python3 --version",
+    "pip install -r requirements.txt",
+    "pytest tests/"
+  ],
+  "tags": [
+    "agent",
+    "self-improvement",
+    "superintelligence",
+    "llm",
+    "iterative-development",
+    "agentic-coding"
+  ]
+}

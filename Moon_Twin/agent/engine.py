@@ -23,6 +23,13 @@ from typing import Any, Callable, Awaitable
 from dataclasses import dataclass, field
 
 from agent.llm import OllamaClient, create_client, tool_def
+from agent.superadvanced import (
+    _tool_research_pipeline,
+    _tool_reasoning_chain,
+    _tool_knowledge_graph,
+    _tool_code_generator,
+    _tool_auto_agent,
+)
 
 # ---------------------------------------------------------------------------
 # Agent persona definitions
@@ -1342,6 +1349,14 @@ class AgentEngine:
             The generated response text.
         """
         system = agent.system_prompt
+        # Inject knowledge base context into system prompt
+        if self._memory:
+            kb_lines = []
+            for m in self._memory[-20:]:
+                data = m.get("data", {})
+                kb_lines.append(f"- {data.get('content', str(data))[:200]}")
+            if kb_lines:
+                system = system + "\n\n[Knowledge Base — recent memories]\n" + "\n".join(kb_lines)
         tool_names = agent.tools or []
         tool_defs = self._build_tool_defs(tool_names) if tool_names else None
 
@@ -3993,6 +4008,11 @@ default_engine.register_tool("build_mind_map", _tool_build_mind_map)
 default_engine.register_tool("local_llm_query", _tool_local_llm_query)
 default_engine.register_tool("spawn_swarm", _tool_spawn_swarm)
 default_engine.register_tool("evidence_hub", _tool_evidence_hub)
+default_engine.register_tool("research_pipeline", _tool_research_pipeline)
+default_engine.register_tool("reasoning_chain", _tool_reasoning_chain)
+default_engine.register_tool("knowledge_graph", _tool_knowledge_graph)
+default_engine.register_tool("code_generator", _tool_code_generator)
+default_engine.register_tool("auto_agent", _tool_auto_agent)
 
 default_engine.register_tool("ssh_client", _tool_ssh_client)
 default_engine.register_tool("tool_bundler", _tool_tool_bundler)
