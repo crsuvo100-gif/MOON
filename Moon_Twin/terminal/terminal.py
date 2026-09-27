@@ -315,6 +315,8 @@ class MoonTerminal:
         # !use <agent> / !u <agent>
         if t.startswith("!use ") or t.startswith("!u "):
             return self._cmd_use(t)
+        if t == "!use" or t == "!u":
+            return self._cmd_use("")
         # !clear / !c
         if t in ("!clear", "!c"):
             self.message_history.clear()
@@ -344,6 +346,8 @@ class MoonTerminal:
             return self._cmd_voice("off")
         if t.startswith("!voice ") or t.startswith("!v "):
             return self._cmd_voice(t)
+        if t == "!voice" or t == "!v":
+            return self._cmd_voice("")
         # !exit / !quit
         if t in ("!exit", "!quit", "!q"):
             self.running = False
@@ -352,7 +356,9 @@ class MoonTerminal:
         if t.startswith("!memory") or t.startswith("!m"):
             return self._cmd_memory(t)
         # !config
-        if t == "!config" or t.startswith("!config "):
+        if t == "!config" or t == "!conf":
+            return self._cmd_config("")
+        if t.startswith("!config ") or t.startswith("!conf "):
             return self._cmd_config(t)
         # !theme
         if t == "!theme" or t.startswith("!theme "):
@@ -366,13 +372,19 @@ class MoonTerminal:
         if t == "!tool":
             return "[bold yellow]Usage:[/bold yellow] !tool <tool_name> [json_args]"
         # !sh <shell command>
-        if t.startswith("!sh "):
+        if t == "!sh ":
             return self._cmd_shell(t)
+        if t == "!sh":
+            return self._cmd_shell("")
+
+        # !p → !plugins
+        if t == "!p":
+            return self._cmd_plugins()
 
         # ── aliases that didn't fit above ───────────────────────────────────
         # !conf → !config
         if t == "!conf":
-            return self._cmd_config()
+            return self._cmd_config("")
         # !plugins → !plugin
         if t == "!plugins":
             return self._cmd_plugins()
