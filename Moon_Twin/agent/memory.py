@@ -237,6 +237,26 @@ class MoonMemory:
             )
             return cur.rowcount
 
+    def get_all_entries(self) -> list[dict]:
+        """Return all memory entries across all sessions (for semantic search indexing)."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT session_id, key, value, created_at FROM memory_entries ORDER BY created_at"
+            ).fetchall()
+            result = []
+            for r in rows:
+                try:
+                    data = json.loads(r["value"])
+                except (json.JSONDecodeError, TypeError):
+                    data = r["value"]
+                result.append({
+                    "session_id": r["session_id"],
+                    "key": r["key"],
+                    "data": data,
+                    "created_at": r["created_at"],
+                })
+            return result
+
     # -- Cleanup --
 
     def prune_old_sessions(self, max_age_hours: float = 24) -> int:
@@ -258,6 +278,11 @@ class MoonMemory:
 # ---------------------------------------------------------------------------
 
 default_memory = MoonMemory()
+
+
+def get_all_entries() -> list[dict]:
+    """Module-level wrapper: return all memory entries across all sessions."""
+    return default_memory.get_all_entries()
 
 
 # ---------------------------------------------------------------------------

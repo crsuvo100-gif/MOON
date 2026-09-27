@@ -30,6 +30,21 @@ from agent.superadvanced import (
     _tool_code_generator,
     _tool_auto_agent,
 )
+from agent.swarm import (
+    _tool_spawn_swarm,
+    _tool_agent_handoff,
+    _tool_swarm_status,
+    _tool_swarm_result,
+)
+from agent.plan_exec import (
+    _tool_plan_and_execute,
+    _tool_plan,
+)
+from agent.memory_semantic import (
+    _tool_memory_vector_search,
+    _tool_memory_stats,
+    _ensure_corpus as _ensure_memory_corpus,
+)
 
 # ---------------------------------------------------------------------------
 # Agent persona definitions
@@ -104,7 +119,11 @@ BUILTIN_AGENTS: list[AgentPersona] = [
         ),
         tools=["web_search", "web_extract", "memory_read", "github_feed",
                "http_request", "dns_lookup", "pdf_reader", "browser", "preprocess",
-               "cve_search", "threat_intel"],
+               "cve_search", "threat_intel",
+               "research_pipeline", "reasoning_chain", "knowledge_graph",
+               "code_generator", "auto_agent",
+               "plan", "plan_and_execute", "spawn_swarm",
+               "memory_vector_search", "memory_stats"],
     ),
     AgentPersona(
         name="voice",
@@ -113,7 +132,9 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "You are MOON Voice Agent. You manage speech synthesis, voice cloning, and audio processing. "
             "You coordinate with the voice engine to produce natural speech."
         ),
-        tools=["voice_speak", "voice_clone", "system_info"],
+        tools=["voice_speak", "voice_clone", "system_info",
+               "plan", "plan_and_execute", "spawn_swarm",
+               "memory_vector_search", "memory_stats"],
     ),
     AgentPersona(
         name="admin",
@@ -132,7 +153,9 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "You are MOON Creative Agent. You produce original creative content: writing, ASCII art, "
             "design concepts, and visual descriptions. Be imaginative and distinctive."
         ),
-        tools=["ascii_art", "image_gen", "system_info", "template_render", "qr_generator"],
+        tools=["ascii_art", "image_gen", "system_info", "template_render", "qr_generator",
+               "plan", "plan_and_execute", "spawn_swarm",
+               "memory_vector_search", "memory_stats"],
     ),
     AgentPersona(
         name="monitor",
@@ -142,7 +165,9 @@ BUILTIN_AGENTS: list[AgentPersona] = [
             "and report on performance. Be systematic and data-driven."
         ),
         tools=["system_info", "log_reader", "health_check", "http_request",
-               "dns_lookup", "system_command"],
+               "dns_lookup", "system_command", "plan", "plan_and_execute",
+               "spawn_swarm",
+               "memory_vector_search", "memory_stats"],
     ),
 ]
 
@@ -155,7 +180,7 @@ INTENT_ROUTING: list[tuple[str, str]] = [
     # (keyword pattern, agent name)
     (r"\b(code|program|script|debug|function|class|import|def |write code|refactor|algorithm|bug|fix|error|exception|traceback|syntax|compile|python|py |pip|module|package)\b", "code"),
     (r"\b(security|penetration|exploit|vulnerability|vulnerabilities|hack|red.?team|payload|audit|nmap|port.?scan|network.?scan|scan|recon|osint|pen.?test)\b", "security"),
-    (r"\b(search|research|find|wiki|google|article|paper|source|citation|web|news|summary|summarize|explain|quantum|information|learn)\b", "research"),
+    (r"\b(search|research|find|wiki|google|article|paper|source|citation|web|news|summary|summarize|explain|quantum|information|learn|research_pipeline|reasoning_chain|knowledge_graph|code_generator|auto_agent|plan_and_execute|spawn_swarm|agent_handoff|swarm|memory_vector|memory_stats)\b", "research"),
     (r"\b(speak|voice|tts|audio|sound|talk|say|pronounce)\b", "voice"),
     (r"\b(health|status|monitor|log|check|up|down|crash|ping|uptime|load|disk|memory|cpu)\b", "monitor"),
     (r"\b(install|service|services|config|deploy|restart|kill|process|daemon|systemd|firewall|dns|network|mount|storage|nginx|systemctl|manage)\b", "admin"),
@@ -4007,6 +4032,13 @@ default_engine.register_tool("sqlite_fts_search", _tool_sqlite_fts_search)
 default_engine.register_tool("build_mind_map", _tool_build_mind_map)
 default_engine.register_tool("local_llm_query", _tool_local_llm_query)
 default_engine.register_tool("spawn_swarm", _tool_spawn_swarm)
+default_engine.register_tool("agent_handoff", _tool_agent_handoff)
+default_engine.register_tool("swarm_status", _tool_swarm_status)
+default_engine.register_tool("swarm_result", _tool_swarm_result)
+default_engine.register_tool("plan_and_execute", _tool_plan_and_execute)
+default_engine.register_tool("plan", _tool_plan)
+default_engine.register_tool("memory_vector_search", _tool_memory_vector_search)
+default_engine.register_tool("memory_stats", _tool_memory_stats)
 default_engine.register_tool("evidence_hub", _tool_evidence_hub)
 default_engine.register_tool("research_pipeline", _tool_research_pipeline)
 default_engine.register_tool("reasoning_chain", _tool_reasoning_chain)
