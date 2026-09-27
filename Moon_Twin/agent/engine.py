@@ -72,6 +72,33 @@ from agent.tools_pro import (
     _tool_sweeper,
     _tool_win32_reg,
 )
+from agent.hermes_tools import (
+    _tool_browser_exec,
+    _tool_browser_vault_enter_code,
+    _tool_browser_vault_fill,
+    _tool_browser_vault_list,
+    _tool_browser_vault_save_login,
+    _tool_browser_vault_unlock,
+    _tool_clarify,
+    _tool_delegate_task,
+    _tool_execute_code,
+    _tool_hermes_memory,
+    _tool_patch,
+    _tool_read_file,
+    _tool_search_files,
+    _tool_skill_manage,
+    _tool_skill_view,
+    _tool_skills_list,
+    _tool_terminal,
+    _tool_vision_analyze,
+    _tool_write_file,
+    _tool_tool_search,
+    _tool_tool_describe,
+    _tool_tool_call,
+    # Hermes tools that duplicate native engine.py implementations — excluded to avoid double-registration
+    # _tool_web_search   — native /home/meow/Projects/MOON/Moon_Twin/agent/engine.py line 1804
+    # _tool_web_extract  — native /home/meow/Projects/MOON/Moon_Twin/agent/engine.py line 1838
+)
 
 # ---------------------------------------------------------------------------
 # Agent persona definitions
@@ -111,7 +138,13 @@ BUILTIN_AGENTS: list[AgentPersona] = [
         tools=["system_info", "memory_read", "memory_write", "python_executor",
                "github_feed", "plan", "reflect", "log_reader", "http_request",
                "dns_lookup", "template_render", "archive", "data_export",
-               "yaml_ops", "qr_generator", "pdf_reader", "browser", "preprocess"],
+               "yaml_ops", "qr_generator", "pdf_reader", "browser", "preprocess",
+               # Hermes agent tools
+               "web_search", "web_extract", "read_file", "write_file",
+               "terminal", "patch", "search_files", "skill_view", "skills_list",
+               "clarify", "delegate_task", "browser_exec", "vision_analyze",
+               "execute_code", "hermes_memory", "tool_search", "tool_describe",
+               "tool_call"],
     ),
     AgentPersona(
         name="code",
@@ -122,7 +155,11 @@ BUILTIN_AGENTS: list[AgentPersona] = [
         ),
         tools=["system_info", "file_read", "file_write", "shell", "python_executor",
                "tool_acquire", "self_evolve", "log_reader", "http_request",
-               "git_ops", "data_export", "yaml_ops", "pdf_reader", "browser", "preprocess"],
+               "git_ops", "data_export", "yaml_ops", "pdf_reader", "browser", "preprocess",
+               # Hermes agent tools
+               "read_file", "write_file", "terminal", "patch", "execute_code",
+               "delegate_task", "tool_search", "tool_describe", "tool_call",
+               "web_search", "web_extract", "search_files"],
     ),
     AgentPersona(
         name="security",
@@ -150,7 +187,11 @@ BUILTIN_AGENTS: list[AgentPersona] = [
                "research_pipeline", "reasoning_chain", "knowledge_graph",
                "code_generator", "auto_agent",
                "plan", "plan_and_execute", "spawn_swarm",
-               "memory_vector_search", "memory_stats"],
+               "memory_vector_search", "memory_stats",
+               # Hermes agent tools
+               "read_file", "search_files", "skill_view", "skills_list",
+               "delegate_task", "execute_code",
+               "tool_search", "tool_describe", "tool_call"],
     ),
     AgentPersona(
         name="voice",
@@ -209,7 +250,10 @@ BUILTIN_AGENTS: list[AgentPersona] = [
                "train_model", "decision_matrix", "deep_analyze", "body_check",
                "sqlite_fts_search", "memory_read", "memory_write",
                "plan", "plan_and_execute", "spawn_swarm",
-               "memory_vector_search", "memory_stats"],
+               "memory_vector_search", "memory_stats",
+               # Hermes agent tools
+               "execute_code", "read_file", "write_file", "terminal",
+               "delegate_task", "tool_search", "tool_describe", "tool_call"],
     ),
     AgentPersona(
         name="operator",
@@ -224,7 +268,14 @@ BUILTIN_AGENTS: list[AgentPersona] = [
                "service_control", "health_check", "log_reader",
                "git_ops", "user_preferences",
                "plan", "plan_and_execute", "spawn_swarm",
-               "memory_vector_search", "memory_stats"],
+               "memory_vector_search", "memory_stats",
+               # Hermes agent tools
+               "terminal", "read_file", "write_file", "patch",
+               "execute_code", "delegate_task",
+               "tool_search", "tool_describe", "tool_call",
+               "web_search", "web_extract", "search_files",
+               "skill_view", "skills_list", "browser_exec",
+               "vision_analyze", "hermes_memory", "clarify"],
     ),
     AgentPersona(
         name="writer",
@@ -237,7 +288,13 @@ BUILTIN_AGENTS: list[AgentPersona] = [
                "web_search", "web_extract", "http_request", "pdf_reader",
                "memory_read", "memory_write",
                "plan", "plan_and_execute", "spawn_swarm",
-               "memory_vector_search", "memory_stats"],
+               "memory_vector_search", "memory_stats",
+               # Hermes agent tools
+               "write_file", "read_file", "terminal", "patch",
+               "execute_code", "delegate_task",
+               "tool_search", "tool_describe", "tool_call",
+               "search_files", "skill_view", "skills_list",
+               "browser_exec", "vision_analyze", "hermes_memory", "clarify"],
     ),
     AgentPersona(
         name="data_scientist",
@@ -252,7 +309,10 @@ BUILTIN_AGENTS: list[AgentPersona] = [
                "train_model", "decision_matrix", "deep_analyze", "body_check",
                "sqlite_fts_search", "memory_read", "memory_write",
                "plan", "plan_and_execute", "spawn_swarm",
-               "memory_vector_search", "memory_stats"],
+               "memory_vector_search", "memory_stats",
+               # Hermes agent tools
+               "execute_code", "read_file", "write_file", "terminal",
+               "delegate_task", "tool_search", "tool_describe", "tool_call"],
     ),
     AgentPersona(
         name="devops",
@@ -265,7 +325,14 @@ BUILTIN_AGENTS: list[AgentPersona] = [
                "git_ops", "service_control", "health_check", "log_reader",
                "docker", "ssh_client", "user_preferences",
                "plan", "plan_and_execute", "spawn_swarm",
-               "memory_vector_search", "memory_stats"],
+               "memory_vector_search", "memory_stats",
+               # Hermes agent tools
+               "terminal", "read_file", "write_file", "patch",
+               "execute_code", "delegate_task",
+               "tool_search", "tool_describe", "tool_call",
+               "web_search", "web_extract", "search_files",
+               "skill_view", "skills_list", "browser_exec",
+               "vision_analyze", "hermes_memory", "clarify"],
     ),
 ]
 
@@ -4184,6 +4251,31 @@ default_engine.register_tool("decision_matrix", _tool_decision_matrix)
 default_engine.register_tool("agent_loop", _tool_agent_loop)
 default_engine.register_tool("sweeper", _tool_sweeper)
 default_engine.register_tool("win32_reg", _tool_win32_reg)
+
+# ── Hermes agent tools (24 tools from Hermes agent platform) ────────────────
+default_engine.register_tool("browser_exec", _tool_browser_exec)
+default_engine.register_tool("browser_vault_enter_code", _tool_browser_vault_enter_code)
+default_engine.register_tool("browser_vault_fill", _tool_browser_vault_fill)
+default_engine.register_tool("browser_vault_list", _tool_browser_vault_list)
+default_engine.register_tool("browser_vault_save_login", _tool_browser_vault_save_login)
+default_engine.register_tool("browser_vault_unlock", _tool_browser_vault_unlock)
+default_engine.register_tool("clarify", _tool_clarify)
+default_engine.register_tool("delegate_task", _tool_delegate_task)
+default_engine.register_tool("execute_code", _tool_execute_code)
+default_engine.register_tool("hermes_memory", _tool_hermes_memory)
+default_engine.register_tool("patch", _tool_patch)
+default_engine.register_tool("read_file", _tool_read_file)
+default_engine.register_tool("search_files", _tool_search_files)
+default_engine.register_tool("skill_manage", _tool_skill_manage)
+default_engine.register_tool("skill_view", _tool_skill_view)
+default_engine.register_tool("skills_list", _tool_skills_list)
+default_engine.register_tool("terminal", _tool_terminal)
+default_engine.register_tool("vision_analyze", _tool_vision_analyze)
+default_engine.register_tool("write_file", _tool_write_file)
+default_engine.register_tool("tool_search", _tool_tool_search)
+default_engine.register_tool("tool_describe", _tool_tool_describe)
+default_engine.register_tool("tool_call", _tool_tool_call)
+
 if __name__ == "__main__":
     import asyncio
 
