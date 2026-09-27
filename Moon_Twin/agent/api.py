@@ -15,6 +15,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 import urllib.parse
 from pathlib import Path
 from typing import Any
@@ -153,6 +154,15 @@ class MoonTwinAPI:
         try:
             while True:
                 msg = await ws.receive_json()
+                # Fast-path: test/echo without touching LLM
+                if msg.get("type") == "test":
+                    await ws.send_json({
+                        "type": "echo",
+                        "message": msg.get("message", ""),
+                        "timestamp": time.time(),
+                    })
+                    continue
+
                 message = msg.get("text", "")
                 session_id = msg.get("session_id", f"ws-{id(ws)}")
                 explicit_agent = msg.get("agent")
