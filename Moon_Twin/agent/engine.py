@@ -22,7 +22,30 @@ from pathlib import Path
 from typing import Any, Callable, Awaitable
 from dataclasses import dataclass, field
 
+# ── Canonical lazy engine accessor (single definition) ──────────────────────
+# Imported by plan_exec, superadvanced, tools_pro, memory_semantic via
+# `from agent.engine import _eng`. Must be defined BEFORE the agent.* submodule
+# imports below so those submodules can resolve the name without circular errors.
+_default_engine = None
+
+def _eng():
+    """Lazy accessor for the default engine singleton. Avoids circular imports
+    when agent submodules are loaded during engine.py initialisation."""
+    global _default_engine
+    if _default_engine is None:
+        from agent.engine import default_engine as _de
+        _default_engine = _de
+    return _de
+
+# ── Agent subsystem imports (tool implementations) ───────────────────────────
+# NOTE: each of these submodules also `from agent.engine import _eng` — the name
+# is already bound above so the submodule-level lazy loader is never triggered.
 from agent.llm import OllamaClient, create_client, tool_def
+from app.brain.agent_registry import AGENT_DEFS, build_agents, persona_for, register_external_agent
+
+# Re-export main brain's agent definitions as BUILTIN_AGENTS for backward compatibility.
+# Moon_Twin runs ONLY via moon main brain (app/) — all agent definitions come from app/brain.
+BUILTIN_AGENTS: list = list(AGENT_DEFS.keys())  # agent names from main brain
 from agent.superadvanced import (
     _tool_research_pipeline,
     _tool_reasoning_chain,
@@ -72,6 +95,8 @@ from agent.tools_pro import (
     _tool_sweeper,
     _tool_win32_reg,
 )
+
+# Hermes agent tools — browser, file ops, terminal, clarify, delegate, etc.
 from agent.hermes_tools import (
     _tool_browser_exec,
     _tool_browser_vault_enter_code,
@@ -95,10 +120,9 @@ from agent.hermes_tools import (
     _tool_tool_search,
     _tool_tool_describe,
     _tool_tool_call,
-    # Hermes tools that duplicate native engine.py implementations — excluded to avoid double-registration
-    # _tool_web_search   — native /home/meow/Projects/MOON/Moon_Twin/agent/engine.py line 1804
-    # _tool_web_extract  — native /home/meow/Projects/MOON/Moon_Twin/agent/engine.py line 1838
 )
+
+
 
 # ---------------------------------------------------------------------------
 # Agent persona definitions
@@ -127,7 +151,18 @@ class AgentPersona:
 # Built-in agent personas
 # ---------------------------------------------------------------------------
 
-BUILTIN_AGENTS: list[AgentPersona] = [
+BUILTIN_AGENTS: list[AgentPersona] = []
+# ── WIRE TO MOON MAIN BRAIN (app/) ───────────────────────────────────────────
+# Moon_Twin runs ONLY via the moon main brain at app/brain/agent_registry.py.
+# All agent personas are loaded from the main brain's AGENT_DEFS.
+from app.brain.agent_registry import AGENT_DEFS as _MAIN_BRAIN_AGENTS
+if _MAIN_BRAIN_AGENTS:
+    BUILTIN_AGENTS.extend([
+        AgentPersona(name=name, description=role, system_prompt=persona, tools=scope)
+        for name, (role, persona, scope) in _MAIN_BRAIN_AGENTS.items()
+    ])
+# Moon_Twin-specific agent personas (in addition to main brain agents)
+BUILTIN_AGENTS.extend([
     AgentPersona(
         name="general",
         description="General-purpose assistant — handles everyday questions, conversation, and broad tasks.",
@@ -138,7 +173,6 @@ BUILTIN_AGENTS: list[AgentPersona] = [
         tools=["system_info", "memory_read", "memory_write", "python_executor",
                "github_feed", "plan", "reflect", "log_reader", "http_request",
                "dns_lookup", "template_render", "archive", "data_export",
-               "yaml_ops", "qr_generator", "pdf_reader", "browser", "preprocess",
                # Hermes agent tools
                "web_search", "web_extract", "read_file", "write_file",
                "terminal", "patch", "search_files", "skill_view", "skills_list",
@@ -334,7 +368,7 @@ BUILTIN_AGENTS: list[AgentPersona] = [
                "skill_view", "skills_list", "browser_exec",
                "vision_analyze", "hermes_memory", "clarify"],
     ),
-]
+])
 
 # ---------------------------------------------------------------------------
 # Intent→agent routing
