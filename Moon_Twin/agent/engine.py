@@ -40,7 +40,7 @@ def _eng():
 # ── Agent subsystem imports (tool implementations) ───────────────────────────
 # NOTE: each of these submodules also `from agent.engine import _eng` — the name
 # is already bound above so the submodule-level lazy loader is never triggered.
-from agent.llm import OllamaClient, create_client, tool_def
+from app.services.llm_service import LLMService, ChatMessage, CompletionResult
 from app.brain.agent_registry import AGENT_DEFS, build_agents, persona_for, register_external_agent
 
 # Re-export main brain's agent definitions as BUILTIN_AGENTS for backward compatibility.
@@ -62,11 +62,6 @@ from agent.swarm import (
 from agent.plan_exec import (
     _tool_plan_and_execute,
     _tool_plan,
-)
-from agent.memory_semantic import (
-    _tool_memory_vector_search,
-    _tool_memory_stats,
-    _ensure_corpus as _ensure_memory_corpus,
 )
 from agent.tools_pro import (
     _tool_user_preferences,
@@ -421,7 +416,7 @@ class AgentEngine:
     def __init__(
         self,
         personas: list[AgentPersona] | None = None,
-        llm: OllamaClient | None = None,
+        llm: LLMService | None = None,
     ):
         self.personas: dict[str, AgentPersona] = {}
         for p in (personas or BUILTIN_AGENTS):
@@ -429,7 +424,10 @@ class AgentEngine:
         self._tool_handlers: dict[str, Callable[[dict], Awaitable[dict]]] = {}
         self._memory: list[dict] = []
         self._session_id: str | None = None
-        self._llm = llm or create_client()
+        self._llm = llm or LLMService(
+            base_url="http://127.0.0.1:11434/v1",
+            model_name="qwen3:0.6b",
+        )
 
     # -- Persona management --
 
@@ -1586,60 +1584,68 @@ class AgentEngine:
                 kb_lines.append(f"- {data.get('content', str(data))[:200]}")
             if kb_lines:
                 system = system + "\n\n[Knowledge Base — recent memories]\n" + "\n".join(kb_lines)
+
         tool_names = agent.tools or []
         tool_defs = self._build_tool_defs(tool_names) if tool_names else None
 
+        messages = [ChatMessage(role="system", content=system), ChatMessage(role="user", content=message)]
+
         if tool_defs:
-            # Use tool-calling loop
+            # Tool-calling loop using app's LLMService
             try:
-                result = await asyncio.wait_for(
-                    self._llm.chat_with_tools(
-                        message=message,
-                        system=system,
-                        tools=tool_defs,
-                        tool_executor=self._execute_tool_call,
-                        max_iterations=5,
-                    ),
-                    timeout=12.0,
+                result = await self._llm_complete_with_tools(
+                    messages, tool_defs, max_iterations=5
                 )
-                return result.get("content", "")
+                return result
             except (asyncio.TimeoutError, Exception):
                 return f"[Tool analysis — {message}] Tools identified and evaluated. (LLM backend unavailable)"
         else:
             # Simple chat
             try:
                 result = await asyncio.wait_for(
-                    self._llm.chat(
-                        message=message,
-                        system=system,
-                    ),
+                    self._llm.complete(messages=messages),
                     timeout=12.0,
                 )
-                return result.get("content", "")
+                return result.content or ""
             except (asyncio.TimeoutError, Exception):
-                return f"[{agent.name}] Response: I received your message: \"{message}\". (LLM backend unavailable — agent persona: {agent.role})"
+                return f"[{agent.name}] Response: I received your message: \"{message}\". (LLM backend unavailable — agent persona: {agent.description})"
 
-    async def _execute_tool_call(self, tool_call: dict) -> dict:
-        """Execute a single tool call from the LLM."""
-        func = tool_call.get("function", {})
-        name = func.get("name", "")
-        args_str = func.get("arguments", "{}")
-        try:
-            args = json.loads(args_str) if isinstance(args_str, str) else args_str
-        except (json.JSONDecodeError, TypeError):
-            args = {}
-        # Post-process: some LLMs send arrays/objects as JSON strings
-        # Deep-parse any string values that look like JSON
-        if isinstance(args, dict):
-            for key, value in args.items():
-                if isinstance(value, str):
-                    try:
-                        parsed = json.loads(value)
-                        if isinstance(parsed, (dict, list)):
-                            args[key] = parsed
-                    except (json.JSONDecodeError, ValueError):
-                        pass  # Not JSON, leave as string
-        return await self.run_tool(name, args)
+    async def _llm_complete_with_tools(
+        self, messages: list[ChatMessage], tool_defs: list[dict], max_iterations: int = 5
+    ) -> str:
+        """Tool-calling loop using app's LLMService — delegates to moon main brain LLM."""
+        current_messages = list(messages)
+        for _ in range(max_iterations):
+            result = await self._llm.complete(messages=current_messages, tools=tool_defs)
+            if not result.has_tool_calls:
+                return result.content or ""
+            # Execute tool calls and feed results back
+            for tc in (result.tool_calls or []):
+                name = tc.get("name", "")
+                args_str = tc.get("arguments", "{}")
+                try:
+                    args = json.loads(args_str) if isinstance(args_str, str) else args_str
+                except (json.JSONDecodeError, TypeError):
+                    args = {}
+                if isinstance(args, dict):
+                    for key, value in args.items():
+                        if isinstance(value, str):
+                            try:
+                                parsed = json.loads(value)
+                                if isinstance(parsed, (dict, list)):
+                                    args[key] = parsed
+                            except (json.JSONDecodeError, ValueError):
+                                pass
+                tool_result = await self.run_tool(name, args)
+                current_messages.append(ChatMessage(role="assistant", content=""))
+                current_messages.append(
+                    ChatMessage(
+                        role="tool",
+                        content=json.dumps(tool_result),
+                        name=name,
+                    )
+                )
+        return (result.content or "") if 'result' in locals() else ""
 
 
 # ---------------------------------------------------------------------------
@@ -4252,8 +4258,6 @@ default_engine.register_tool("agent_handoff", _tool_agent_handoff)
 default_engine.register_tool("swarm_status", _tool_swarm_status)
 default_engine.register_tool("swarm_result", _tool_swarm_result)
 default_engine.register_tool("plan_and_execute", _tool_plan_and_execute)
-default_engine.register_tool("memory_vector_search", _tool_memory_vector_search)
-default_engine.register_tool("memory_stats", _tool_memory_stats)
 default_engine.register_tool("evidence_hub", _tool_evidence_hub)
 default_engine.register_tool("research_pipeline", _tool_research_pipeline)
 default_engine.register_tool("reasoning_chain", _tool_reasoning_chain)
