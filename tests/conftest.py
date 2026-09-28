@@ -8,9 +8,11 @@ the skip reason clearly states WHY, and the offline-safe suite still runs.
 Local dev with Ollama up: every test (including live ones) runs normally.
 Force a dry run of the offline path with:  OLLAMA_HOST=127.0.0.1:9 pytest
 """
+
 from __future__ import annotations
 
 import os
+import sys
 import urllib.request
 
 import pytest
@@ -35,6 +37,21 @@ def pytest_configure(config):
         "markers",
         "live: test requires a live model backend (Ollama); auto-skipped when unreachable.",
     )
+    # Ensure site-packages dirs are on sys.path BEFORE test modules are
+    # imported during collection, so app.tui (which imports textual at
+    # module level) can resolve its dependencies.
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    for _dir in (
+        os.path.abspath(os.path.join(sys.prefix, "lib", f"python{sys.version_info.major}.{sys.version_info.minor}", "site-packages")),
+        os.path.expanduser("~/.local/lib/python3.14/site-packages"),
+        "/usr/lib/python3/dist-packages",
+        "/usr/local/lib/python3.14/dist-packages",
+        "/usr/lib/python3.14/dist-packages",
+    ):
+        if _dir not in sys.path and os.path.isdir(_dir):
+            sys.path.insert(0, _dir)
 
 
 # Session-wide reachability (computed once).
