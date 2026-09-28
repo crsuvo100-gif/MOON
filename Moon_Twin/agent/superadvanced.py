@@ -6,16 +6,7 @@ import asyncio
 import re as _re
 from collections import defaultdict as _dd
 
-_default_engine = None
-
-
-def _eng():
-    """Lazy accessor for the default engine singleton."""
-    global _default_engine
-    if _default_engine is None:
-        from agent.engine import default_engine as _de
-        _default_engine = _de
-    return _default_engine
+from agent.engine import _eng
 
 
 async def _tool_research_pipeline(args: dict) -> dict:

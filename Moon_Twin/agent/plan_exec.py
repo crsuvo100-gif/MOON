@@ -12,16 +12,7 @@ import asyncio
 import re as _re
 import json as _json
 
-_default_engine = None
-
-
-def _eng():
-    global _default_engine
-    if _default_engine is None:
-        from agent.engine import default_engine as _de
-        _default_engine = _de
-    return _de
-
+from agent.engine import _eng
 
 # ---------------------------------------------------------------------------
 # Step decomposition

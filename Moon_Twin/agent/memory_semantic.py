@@ -17,16 +17,7 @@ import math as _math
 from collections import Counter as _Counter
 from typing import Any
 
-_default_engine = None
-
-
-def _eng():
-    global _default_engine
-    if _default_engine is None:
-        from agent.engine import default_engine as _de
-        _default_engine = _de
-    return _de
-
+from agent.engine import _eng
 
 # ---------------------------------------------------------------------------
 # Tokenisation and vectorisation helpers
