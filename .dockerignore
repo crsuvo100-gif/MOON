@@ -1,0 +1,41 @@
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.venv/
+venv/
+.env
+*.db
+*.sqlite
+*.log
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.egg
+
+# Git
+.git/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Deploy (keep service templates, ignore installed copies)
+deploy/*.service
+deploy/*.timer
+
+# Optional deps that may not be available
+*.whl
+
+# Generated
+plugins/generated/
