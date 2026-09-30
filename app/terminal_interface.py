@@ -471,6 +471,9 @@ async def _moon_status_impl(orch) -> dict:
     }
 
 
+_moon_status = _moon_status_impl
+
+
 @app.get("/api/settings")
 async def api_get_settings(request: Request):
     return JSONResponse(_load_settings())
@@ -732,7 +735,8 @@ async def api_voice_set(req: VoiceSetRequest, request: Request):
 async def api_health(request: Request):
     """Project-wide health endpoint (Phase 27).
 
-    Reuses the existing real diagnostic pipeline (_moon_status + _run_diagnostics)
+    Reuses the existing real diagnostic pipeline (_moon_status_impl +
+    _run_diagnostics)
     and rolls the per-subsystem OK/FAIL/WARN verdicts into a single overall status:
       HEALTHY   - no FAIL and no WARN
       DEGRADED  - at least one WARN (non-critical, still operational)
@@ -799,7 +803,7 @@ async def api_brain_stats(request: Request):
 async def api_agents(request: Request):
     """Read-only roster of MOON's agent brains (real data from the Orchestrator).
 
-    Additive: reuses _moon_status (no new data source). Useful for the HUD and
+    Additive: reuses _moon_status_impl (no new data source). Useful for the HUD and
     any external monitor that wants the live agent list.
     """
     if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
@@ -833,7 +837,7 @@ async def api_agents(request: Request):
 async def api_tools(request: Request):
     """Read-only roster of MOON's registered tools (real data from the Orchestrator).
 
-    Additive: reuses _moon_status (no new data source).
+    Additive: reuses _moon_status_impl (no new data source).
     """
     if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
         from fastapi import Response
@@ -1290,7 +1294,7 @@ def _broadcast_status(orch) -> dict:
 
 def _moon_status_sync(orch) -> dict:
     try:
-        return asyncio.get_event_loop().run_until_complete(_moon_status(orch))
+        return asyncio.get_event_loop().run_until_complete(_moon_status_impl(orch))
     except Exception:
         # fallback: build a minimal sync status
         return {
@@ -2186,7 +2190,7 @@ async def ws_endpoint(ws: WebSocket):
         # monitoring on connect (cpu/ram/threat/agents) without the client
         # having to request it. This is genuine backend data, not a placeholder.
         try:
-            _init_payload = await _moon_status(orch)
+            _init_payload = await _moon_status_impl(orch)
             _init_payload["voice"] = {
                 "mode": "MUTED" if _voice_muted else "AUTO",
                 "available": bool(_get_voice_engine()),
@@ -2200,7 +2204,7 @@ async def ws_endpoint(ws: WebSocket):
             data = await ws.receive_json()
             action = data.get("action")
             if action == "status":
-                payload = await _moon_status(orch)
+                payload = await _moon_status_impl(orch)
                 payload["voice"] = {
                     "mode": "MUTED" if _voice_muted else "AUTO",
                     "available": bool(_get_voice_engine()),
@@ -2208,7 +2212,7 @@ async def ws_endpoint(ws: WebSocket):
                 await send(type="status", **payload)
             elif action in ("mute", "unmute"):
                 _voice_muted = (action == "mute")
-                payload = await _moon_status(orch)
+                payload = await _moon_status_impl(orch)
                 payload["voice"] = {
                     "mode": "MUTED" if _voice_muted else "AUTO",
                     "available": bool(_get_voice_engine()),

@@ -181,8 +181,8 @@ def api_status():
     except Exception as exc:  # noqa: BLE001
         return jsonify({"error": str(exc)}), 500
     try:
-        from app.terminal_interface import _moon_status
-        return jsonify(asyncio.run(_moon_status(orch)))
+        from app.terminal_interface import _moon_status_impl
+        return jsonify(asyncio.run(_moon_status_impl(orch)))
     except Exception as exc:  # noqa: BLE001
         return jsonify({"error": str(exc)}), 500
 
@@ -206,7 +206,7 @@ def run_dashboard(run_fn):
     """Block forever, serving the dashboard + a live brain-event stream."""
     import threading
 
-    from app.terminal_interface import (_get_orchestrator, _moon_status,
+    from app.terminal_interface import (_get_orchestrator, _moon_status_impl,
                                         _telemetry_snapshot, _log)
 
     _log("dashboard starting on http://127.0.0.1:5000")
@@ -222,7 +222,7 @@ def run_dashboard(run_fn):
     def _on_connect():
         if orch is not None:
             try:
-                SOCKETIO.emit("status", _moon_status(orch))
+                SOCKETIO.emit("status", _moon_status_impl(orch))
             except Exception:  # noqa: BLE001
                 pass
 
@@ -230,7 +230,7 @@ def run_dashboard(run_fn):
     def _on_status_req():
         if orch is not None:
             try:
-                SOCKETIO.emit("status", _moon_status(orch))
+                SOCKETIO.emit("status", _moon_status_impl(orch))
             except Exception:  # noqa: BLE001
                 pass
 
