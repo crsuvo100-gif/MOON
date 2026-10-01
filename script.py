@@ -139,7 +139,7 @@ Wants=moon-terminal.service
 Type=simple
 User=%u
 WorkingDirectory=%s
-ExecStart=%s/.venv/bin/python -c "from app.services.monitor import monitor_main; monitor_main()"
+ExecStart=%s/.venv/bin/python scripts/moon_monitor.py
 Restart=on-failure
 RestartSec=10
 Environment=PYTHONUNBUFFERED=1
