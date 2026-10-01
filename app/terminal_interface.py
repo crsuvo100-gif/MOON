@@ -48,7 +48,18 @@ _DEFAULT_SETTINGS = {
 def _load_settings() -> dict:
     return dict(_DEFAULT_SETTINGS)
 
-app = FastAPI(title="MOON Terminal")
+app = FastAPI(title="MOON Terminal", version="1.0.0")
+
+# CORS middleware — restrict to configured origins
+from fastapi.middleware.cors import CORSMiddleware as _CORSMiddleware
+from app.config.settings import get_settings as _get_settings
+app.add_middleware(
+    _CORSMiddleware,
+    allow_origins=_get_settings().cors_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Serve the interactive HUD (single-file HTML, no server-side routes beyond static serve).
 _HUD_PATH = Path(__file__).resolve().parent.parent / "moon_ui" / "hud.html"
@@ -91,6 +102,41 @@ def _token_ok(ws_or_headers) -> bool:
     else:
         auth = ws_or_headers.headers.get("authorization", "") if hasattr(ws_or_headers, "headers") else ""
     return auth == f"Bearer {TERMINAL_TOKEN}"
+
+
+# ---------------------------------------------------------------------------
+# Centralized auth dependency — applied to every non-public endpoint.
+# When TERMINAL_TOKEN is set, all routes except /api/health and /health
+# require a valid bearer token. When unset (local-only), all routes are open.
+# ---------------------------------------------------------------------------
+_PUBLIC_PATHS = {"/api/health", "/health", "/openapi.json", "/docs", "/redoc"}
+
+
+@app.middleware("http")
+async def _auth_middleware(request: Request, call_next):
+    """Enforce bearer-token auth on all non-public HTTP routes.
+
+    When TERMINAL_TOKEN is set, every request to a non-public path must
+    carry a valid Bearer token. Public paths (health, docs) are exempt.
+    When TERMINAL_TOKEN is unset (local-only), all routes are open.
+    """
+    if TERMINAL_TOKEN and request.url.path not in _PUBLIC_PATHS:
+        if not _token_ok(dict(request.headers)):
+            from fastapi.responses import JSONResponse
+            return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+    return await call_next(request)
+
+
+async def _auth_dependency(request: Request):
+    """FastAPI dependency: enforce bearer-token auth on all non-public routes."""
+    if not TERMINAL_TOKEN:
+        return  # local-only mode, no auth required
+    if request.url.path in _PUBLIC_PATHS:
+        return  # public endpoints
+    if not _token_ok(dict(request.headers)):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
 
 # ---- shared orchestrator (lazy, one per process) ----
 _ORCH = None
@@ -581,7 +627,7 @@ _SHELL_ALLOW = {
     "echo": "echo",
     "date": "date",
     "whoami": "whoami",
-    "env": "env | grep -iE 'MOON|PATH|HOME|USER' | head",
+    "env": "env | grep -iE 'MOON|PATH|HOME|USER' | grep -v TOKEN | grep -v SECRET | grep -v KEY | head",
     "nproc": "nproc",
     "cat": "cat",   # gated below to text files only
 }
@@ -617,6 +663,9 @@ def _shell_dispatch(cmd: str) -> tuple[str, int]:
 
 @app.post("/api/exec")
 async def api_exec(request: Request):
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
     try:
         body = await request.json()
     except Exception:
@@ -1127,32 +1176,6 @@ async def api_moon_agent(request: Request):
     tools_requested = body.get("tools", [])
     t0 = time.time()
     try:
-        # --- Build system prompt: ALL agent personas so LLM knows the capability surface ---
-        from app.brain.agent_registry import AGENT_DEFS, persona_for
-
-        sys_parts: list[str] = []
-        sys_parts.append("You are MOON, an AI agent system. Choose the best specialist for the task "
-                         "(or use the agent hint if provided). If the task needs shell commands, file writes, "
-                         "or tools — execute them for real and include the actual output. Do not fake tool use.\n\n"
-                         "AVAILABLE AGENTS:\n")
-        for key in AGENT_DEFS:
-            entry = AGENT_DEFS[key]
-            if isinstance(entry, tuple) and len(entry) >= 2:
-                desc = entry[0]
-            elif isinstance(entry, dict):
-                desc = entry.get("description", "")
-            else:
-                desc = str(entry)
-            p = persona_for(key) if callable(persona_for) else ""
-            sys_parts.append(f"  [{key}] {desc}: {p}\n")
-        sys_parts.append("\nIf agent='coding' is given, use the coding agent. "
-                         "Otherwise pick the best match from the list above.")
-        agent_sys_prompt = "".join(sys_parts)
-
-        settings = get_settings()
-        chosen_model = model_override or settings.model_name
-
-        # --- Route via orchestrator (real tool execution + cognition loop) ---
         orch = await _get_orchestrator()
         agent_name = agent_hint if (agent_hint and agent_hint in orch._agents) else None
         if agent_name is None:
@@ -1163,40 +1186,38 @@ async def api_moon_agent(request: Request):
         if agent_name is None:
             agent_name = "planning"
 
-        _log(f"moon_agent[{agent_name}] task={task[:60]}... model={chosen_model}", "ok")
+        _log(f"moon_agent[{agent_name}] task={task[:60]}... model={model_override or 'default'}", "ok")
 
-        # Set preferred model for this call.
-        prev_model = orch._settings.model_name if hasattr(orch._settings, "model_name") else None
-        if prev_model != chosen_model:
-            orch._settings.model_name = chosen_model
+        # Apply tool allowlist if requested
+        if tools_requested and orch._tools is not None:
+            allowed = set(tools_requested)
+            orch._tools._enabled = allowed
 
-        # Build context with our ALL-agents system prompt, then call the LLM directly
-        # (real completion + per-request model + timeout guards). The cognition loop
-        # (_run_cognition_loop) uses per-agent brains which can stall on model pull;
-        # for the external integration endpoint we use the orchestrator's shared LLM
-        # which is already warm and returns fast.
-        t_task = Task.create(task, agent_name=agent_name)
-        agent_card = orch._agents.get(agent_name) or orch._agents.get("planning")
-        messages = await orch._context.build(
-            task=t_task, history=orch._history, retrieved=None,
-            agent=agent_card, system_override=agent_sys_prompt,
-        )
-        _log(f"moon_agent[{agent_name}] calling llm.complete (model={chosen_model})", "ok")
-        result = await orch._llm.complete(messages)
+        # Use run_task for real tool execution + cognition loop + validation.
+        # Model override is applied via a temporary settings swap (best-effort;
+        # concurrent requests may race on this — documented limitation).
+        prev_model = None
+        if model_override and hasattr(orch._settings, "model_name"):
+            prev_model = orch._settings.model_name
+            orch._settings.model_name = model_override
 
-        # Restore model.
-        if prev_model is not None:
-            orch._settings.model_name = prev_model
+        try:
+            t_task = Task.create(task, agent_name=agent_name)
+            result = await orch.run_task(t_task)
+        finally:
+            # Always restore model setting
+            if prev_model is not None and hasattr(orch._settings, "model_name"):
+                orch._settings.model_name = prev_model
 
         elapsed_ms = round((time.time() - t0) * 1000)
-        content = result.content.strip() if result.content else ""
-        used_tools = []
-        _log(f"moon_agent[{agent_name}] -> {len(content)} chars", "ok")
+        content = (result.result or "").strip() if result.status == "completed" else ""
+        used_tools = list(getattr(result, "tools_used", []) or [])
+        _log(f"moon_agent[{agent_name}] -> {len(content)} chars, tools={used_tools}", "ok")
         return JSONResponse({
             "status": "completed",
-            "response": content.strip(),
+            "response": content,
             "agent": agent_name,
-            "model": chosen_model,
+            "model": model_override or "default",
             "tokens": len(content.split()),
             "elapsed_ms": elapsed_ms,
             "tools_used": used_tools,

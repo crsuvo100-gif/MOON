@@ -1,3 +1,0 @@
-"""
-MOON Terminal runtime package.
-"""

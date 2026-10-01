@@ -1,5 +1,5 @@
 [Unit]
-Description=MOON Neural Core Terminal Interface
+Description=MOON Agent Control Plane (local ASGI API)
 After=network-online.target
 Wants=network-online.target
 
@@ -9,7 +9,9 @@ WorkingDirectory=__INSTALL_PATH__/MOON
 # Run uvicorn directly so systemd tracks the real long-running server process
 # (main.py start only spawns uvicorn as a child, leaving the parent in the
 # 'activating' state). This makes the unit report 'active' cleanly.
-ExecStart=__INSTALL_PATH__/MOON/.venv/bin/python -m uvicorn app.terminal_interface:app --host 0.0.0.0 --port 8777 --log-level info
+# Keep the unauthenticated control plane local by default.  The tunnel workflow
+# supplies a bearer token before any deliberate remote exposure.
+ExecStart=__INSTALL_PATH__/MOON/.venv/bin/python -m uvicorn app.terminal_interface:app --host 127.0.0.1 --port 8777 --log-level info
 # The visible NEURAL CORE HUD window is owned solely by moon-hud.service
 # (the keeper loop below), which opens exactly ONE window and reopens it if
 # closed. Do NOT also open it here -- running open_hud.py from ExecStartPost

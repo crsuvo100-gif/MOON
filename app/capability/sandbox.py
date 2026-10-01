@@ -102,3 +102,20 @@ class SandboxExecutor:
             return SandboxResult(124, "", "sandbox: command timed out", self._method)
         except Exception as exc:  # noqa: BLE001
             return SandboxResult(1, "", f"sandbox error: {exc}", self._method)
+
+    # ------------------------------------------------------------------
+    # High-level install helpers used by CapabilityManager
+    # ------------------------------------------------------------------
+    def install(self, spec: dict) -> SandboxResult:
+        """Install a capability spec inside the sandbox."""
+        method = spec.get("method", "pip")
+        pkg = spec.get("package", "")
+        if method == "pip":
+            return self.run(["pip", "install", pkg], timeout=300)
+        if method == "system":
+            return self.run(["apt-get", "install", "-y", pkg], timeout=300)
+        return SandboxResult(1, "", f"unsupported install method: {method}", self._method)
+
+    def install_pip(self, pkg: str) -> SandboxResult:
+        """Install a pip package inside the sandbox."""
+        return self.run(["pip", "install", pkg], timeout=300)

@@ -129,7 +129,11 @@ class CapabilityManager:
         while self.repair.should_retry(attempt):
             attempt += 1
             if spec is not None:
-                res = self.installer.install(spec)
+                # Route installs through sandbox when possible
+                try:
+                    res = await self.sandbox.install(spec)
+                except Exception:
+                    res = self.installer.install(spec)
                 last_err = res.detail
                 if res.ok:
                     vr = self.verifier.verify(spec["type"], spec["verify"])
@@ -144,7 +148,10 @@ class CapabilityManager:
                 if plan.recoverable and plan.action.startswith("pip:"):
                     pkg = plan.action.split(":", 1)[1]
                     if pkg and pkg != "unknown":
-                        self.installer.install_pip(pkg)
+                        try:
+                            await self.sandbox.install_pip(pkg)
+                        except Exception:
+                            self.installer.install_pip(pkg)
                         await self.repair.backoff(attempt)
                         continue
                 if plan.action == "retry":

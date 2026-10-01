@@ -12,6 +12,9 @@ class DockerTool(BaseTool):
     name = "docker"
     description = "Docker operations: ps, images, run, exec, logs, build (on operator's host)."
 
+    def is_dangerous(self) -> bool:
+        return True
+
     async def execute(self, subcommand: str = "ps", args: str = "-a", **kwargs) -> str:
         if not shutil.which("docker"):
             return "[docker] docker CLI not found on this host."

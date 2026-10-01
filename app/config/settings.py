@@ -193,11 +193,21 @@ class Settings(BaseSettings):
     redis_url: str = ""
     task_queue_backend: Literal["memory", "redis"] = "memory"
 
-    api_cors_origins: str = "*"
+    api_cors_origins: str = Field(
+        default="*",
+        description="Comma-separated list of allowed CORS origins. Use '*' for all.",
+    )
 
     enable_browser_automation: bool = True
     enable_ocr: bool = True
     enable_pdf: bool = True
+    # Dangerous tools (shell, python exec, docker) require explicit opt-in.
+    # When False (default), ToolManager blocks them even if registered.
+    enable_dangerous_tools: bool = Field(
+        default=False,
+        description="Allow dangerous tools (terminal, python_executor, docker) to execute. "
+                    "When False, these are blocked by ToolManager safety gate.",
+    )
 
     enable_agent_validation: bool = Field(
         default=False,

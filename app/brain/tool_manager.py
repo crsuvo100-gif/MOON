@@ -48,6 +48,10 @@ class ToolManager:
         tool = self._registry.get(name)
         if tool is None or name not in self._enabled:
             return ToolResult(name=name, output=None, success=False, error="tool not available")
+        # Safety gate: reject dangerous tools unless explicitly allowed
+        if not self._allow_dangerous and hasattr(tool, 'is_dangerous') and tool.is_dangerous():
+            logger.warning("tool %s blocked: dangerous tool not allowed", name)
+            return ToolResult(name=name, output=None, success=False, error="tool requires explicit approval (dangerous)")
         try:
             to = timeout if timeout is not None else getattr(self, "_tool_timeout", None)
             if to:

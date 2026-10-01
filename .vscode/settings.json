@@ -1,0 +1,9 @@
+{
+    "chatgpt.promptBasedTools.enabled": true,
+    "chatgpt.autoAddCurrentFile": true,
+    "chatgpt.response.showNotification": true,
+    "chatgpt.promptPrefix.customPrompt2-enabled": true,
+    "chatgpt.promptPrefix.customPrompt1-enabled": true,
+    "chatgpt.gpt3.responsesAPI.enabled": true,
+    "chatgpt.gpt3.searchGrounding.enabled": true
+}

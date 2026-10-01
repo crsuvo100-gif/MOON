@@ -16,6 +16,9 @@ class PythonExecutorTool(BaseTool):
     name = "python_executor"
     description = "Run a bounded Python snippet and return stdout."
 
+    def is_dangerous(self) -> bool:
+        return True
+
     async def execute(self, code: str = "", **kwargs: Any) -> str:
         if not code:
             return "[no code]"

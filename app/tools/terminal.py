@@ -15,7 +15,10 @@ _DANGEROUS = ("rm -rf", "shutdown", "reboot", "dd if=")
 
 class TerminalTool(BaseTool):
     name = "terminal"
-    description = "Execute a safe shell command on the host."
+    description = "Run a shell command on the host."
+
+    def is_dangerous(self) -> bool:
+        return True
 
     async def execute(self, command: str = "", **kwargs: Any) -> str:
         if not command:

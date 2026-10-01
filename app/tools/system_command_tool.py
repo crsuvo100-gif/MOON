@@ -22,6 +22,9 @@ class SystemCommandTool(BaseTool):
     name = "system_command"
     description = "Run a controlled system command (guarded)."
 
+    def is_dangerous(self) -> bool:
+        return True
+
     async def execute(self, command: str = "", **kwargs: Any) -> str:
         if not command:
             return "[no command]"

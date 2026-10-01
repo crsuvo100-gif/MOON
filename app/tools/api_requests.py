@@ -18,6 +18,17 @@ class ApiRequestsTool(BaseTool):
         if not url:
             return "[no url]"
         try:
+            # Egress permission check via connector permission manager
+            try:
+                from app.connector.permission import ConnectorPermissionManager
+                from urllib.parse import urlparse
+                host = urlparse(url).hostname or ""
+                perm = ConnectorPermissionManager()
+                decision = perm.egress_decision(host, "network.egress")
+                if not decision.allowed and decision.tier.name == "NEVER":
+                    return f"[api error: egress to '{host}' blocked: {decision.reason}]"
+            except Exception:
+                pass  # permission check failed — fall through to direct request
             import requests
 
             resp = requests.request(method or "GET", url, timeout=15)

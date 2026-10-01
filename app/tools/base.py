@@ -16,8 +16,14 @@ class ToolResult:
 
 
 class BaseTool(ABC):
-    name: str = "base"
+    name: str = ""
     description: str = ""
+
+    def is_dangerous(self) -> bool:
+        """Return True if this tool can modify the host or exfiltrate data.
+        Override in subclasses that run shell commands, write files, or make
+        outbound connections. The ToolManager checks this before execution."""
+        return False
 
     @abstractmethod
     async def execute(self, **kwargs: Any) -> Any:

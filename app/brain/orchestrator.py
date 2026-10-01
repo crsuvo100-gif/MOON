@@ -304,7 +304,7 @@ class Orchestrator:
         except Exception as exc:  # noqa: BLE001
             logger.warning("Plugin loading skipped: %s", exc)
 
-        allow_dangerous = True
+        allow_dangerous = self._settings.enable_dangerous_tools
         enabled_names = {t.name for t in registry.all()}
         self._tools = ToolManager(registry, enabled_tools=enabled_names, allow_dangerous=allow_dangerous)
         self._tools._tool_timeout = self._settings.tool_timeout

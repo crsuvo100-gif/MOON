@@ -449,25 +449,8 @@ def main() -> None:
     elif args.cmd == "update":
         raise SystemExit(_cmd_update())
     elif args.cmd == "terminal-moon":
-        # Launch standalone MOON Terminal (terminal_moon/ sub-project).
-        # Uses its own .venv if available, else runs from project root with
-        # terminal_moon/ on sys.path so its app.* imports resolve.
-        import sys as _sys2
-        import subprocess as _sp2
-        tm_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "terminal_moon")
-        tm_venv_py = os.path.join(tm_root, ".venv", "bin", "python")
-        if os.path.exists(tm_venv_py):
-            # Use terminal_moon's own venv (isolated deps) – prefers its .venv/bin/python
-            _sp2.run([tm_venv_py, "main.py", "terminal"], cwd=tm_root)
-        else:
-            # Fallback: run inline with terminal_moon/ on sys.path
-            _sys2.path.insert(0, tm_root)
-            try:
-                from terminal_moon.app.tui import Moonscope as _tm_Moonscope
-                raise SystemExit(_tm_Moonscope().run())
-            except Exception as exc:  # noqa: BLE001
-                print(f"[terminal-moon] launch failed: {exc}", file=_sys2.stderr)
-                raise SystemExit(1)
+        print("[terminal-moon] terminal_moon/ sub-project has been removed. Use 'moon terminal' instead.", file=sys.stderr)
+        raise SystemExit(1)
     elif args.cmd == "telegram":
         # Launch MOON's Telegram bot listener (polling mode).
         # Token is read from TELEGRAM_BOT_TOKEN env var (set via .env or
@@ -477,43 +460,12 @@ def main() -> None:
     elif args.cmd == "version":
         _cmd_version()
     elif args.cmd == "agent":
-        # Moon_Twin standalone agent CLI — integrated into root MOON.
-        #   moon agent                    → interactive agent session
-        #   moon agent "hello"           → send message
-        #   moon agent --list             → list agents
-        #   moon agent --route "query"   → smart route
-        #   moon agent --json             → JSON output
-        import subprocess as _sp
-        import sys as _sys3
-
-        twin_root = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  "Moon_Twin")
-        twin_venv_py = os.path.join(twin_root, ".venv", "bin", "python")
-        py = twin_venv_py if os.path.exists(twin_venv_py) else sys.executable
-        _sp.run([py, "main.py"] + _sys3.argv[2:],
-                cwd=twin_root, env=dict(os.environ))
-        raise SystemExit(0)
+        print("[agent] Moon_Twin/ sub-project has been removed. Use 'moon terminal' or the API instead.", file=sys.stderr)
+        raise SystemExit(1)
 
     elif args.cmd == "api":
-        # Moon_Twin API server — integrated into root MOON.
-        #   moon api                     → start API on :8778
-        #   moon api --port 9000         → custom port
-        import argparse as _ap
-        import subprocess as _sp4
-        import sys as _sys4
-
-        aparser = _ap.ArgumentParser(prog="moon api")
-        aparser.add_argument("--port", type=int, default=8778)
-        aparser.add_argument("--host", default="0.0.0.0")
-        aargs, _ = aparser.parse_known_args(_sys4.argv[2:])
-        twin_root = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  "Moon_Twin")
-        twin_venv_py = os.path.join(twin_root, ".venv", "bin", "python")
-        py = twin_venv_py if os.path.exists(twin_venv_py) else sys.executable
-        _sp4.run([py, "-m", "agent.api",
-                  "--host", aargs.host, "--port", str(aargs.port)],
-                 cwd=twin_root, env=dict(os.environ))
-        raise SystemExit(0)
+        print("[api] Moon_Twin/ sub-project has been removed. Use 'moon terminal' (port 8777) instead.", file=sys.stderr)
+        raise SystemExit(1)
 
     else:
         # No subcommand (bare `moon`) -> moonscope TUI (default terminal).
