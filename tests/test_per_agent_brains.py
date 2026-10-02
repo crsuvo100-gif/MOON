@@ -211,7 +211,7 @@ def test_agent_brain_draft_uses_own_model():
         brain = AgentBrain("research", main_brain=None, agent_models=None)
 
         class FakeLLM:
-            async def complete(self, messages):
+            async def complete(self, messages, **kwargs):
                 from app.services.llm_service import CompletionResult
                 return CompletionResult(content="AGENT-OWN-MODEL-ANSWER", has_tool_calls=False)
 

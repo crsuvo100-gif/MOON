@@ -24,7 +24,7 @@ class ReasoningEngine:
                     "Reason step by step about the following. Show your analysis, "
                     "intermediate steps, and a clear final conclusion.\n\n" + query
                 ))],
-                max_tokens=600, temperature=0.3,
+                max_tokens=4096, temperature=0.3,
             )
             return (resp.content or "").strip() or query
         except Exception:  # noqa: BLE001

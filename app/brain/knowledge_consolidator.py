@@ -150,7 +150,7 @@ class KnowledgeConsolidator:
                     )),
                     ChatMessage(role="user", content=f"Q: {prompt}\nA: {response}"),
                 ],
-                max_tokens=300,
+                max_tokens=1024,
                 temperature=0.2,
             )
             import json

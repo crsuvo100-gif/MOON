@@ -124,7 +124,7 @@ class AgentBrain:
                     )),
                     ChatMessage(role="user", content=f"Task: {task}\nContext: {context}"),
                 ]
-                resp = await self._llm.complete(messages)
+                resp = await self._llm.complete(messages, max_tokens=4096)
                 if resp.content:
                     return resp.content
                 logger.info("Agent '%s' own-model returned empty; using template fallback", self.agent_name)

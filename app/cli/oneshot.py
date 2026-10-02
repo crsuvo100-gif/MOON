@@ -59,7 +59,7 @@ async def run_oneshot(
         )
         messages = [ChatMessage(role="user", content=prompt_text)]
 
-        result = await llm.complete(messages=messages)
+        result = await llm.complete(messages=messages, max_tokens=4096)
         content = getattr(result, 'content', None) or ""
 
         console.print()

@@ -519,7 +519,7 @@ class Orchestrator:
                         ChatMessage(role="system", content=sys_p),
                         ChatMessage(role="user", content=f"Task: {task.prompt}"),
                     ],
-                    max_tokens=600, temperature=0.2,
+                    max_tokens=1024, temperature=0.2,
                 )
                 import json
                 import re as _re
@@ -950,14 +950,14 @@ class Orchestrator:
             # finishes in 1-3s; anything past 30s is a stuck reasoning model.
             try:
                 resp = await asyncio.wait_for(
-                    llm.complete(messages, tools=tool_specs if tool_specs else None),
+                    llm.complete(messages, tools=tool_specs if tool_specs else None, max_tokens=4096),
                     timeout=30,
                 )
             except asyncio.TimeoutError:
                 logger.warning("llm.complete timed out (%s); falling back to shared model",
                                getattr(llm, "_model", "?"))
                 resp = await self._llm.complete(
-                    messages, tools=tool_specs if tool_specs else None)
+                    messages, tools=tool_specs if tool_specs else None, max_tokens=4096)
             total_tokens += 1
             if resp.has_tool_calls:
                 for call in resp.tool_calls:

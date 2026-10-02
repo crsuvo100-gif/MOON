@@ -34,7 +34,7 @@ class SelfReflection:
                         "each issue on its own line.\n\nPROMPT: " + prompt
                         + "\n\nANSWER: " + answer
                     ))],
-                    max_tokens=300, temperature=0.1,
+                    max_tokens=1024, temperature=0.1,
                 )
                 text = (resp.content or "").strip()
                 if text.upper().startswith("SATISFACTORY"):

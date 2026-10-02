@@ -595,7 +595,7 @@ class Moonscope(App):
         self.query_one(BrainHUD).set_tokens(len(prompt_text.split()))
 
         try:
-            result = await llm.complete(messages=messages)
+            result = await llm.complete(messages=messages, max_tokens=4096)
             content = getattr(result, "content", None) or ""
             if content:
                 self._chat_messages.append({

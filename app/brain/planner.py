@@ -23,7 +23,7 @@ class Planner:
                         "actionable sub-steps (each one line, no numbering symbols). "
                         "Keep it under 8 steps. Goal: " + goal
                     ))],
-                    max_tokens=300, temperature=0.2,
+                    max_tokens=1024, temperature=0.2,
                 )
                 steps = [s.strip("0123456789. )-") for s in (resp.content or "").splitlines()]
                 steps = [s for s in steps if s]
