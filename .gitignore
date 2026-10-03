@@ -20,6 +20,9 @@ data/
 data/agents/
 data/executions.db
 
+# MOON runtime state
+.moon/
+
 # Python
 __pycache__/
 *.py[cod]
