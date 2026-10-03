@@ -1,10 +1,10 @@
 # MOON — Whole-Project Insight & Architecture Compendium
 
 **Project Root:** `/home/meow/Projects/MOON`
-**Agent Platform:** `Moon_Twin/` — professional AI agent engine on `:8778`
-**Service:** `moon.service` (systemd, `systemctl --user restart moon.service`)
-**Health:** `http://127.0.0.1:8778/api/health` → `{"status":"healthy","agent_count":13,"lock_state":"unlocked","service":"moon-agent-api","version":"1.0.0"}`
-**Agent Endpoint:** `http://127.0.0.1:8778/api/moon-agent` (POST)
+**Agent Platform:** `app/` — professional AI agent engine on `:8777`
+**Service:** `moon-terminal.service` (systemd, `systemctl --user restart moon-terminal.service`)
+**Health:** `http://127.0.0.1:8777/api/health` → `{"status":"healthy","agent_count":13,"lock_state":"unlocked","service":"moon-agent-api","version":"1.0.0"}`
+**Agent Endpoint:** `http://127.0.0.1:8777/api/moon-agent` (POST)
 **LLM Backend:** Ollama (OpenAI-compatible) at `http://127.0.0.1:11434/v1`, default model `qwen3:0.6b`
 **Git Remote:** `github.com:crsuvo100-gif/MOON.git` (master, pushed)
 
@@ -14,24 +14,19 @@
 
 ```
 /home/meow/Projects/MOON/
-├── Moon_Twin/                 # ← Primary agent platform (port 8778)
-│   ├── main.py                # Entry point (177 lines)
-│   ├── agent/
-│   │   ├── engine.py          # CORE ENGINE (4,352 lines)
-│   │   ├── hermes_tools.py   # 22 Hermes tool wrappers (311 lines)
-│   │   ├── tools_pro.py      # Professional tools (2,200 lines)
-│   │   ├── superadvanced.py  # Advanced capabilities (471 lines)
-│   │   ├── llm.py            # Ollama LLM client (410 lines)
-│   │   ├── memory.py         # SQLite memory (310 lines)
-│   │   ├── api.py            # REST API layer (836 lines)
-│   │   ├── plan_exec.py      # Plan-and-execute orchestrator (314 lines)
-│   │   ├── swarm.py          # Multi-agent swarm (340 lines)
-│   │   └── memory_semantic.py # TF-IDF semantic search (320 lines)
-│   └── terminal/
-│       └── app.py            # TUI terminal (743 lines)
+├── app/
+│   ├── brain/                 # Agent brain (orchestrator, cognitive loop, context builder)
+│   ├── agents/                # Agent system (factory, registry, lifecycle)
+│   ├── context/               # Context system (retriever, advanced self-function)
+│   ├── memory/                # Memory system (SQLite, compression, advanced)
+│   ├── skills/                # Skill system (advanced orchestrator)
+│   ├── services/              # Services (telegram bot, etc.)
+│   ├── terminal_interface.py  # REST API + WebSocket (port 8777)
+│   └── tui.py                 # Textual TUI (moonscope)
+├── main.py                    # Entry point (CLI orchestrator)
 ├── .env                       # TELEGRAM_BOT_TOKEN=[REDACTED]
 ├── requirements.txt
-└── moon.service               # Systemd unit
+└── deploy/                    # Systemd units (moon-terminal, moon-hud, etc.)
 ```
 
 **Total source lines:** ~10,500+ across 11 primary modules
@@ -577,11 +572,11 @@ The unified MOON launcher. Provides:
 
 ## 14. SERVICE & DEPLOYMENT
 
-### Systemd Service (`moon.service`)
-- Runs `Moon_Twin/main.py` on port 8778
-- Restart via `systemctl --user restart moon.service` (sudo password unavailable)
-- Health endpoint: `http://127.0.0.1:8778/api/health`
-- Agent endpoint: `http://127.0.0.1:8778/api/moon-agent`
+### Systemd Service (`moon-terminal.service`)
+- Runs `app.terminal_interface:app` via uvicorn on port 8777
+- Restart via `systemctl --user restart moon-terminal.service`
+- Health endpoint: `http://127.0.0.1:8777/api/health`
+- Agent endpoint: `http://127.0.0.1:8777/api/moon-agent`
 
 ### Git
 - Remote: `github.com:crsuvo100-gif/MOON.git`

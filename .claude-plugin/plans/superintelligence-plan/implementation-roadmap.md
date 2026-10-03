@@ -66,4 +66,4 @@
 - Ollama base URL: http://127.0.0.1:11434 (default)
 - Default model: llama3.2 (configurable)
 - If Ollama unreachable: fallback to structured mock, document limitation
-- Knowledge base storage: SQLite FTS table or JSON file in Moon_Twin data dir
+- Knowledge base storage: SQLite FTS table or JSON file in MOON data dir

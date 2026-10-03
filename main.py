@@ -433,8 +433,7 @@ def main() -> None:
     sub.add_parser("update", help="Safe update: git pull --ff-only + pip install -e . --upgrade")
     sub.add_parser("version", help="Print MOON version")
     sub.add_parser("monitor", help="Run health monitor + self-heal (backend, models, git sync)")
-    sub.add_parser("agent", help="Moon_Twin standalone agent CLI (interactive, message, --list, --route, --json)")
-    sub.add_parser("api", help="Launch Moon_Twin API server (default :8778)")
+
     args, remaining = ap.parse_known_args()
     _ensure_default_peer()
     if args.cmd == "run":
@@ -483,14 +482,6 @@ def main() -> None:
         raise SystemExit(_tg_main())
     elif args.cmd == "version":
         _cmd_version()
-    elif args.cmd == "agent":
-        print("[agent] Moon_Twin/ sub-project has been removed. Use 'moon terminal' or the API instead.", file=sys.stderr)
-        raise SystemExit(1)
-
-    elif args.cmd == "api":
-        print("[api] Moon_Twin/ sub-project has been removed. Use 'moon terminal' (port 8777) instead.", file=sys.stderr)
-        raise SystemExit(1)
-
     else:
         # No subcommand (bare `moon`) -> moonscope TUI (default terminal).
         from app.tui import main as tui_main

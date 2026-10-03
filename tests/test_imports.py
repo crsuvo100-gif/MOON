@@ -18,7 +18,7 @@ def _ensure_paths():
         _td = os.path.dirname(os.path.dirname(_spec.origin))
         if _td not in sys.path:
             sys.path.insert(0, _td)
-    # Also add local venv site-packages (Moon_Twin runs from its own venv)
+    # Also add local venv site-packages
     for _vn in (
         os.path.join(os.path.dirname(os.path.dirname(__file__)), ".venv", "lib",
                      f"python{sys.version_info.major}.{sys.version_info.minor}", "site-packages"),

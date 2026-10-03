@@ -674,10 +674,10 @@ def install_service() -> None:
     moon_terminal_path = str(ROOT)
     python_path = str(VENV / "bin" / "python")
 
-    # Remove stale/obsolete MOON units left by older layouts (e.g. the removed
-    # Moon_Twin sub-project) so a fresh install can never inherit a crash loop.
-    # Neither moon.service nor moon-agent.service is shipped by this installer.
-    for stale in ("moon.service", "moon-agent.service"):
+    # Remove stale/obsolete MOON units left by older layouts so a fresh install
+    # can never inherit a crash loop. Neither moon.service nor moon-agent.service
+    # is shipped by this installer.
+    for stale in ("moon.service",):
         stale_path = user_units_dir / stale
         if stale_path.exists():
             _run(["systemctl", "--user", "stop", stale], check=False)

@@ -64,10 +64,9 @@ UNIT_NAMES = [
     "moon-watchdog.timer",
     "moon-monitor.service",
     "moon-monitor.timer",
-    # Obsolete / orphan units from earlier layouts (e.g. the removed Moon_Twin
-    # sub-project). Harmless to list even if absent; ensures a clean uninstall.
+    # Obsolete / orphan units from earlier layouts. Harmless to list even if
+    # absent; ensures a clean uninstall.
     "moon.service",
-    "moon-agent.service",
 ]
 
 

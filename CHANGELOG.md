@@ -50,7 +50,7 @@
 - Consolidated MOON to single canonical checkout at /home/meow/Projects/MOON
 - All systemd units + launcher + desktop entry repointed to canonical path
 - HUD owned by moon-hud.service; moon-monitor.timer only health-checks
-- MOON_Twin API consolidated to :8778
+
 
 ---
 
