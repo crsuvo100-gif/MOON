@@ -114,6 +114,7 @@ class Orchestrator:
         self._agent_brains: dict[str, Any] = {}
         self._agent_model_overrides: dict[str, str | None] = {}
         self._consolidator = None
+        self._advanced_memory = None
         # Shared lock state across CLI + web backend + WebSocket so an unlock
         # in ANY surface (HUD, `moon run`, voice, TUI) persists for ALL others.
         if lock_state_file is None:
@@ -258,6 +259,21 @@ class Orchestrator:
         )
         await self._memory_maintenance.start()
 
+        # --- Advanced memory system (unified search, consolidation, proactive) --
+        try:
+            from app.memory.advanced.orchestrator import AdvancedMemoryOrchestrator
+            self._advanced_memory = AdvancedMemoryOrchestrator(
+                memory_manager=self._memory,
+                llm_service=self._llm,
+            )
+            await self._advanced_memory.setup()
+            # Wire advanced orchestrator into MemoryManager
+            self._memory._advanced = self._advanced_memory
+            logger.info("Advanced memory system initialized")
+        except Exception as exc:  # noqa: BLE001
+            logger.info("Advanced memory system init skipped: %s", exc)
+            self._advanced_memory = None
+
         # Index the bundled Hermes skill corpus into the knowledge base so the
         # skills are retrievable via semantic recall (MOON can use them).
         try:
@@ -376,6 +392,12 @@ class Orchestrator:
                     pass
         if getattr(self, "_agent_models", None) is not None:
             await self._agent_models.teardown()
+        # --- Advanced memory shutdown ---
+        if getattr(self, "_advanced_memory", None) is not None:
+            try:
+                await self._advanced_memory.shutdown()
+            except Exception:  # noqa: BLE001
+                pass
         logger.info("Orchestrator torn down")
 
     # ------------------------------------------------------------------
@@ -762,8 +784,17 @@ class Orchestrator:
                 return task
             except Exception as exc:  # noqa: BLE001
                 logger.info("fast-path fell back to full loop: %s", exc)
+        # --- Advanced memory: proactive context injection ---
+        proactive_context: list = []
+        if self._advanced_memory is not None:
+            try:
+                proactive_context = await self._advanced_memory.before_task(task.prompt)
+            except Exception:  # noqa: BLE001
+                pass
+
+        lesson = ""
         try:
-            final_text, tokens = await self._run_cognition_loop(task, agent, on_event=on_event)
+            final_text, tokens = await self._run_cognition_loop(task, agent, on_event=on_event, proactive_context=proactive_context)
             # --- spec 27/41: verification events (additive; degrades cleanly) ---
             try:
                 from app.runtime.integration import emit as _emit
@@ -883,6 +914,15 @@ class Orchestrator:
                 pass
             task.complete(clean, data={"tokens_used": tokens, "issues": validation.issues, "agent": agent.name}, tokens_used=tokens)
             await self._memory.remember(clean, long_term=False)
+            # --- Advanced memory: store task result ---
+            if self._advanced_memory is not None:
+                try:
+                    await self._advanced_memory.after_task(
+                        task.prompt, clean, success=reflection.satisfactory,
+                        lesson=lesson,
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
             # spec 31: mark the execution job SUCCESS
             self._exec_transition(task.id, "SUCCESS", agent_id=agent.name, task=task.prompt,
                                   result={"status": "done", "agent": agent.name})
@@ -918,9 +958,19 @@ class Orchestrator:
         on_event=None,
         *,
         system_override: str | None = None,
+        proactive_context: list | None = None,
     ) -> tuple[str, int]:
         assert self._llm is not None and self._tools is not None and self._context is not None
         retrieved = await self._memory.semantic_recall(task.prompt) if self._memory else []
+        # Inject proactive memory context from advanced memory system
+        if proactive_context:
+            for ctx in proactive_context:
+                if hasattr(ctx, 'content') and ctx.content:
+                    retrieved.append({
+                        "content": f"[proactive] {ctx.content}",
+                        "score": getattr(ctx, 'relevance', 0.5),
+                        "source": getattr(ctx, 'source', 'proactive'),
+                    })
         if self._memory is not None:
             try:
                 for ep in self._memory.episodic.recall(task.prompt, k=3):
@@ -1099,7 +1149,17 @@ class Orchestrator:
         if self._llm is None:
             return "MOON is not ready to reply yet."
         persona = self._system_persona()
-        messages = [ChatMessage(role="system", content=persona), ChatMessage(role="user", content=prompt)]
+        # --- Advanced memory: proactive context injection ---
+        proactive_msgs: list = []
+        if self._advanced_memory is not None:
+            try:
+                proactive_ctx = await self._advanced_memory.before_task(prompt)
+                for ctx in proactive_ctx:
+                    if hasattr(ctx, 'content') and ctx.content:
+                        proactive_msgs.append(ChatMessage(role="system", content=f"[memory] {ctx.content}"))
+            except Exception:  # noqa: BLE001
+                pass
+        messages = [ChatMessage(role="system", content=persona), *proactive_msgs, ChatMessage(role="user", content=prompt)]
         try:
             resp = await self._complete_with_fallback(messages, max_tokens=max_tokens, temperature=temperature)
             text = (resp.content or "").strip()
@@ -1119,6 +1179,12 @@ class Orchestrator:
                 await self._consolidator.consolidate(prompt=prompt, response=text)
             except Exception as exc:  # noqa: BLE001
                 logger.debug("quick_reply self-learn skipped: %s", exc)
+        # --- Advanced memory: store result ---
+        if self._advanced_memory is not None and text and "could not form a reply" not in text:
+            try:
+                await self._advanced_memory.after_task(prompt, text, success=True)
+            except Exception:  # noqa: BLE001
+                pass
         return text
 
     async def refine(self, prompt: str, *, temperature: float | None = None) -> str:

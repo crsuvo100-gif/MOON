@@ -45,6 +45,7 @@ class MemoryManager:
         memory_graph: MemoryGraph | None = None,
         stats_collector: MemoryStatsCollector | None = None,
         maintenance: MemoryMaintenance | None = None,
+        advanced_orchestrator: Any | None = None,
     ) -> None:
         self._stm = short_term
         self._ltm = long_term
@@ -53,6 +54,7 @@ class MemoryManager:
         self._graph = memory_graph
         self._stats = stats_collector
         self._maintenance = maintenance
+        self._advanced = advanced_orchestrator
         self._load_episodes()
 
     def _load_episodes(self) -> None:
@@ -214,4 +216,42 @@ class MemoryManager:
         results: dict[str, Any] = {}
         if self._maintenance is not None:
             results = await self._maintenance.run_all()
+        if self._advanced is not None:
+            adv_results = await self._advanced.maintenance()
+            results["advanced"] = adv_results
         return results
+
+    async def advanced_search(self, query: str, top_k: int = 10, min_score: float = 0.1) -> list[Any]:
+        """Search across all memory types with unified relevance ranking."""
+        if self._advanced is not None:
+            return await self._advanced.search(query, top_k, min_score)
+        return []
+
+    async def before_task(self, task_prompt: str) -> list[Any]:
+        """Get proactive memory context before executing a task."""
+        if self._advanced is not None:
+            return await self._advanced.before_task(task_prompt)
+        return []
+
+    async def after_task(self, task_prompt: str, result: str, success: bool = True, lesson: str = "") -> None:
+        """Store task results in memory after completion."""
+        if self._advanced is not None:
+            await self._advanced.after_task(task_prompt, result, success, lesson)
+
+    async def get_advanced_stats(self) -> dict[str, Any]:
+        """Get comprehensive statistics from the advanced memory system."""
+        if self._advanced is not None:
+            return self._advanced.stats()
+        return {}
+
+    async def get_memory_health(self) -> Any:
+        """Generate a comprehensive memory health report."""
+        if self._advanced is not None:
+            return await self._advanced.get_health_report()
+        return None
+
+    def get_continuity_context(self) -> list[dict[str, Any]]:
+        """Get cross-session continuity context."""
+        if self._advanced is not None:
+            return self._advanced.get_continuity_context()
+        return []
