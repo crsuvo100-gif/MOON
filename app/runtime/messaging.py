@@ -19,10 +19,34 @@ from typing import Any
 
 
 class MessageType(str, Enum):
+    """Agent communication protocol message types (spec 25).
+
+    The original four (TASK/RESULT/EVENT/CONTROL) remain the transport-level
+    primitives; the remaining names are the spec-25 protocol vocabulary so an
+    agent conversation can express acceptance, rejection, permission,
+    verification, recovery and cancellation -- not just task/result.
+    """
+    # transport primitives (pre-existing; kept for backward compatibility)
     TASK = "task"
     RESULT = "result"
     EVENT = "event"
     CONTROL = "control"
+    # spec 25 protocol vocabulary
+    TASK_REQUEST = "TASK_REQUEST"
+    TASK_ACCEPTED = "TASK_ACCEPTED"
+    TASK_REJECTED = "TASK_REJECTED"
+    TASK_PROGRESS = "TASK_PROGRESS"
+    TASK_RESULT = "TASK_RESULT"
+    TASK_FAILED = "TASK_FAILED"
+    TOOL_REQUEST = "TOOL_REQUEST"
+    TOOL_RESULT = "TOOL_RESULT"
+    PERMISSION_REQUEST = "PERMISSION_REQUEST"
+    VERIFICATION_REQUEST = "VERIFICATION_REQUEST"
+    VERIFICATION_RESULT = "VERIFICATION_RESULT"
+    RECOVERY_REQUEST = "RECOVERY_REQUEST"
+    CANCEL_REQUEST = "CANCEL_REQUEST"
+    CANCELLED = "CANCELLED"
+    COMPLETED = "COMPLETED"
 
 
 @dataclass

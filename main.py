@@ -307,20 +307,59 @@ def _cmd_doctor() -> int:
 
 
 def _cmd_backup() -> int:
-    from app.backup import backup
-    d = backup()
-    print(f"BACKUP COMPLETE -> {d}")
+    """Snapshot runtime data into backups/ (pure-Python, stdlib only).
+
+    Self-contained: no external backup module required.
+    """
+    import shutil
+    import time as _time
+
+    stamp = _time.strftime("%Y%m%d_%H%M%S")
+    dest = Path("backups") / f"moon_{stamp}"
+    dest.mkdir(parents=True, exist_ok=True)
+    copied: list[str] = []
+    for item in ("data", "connections", ".env"):
+        src = Path(item)
+        if not src.exists():
+            continue
+        try:
+            if src.is_dir():
+                shutil.copytree(src, dest / item, dirs_exist_ok=True)
+            else:
+                shutil.copy2(src, dest / item)
+            copied.append(item)
+        except Exception as exc:  # noqa: BLE001
+            print(f"WARN: could not back up {item}: {exc}")
+    print(f"BACKUP COMPLETE -> {dest}")
+    print(f"  included: {', '.join(copied) or 'nothing'}")
     return 0
 
 
 def _cmd_restore() -> int:
+    """Restore a backups/moon_<timestamp> snapshot (pure-Python)."""
+    import shutil
     import sys as _sys
+
     if len(_sys.argv) < 2:
         print("usage: python -m moon restore <snapshot-dir>")
         return 2
-    from app.backup import restore
-    snap = _sys.argv[-1]
-    restored = restore(Path(snap))
+    snap = Path(_sys.argv[-1])
+    if not snap.is_dir():
+        print(f"snapshot not found: {snap}")
+        return 2
+    restored: list[str] = []
+    for item in ("data", "connections", ".env"):
+        src = snap / item
+        if not src.exists():
+            continue
+        try:
+            if src.is_dir():
+                shutil.copytree(src, Path(item), dirs_exist_ok=True)
+            else:
+                shutil.copy2(src, Path(item))
+            restored.append(item)
+        except Exception as exc:  # noqa: BLE001
+            print(f"WARN: could not restore {item}: {exc}")
     print(f"RESTORE COMPLETE -> restored: {', '.join(restored) or 'nothing'}")
     return 0
 
@@ -328,20 +367,29 @@ def _cmd_restore() -> int:
 def _cmd_setup() -> int:
     """First-run setup wizard (interactive config -> .env -> installer).
 
-    Native to MOON (mirrors the 'setup' step of agent installers) and shares
-    no code with any other project. Delegates to setup_wizard.py.
+    Delegates to script.py, the single consolidated installer that replaced
+    install_moon.py / setup_wizard.py / install.sh (commit 7fd368a).
     """
     import importlib.util
-    import os
 
+    installer = Path("script.py")
+    if not installer.is_file():
+        print("script.py (installer) not found in project root")
+        return 2
     spec = importlib.util.spec_from_file_location(
-        "setup_wizard", str(Path("setup_wizard.py").resolve()))
+        "moon_installer", str(installer.resolve()))
     if spec is None or spec.loader is None:
-        print("setup_wizard.py not found in project root")
+        print("script.py could not be loaded")
         return 2
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    return mod.main() or 0
+    for entry in ("main", "run"):
+        fn = getattr(mod, entry, None)
+        if callable(fn):
+            rc = fn()
+            return rc if isinstance(rc, int) else 0
+    # No main()/run(): execute the module body (top-level installer script).
+    return 0
 
 
 def _cmd_uninstall() -> int:
@@ -360,15 +408,29 @@ def _cmd_uninstall() -> int:
 
 
 def _cmd_install() -> int:
-    """Delegate to the existing Python bootstrap installer (install_moon.py)."""
+    """Run the consolidated Python installer (script.py).
+
+    script.py replaced install.sh / install_moon.py / install_moon_full.py /
+    setup_wizard.py / scripts/install_ollama.py in commit 7fd368a.
+    """
     import importlib.util
-    spec = importlib.util.spec_from_file_location("install_moon", str(Path("install_moon.py").resolve()))
+
+    installer = Path("script.py")
+    if not installer.is_file():
+        print("script.py (installer) not found in project root")
+        return 2
+    spec = importlib.util.spec_from_file_location(
+        "moon_installer", str(installer.resolve()))
     if spec is None or spec.loader is None:
-        print("install_moon.py not found in project root")
+        print("script.py could not be loaded")
         return 2
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    mod.main()
+    for entry in ("main", "run"):
+        fn = getattr(mod, entry, None)
+        if callable(fn):
+            rc = fn()
+            return rc if isinstance(rc, int) else 0
     return 0
 
 
