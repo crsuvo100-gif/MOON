@@ -109,28 +109,52 @@ async def _prefetch_models():
 
 
 async def _run(task, agent):
-    from app.services.llm_service import LLMService, ChatMessage
+    """Run a task through the full Orchestrator (advanced brain + agents + memory)."""
+    from app.brain.orchestrator import Orchestrator
     from app.config.settings import get_settings as _gs
+    from app.models.task import Task
     import asyncio as _asyncio
+    import time as _time
 
     settings = _gs()
-    llm = LLMService(
-        base_url=settings.model_base_url,
-        model_name=settings.model_name,
-        timeout=settings.model_timeout,
-    )
-    messages = [ChatMessage(role="user", content=task)]
+    orchestrator = Orchestrator(settings)
     try:
-        result = await llm.complete(messages=messages)
-        content = getattr(result, "content", None) or ""
+        await orchestrator.setup()
+    except Exception as exc:
+        print(f"[MOON: orchestrator setup failed: {exc}]")
+        return
+
+    # Create a task model
+    t = Task(prompt=task, agent_name=agent or "auto")
+
+    # Pick an agent
+    agent_card = None
+    if agent and agent in orchestrator._agents:
+        agent_card = orchestrator._agents[agent]
+    elif orchestrator._agents:
+        agent_card = list(orchestrator._agents.values())[0]
+
+    if agent_card is None:
+        print("[MOON: no agents available]")
+        return
+
+    # Run the task through the full cognition loop
+    try:
+        result_task = await orchestrator.run_task(t)
+        content = result_task.result or ""
         if content:
             print(f"RESULT: {content}")
         else:
             print("(no response from model)")
     except _asyncio.TimeoutError:
-        print("[MOON: LLM timed out]")
+        print("[MOON: task timed out]")
     except Exception as exc:
         print(f"[MOON: task failed: {exc}]")
+    finally:
+        try:
+            await orchestrator.teardown()
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------

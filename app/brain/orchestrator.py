@@ -118,6 +118,8 @@ class Orchestrator:
         self._advanced_memory = None
         self._advanced_agents = None
         self._advanced_brain = None
+        self._cognitive_loop = None
+        self._agent_workflow = None
         # Shared lock state across CLI + web backend + WebSocket so an unlock
         # in ANY surface (HUD, `moon run`, voice, TUI) persists for ALL others.
         if lock_state_file is None:
@@ -299,6 +301,32 @@ class Orchestrator:
         except Exception as exc:  # noqa: BLE001
             logger.info("Advanced brain system init skipped: %s", exc)
             self._advanced_brain = None
+
+        # --- Professional cognitive loop (ReAct + working memory + compression) --
+        try:
+            from app.brain.advanced.cognitive_loop import CognitiveLoop
+            self._cognitive_loop = CognitiveLoop(
+                llm=self._llm,
+                tool_executor=self._make_tool_executor(),
+                max_iterations=5,
+                max_tool_calls=10,
+            )
+            logger.info("Professional cognitive loop initialized")
+        except Exception as exc:  # noqa: BLE001
+            logger.info("Cognitive loop init skipped: %s", exc)
+            self._cognitive_loop = None
+
+        # --- Professional agent workflow (lifecycle + coordination + learning) ---
+        try:
+            from app.agents.advanced.workflow import ProfessionalAgentWorkflow
+            self._agent_workflow = ProfessionalAgentWorkflow(
+                agent_id="orchestrator",
+            )
+            await self._agent_workflow.initialize()
+            logger.info("Professional agent workflow initialized")
+        except Exception as exc:  # noqa: BLE001
+            logger.info("Agent workflow init skipped: %s", exc)
+            self._agent_workflow = None
 
         # Index the bundled Hermes skill corpus into the knowledge base so the
         # skills are retrievable via semantic recall (MOON can use them).
@@ -992,6 +1020,28 @@ class Orchestrator:
                     )
                 except Exception:  # noqa: BLE001
                     pass
+            # --- Professional agent workflow: lifecycle + coordination + state ---
+            if self._agent_workflow is not None:
+                try:
+                    workflow_result = await self._agent_workflow.execute(
+                        task=task.prompt,
+                        context={
+                            "output": clean,
+                            "tool_calls": [
+                                {"name": t, "success": True, "duration": 0}
+                                for t in (self._last_tool_outputs or [])
+                            ],
+                        },
+                        requirements=[],
+                        priority=5,
+                    )
+                    task.data["agent_workflow"] = {
+                        "stages_completed": workflow_result.stages_completed,
+                        "execution_time": workflow_result.execution_time,
+                        "errors": workflow_result.errors,
+                    }
+                except Exception:  # noqa: BLE001
+                    pass
             # --- Advanced brain: metacognition + uncertainty + reflection ---
             if self._advanced_brain is not None:
                 try:
@@ -1063,6 +1113,21 @@ class Orchestrator:
                 pass
         return task
 
+    def _make_tool_executor(self):
+        """Create a simple async tool executor for the CognitiveLoop.
+
+        Wraps self._tools.run() into a callable that the CognitiveLoop can use.
+        """
+        async def _execute(tool_name: str, tool_args: dict[str, Any]) -> str:
+            if self._tools is None:
+                return f"[no tool manager for {tool_name}]"
+            try:
+                result = await self._tools.run(tool_name, tool_args)
+                return str(result.output)
+            except Exception as exc:
+                return f"Error executing {tool_name}: {exc}"
+        return _execute
+
     async def _run_cognition_loop(
         self,
         task: Task,
@@ -1115,6 +1180,64 @@ class Orchestrator:
                 await on_event({"stage": "thinking", "detail": f"recalled {len(retrieved)} memories; building context"})
             except Exception:
                 pass
+
+        # --- Professional cognitive loop: ReAct reasoning with working memory ---
+        if self._cognitive_loop is not None:
+            try:
+                # Build context string from retrieved memories
+                ctx_parts = []
+                for r in retrieved[:5]:
+                    if isinstance(r, dict):
+                        ctx_parts.append(r.get("content", ""))
+                    elif hasattr(r, 'content'):
+                        ctx_parts.append(r.content)
+                cognitive_context = "\n".join(ctx_parts) if ctx_parts else None
+
+                # Run the cognitive loop for initial reasoning
+                cog_result = await self._cognitive_loop.run(
+                    task=task.prompt,
+                    context=cognitive_context,
+                    available_tools=tool_specs,
+                    system_prompt=system_override,
+                )
+
+                # If the cognitive loop produced a confident answer, use it
+                if cog_result.success and cog_result.confidence > 0.7:
+                    if on_event:
+                        try:
+                            await on_event({"stage": "cognitive_loop", "detail": f"ReAct answer (confidence={cog_result.confidence:.2f})"})
+                        except Exception:
+                            pass
+                    # Store cognitive loop metadata in task
+                    task.data["cognitive_loop"] = {
+                        "strategy": cog_result.strategy_used,
+                        "confidence": cog_result.confidence,
+                        "uncertainty": cog_result.uncertainty,
+                        "iterations": cog_result.iterations,
+                        "tool_calls": cog_result.tool_calls,
+                        "execution_time": cog_result.execution_time,
+                    }
+                    return cog_result.answer, cog_result.iterations
+
+                # Otherwise, inject working memory context into messages
+                if cog_result.working_memory_context:
+                    messages.append(ChatMessage(
+                        role="system",
+                        content=f"[Working memory]\n{cog_result.working_memory_context}",
+                    ))
+
+                # Store cognitive loop metadata even if not confident
+                task.data["cognitive_loop"] = {
+                    "strategy": cog_result.strategy_used,
+                    "confidence": cog_result.confidence,
+                    "uncertainty": cog_result.uncertainty,
+                    "iterations": cog_result.iterations,
+                    "tool_calls": cog_result.tool_calls,
+                    "execution_time": cog_result.execution_time,
+                    "used_as_context": True,
+                }
+            except Exception as exc:
+                logger.debug("Cognitive loop failed (continuing with standard loop): %s", exc)
 
         for _ in range(_MAX_TOOL_ITERATIONS):
             # Prefer the agent's OWN model (per-agent models) for its function;
