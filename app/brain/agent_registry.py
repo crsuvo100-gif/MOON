@@ -53,6 +53,9 @@ AGENT_DEFS: dict = {
     "toolsmith": ("Build and wire tools / automations", "You are MOON's toolsmith. Design tool specs and integration steps that are safe and minimal.", "all"),
     "critic": ("Adversarial critique for robustness", "You are MOON's critic. Attack the proposal; surface failure modes and edge cases.", "none"),
     "router": ("Classify and route requests", "You are MOON's router. Map each request to the single best agent and explain why.", "none"),
+    # --- spec 7: Data/File Agent + Automation Agent (distinct capabilities) ---
+    "data_file": ("Read, transform and organize data and files", "You are MOON's data and file specialist. Read and write files, parse CSV/JSON/PDF/spreadsheets, clean and transform datasets, extract structured records, and keep the workspace organized. Report exact file paths and row/record counts as evidence.", "data"),
+    "automation": ("Automate recurring multi-step workflows", "You are MOON's automation engineer. Turn a repeated manual procedure into a safe, idempotent script or scheduled job. Design the trigger, the steps, the failure handling and the verification. Never leave a destructive step ungated.", "automation"),
 }
 
 
@@ -78,6 +81,14 @@ def build_agents(tool_names: list) -> dict:
             allowed = [t for t in ("image_processing", "ocr", "file_manager") if t in tool_names]
         elif scope == "knowledge":
             allowed = [t for t in KNOWLEDGE_TOOLS if t in tool_names]
+        elif scope == "data":
+            # spec 7 Data/File Agent: file + data tooling only.
+            allowed = [t for t in ("file_manager", "pdf_reader", "ocr", "database",
+                                   "python_executor", "terminal") if t in tool_names]
+        elif scope == "automation":
+            # spec 7 Automation Agent: scheduling/execution tooling.
+            allowed = [t for t in ("terminal", "python_executor", "file_manager",
+                                   "system_command", "docker", "git") if t in tool_names]
         else:
             allowed = tool_names
         agents[name] = AgentCard(name, role, allowed_tools=allowed)

@@ -980,6 +980,11 @@ class Orchestrator:
         # list[Message]/list[ChatMessage] or a plain string. (Passing ctx.prompt
         # was a bug -- the list has no .prompt attribute and crashed the path.)
         ctx = await self._context.build(task=task, history=self._history, system_override=sys_p)
+        # spec 49: the fast path must respect the context budget too.
+        try:
+            ctx, _b = self._enforce_context_budget(ctx, task)
+        except Exception:  # noqa: BLE001
+            pass
         resp = await self._complete_with_fallback(
             ctx, max_tokens=self._settings.model_max_tokens,
             temperature=self._settings.model_temperature,
@@ -1057,6 +1062,9 @@ class Orchestrator:
             "strategy": "strategist", "tools": "toolsmith",
             "github_sync": "github_sync", "voice": "audio", "system": "infra",
             "chat": "manager",
+            # spec 7: Data/File + Automation agents
+            "data": "data_file", "data_file": "data_file", "file": "data_file",
+            "automation": "automation", "workflow": "automation",
         }
         agent = mapping.get(intent, "coordinator")
         # --- spec 5: MainBrain decomposition decision ---
