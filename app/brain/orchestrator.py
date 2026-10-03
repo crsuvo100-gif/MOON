@@ -120,6 +120,7 @@ class Orchestrator:
         self._advanced_brain = None
         self._cognitive_loop = None
         self._agent_workflow = None
+        self._skill_orchestrator = None
         # Shared lock state across CLI + web backend + WebSocket so an unlock
         # in ANY surface (HUD, `moon run`, voice, TUI) persists for ALL others.
         if lock_state_file is None:
@@ -328,6 +329,17 @@ class Orchestrator:
             logger.info("Agent workflow init skipped: %s", exc)
             self._agent_workflow = None
 
+        # --- Advanced skill system (discovery, matching, chaining, context) --
+        try:
+            from app.skills.advanced.skill_orchestrator import SkillOrchestrator
+            self._skill_orchestrator = SkillOrchestrator()
+            await self._skill_orchestrator.initialize()
+            logger.info("Advanced skill system initialized (%d skills)",
+                        len(self._skill_orchestrator.get_active_skills()))
+        except Exception as exc:  # noqa: BLE001
+            logger.info("Advanced skill system init skipped: %s", exc)
+            self._skill_orchestrator = None
+
         # Index the bundled Hermes skill corpus into the knowledge base so the
         # skills are retrievable via semantic recall (MOON can use them).
         try:
@@ -464,6 +476,14 @@ class Orchestrator:
         if advanced_brain is not None:
             try:
                 await advanced_brain.shutdown()
+            except Exception:  # noqa: BLE001
+                pass
+        # --- Advanced skill system shutdown ---
+        skill_orch = getattr(self, "_skill_orchestrator", None)
+        if skill_orch is not None:
+            try:
+                # SkillOrchestrator has no async shutdown; just clear references
+                skill_orch._initialized = False
             except Exception:  # noqa: BLE001
                 pass
         logger.info("Orchestrator torn down")
@@ -1085,6 +1105,24 @@ class Orchestrator:
                     }
                 except Exception:  # noqa: BLE001
                     pass
+            # --- Advanced skill system: record skill performance ---
+            if self._skill_orchestrator is not None:
+                try:
+                    matched = task.data.get("skills_matched", [])
+                    for skill_info in matched:
+                        self._skill_orchestrator.record_skill_usage(
+                            skill_name=skill_info["name"],
+                            task=task.prompt,
+                            success=reflection.satisfactory,
+                            execution_time=0.0,  # tracked at skill level, not task level
+                        )
+                    # Store skill performance summary in task data
+                    task.data["skill_system"] = {
+                        "matched_skills": [s["name"] for s in matched],
+                        "performance_summary": self._skill_orchestrator.get_performance_summary(),
+                    }
+                except Exception:  # noqa: BLE001
+                    pass
             # spec 31: mark the execution job SUCCESS
             self._exec_transition(task.id, "SUCCESS", agent_id=agent.name, task=task.prompt,
                                   result={"status": "done", "agent": agent.name})
@@ -1155,6 +1193,31 @@ class Orchestrator:
                         retrieved.append({"content": f"[past lesson] goal: {ep.goal} | lesson: {ep.lesson}", "score": 0.6})
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Episodic recall failed (skipped): %s", exc)
+        # --- Advanced skill system: match + inject skill context ---
+        skill_context_str = ""
+        matched_skills: list[str] = []
+        if self._skill_orchestrator is not None:
+            try:
+                matches = self._skill_orchestrator.match_skills(task.prompt, top_k=3)
+                if matches:
+                    matched_skills = [m.skill_name for m in matches if m.score > 0.1]
+                    if matched_skills:
+                        skill_context_str = self._skill_orchestrator.inject_multiple_skills(
+                            matched_skills, task.prompt
+                        )
+                        # Add skill context to retrieved for semantic recall
+                        retrieved.append({
+                            "content": f"[skill context] {skill_context_str[:500]}",
+                            "score": 0.8,
+                            "source": "skill_system",
+                        })
+                        # Store in task data
+                        task.data["skills_matched"] = [
+                            {"name": m.skill_name, "score": m.score, "reason": m.reason}
+                            for m in matches
+                        ]
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("Skill matching failed (skipped): %s", exc)
         messages = await self._context.build(
             task=task, history=self._history, retrieved=retrieved, agent=agent,
             system_override=system_override,
