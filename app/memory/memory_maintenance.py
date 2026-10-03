@@ -9,11 +9,28 @@ that runs these tasks periodically.
 from __future__ import annotations
 
 import asyncio
+import inspect
 from typing import Any
 
 from app.config.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+async def _maybe_await(value: Any) -> Any:
+    """Await ``value`` when it is awaitable, otherwise return it as-is.
+
+    Memory backends are inconsistent by design: ``EnhancedLongTermMemory.decay``
+    and ``EnhancedShortTermMemory.auto_promote`` are coroutines, but
+    ``EnhancedShortTermMemory.expire_old`` is a plain synchronous method that
+    returns an ``int``. Unconditionally awaiting the sync one raised
+    ``TypeError: object int can't be used in 'await' expression`` on every
+    maintenance tick (logged as "Maintenance expiry failed: 'int' object can't
+    be awaited") and silently disabled short-term-memory expiry.
+    """
+    if inspect.isawaitable(value):
+        return await value
+    return value
 
 
 class MemoryMaintenance:
@@ -98,7 +115,7 @@ class MemoryMaintenance:
                 results["stm_promoted"] = 0
         if self._stm is not None and hasattr(self._stm, "expire_old"):
             try:
-                results["stm_expired"] = await self._stm.expire_old()
+                results["stm_expired"] = await _maybe_await(self._stm.expire_old())
             except Exception as exc:
                 logger.warning("STM expiry failed: %s", exc)
                 results["stm_expired"] = 0
@@ -163,7 +180,7 @@ class MemoryMaintenance:
     async def _run_expiry(self) -> None:
         if self._stm is not None and hasattr(self._stm, "expire_old"):
             try:
-                expired = await self._stm.expire_old()
+                expired = await _maybe_await(self._stm.expire_old())
                 if expired:
                     logger.info("Maintenance: expired %d STM items", expired)
             except Exception as exc:
