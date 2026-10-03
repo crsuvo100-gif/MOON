@@ -643,7 +643,6 @@ class Orchestrator:
         # Autonomy gate (spec 46): installing/creating tools is a high-risk action.
         _auto_allowed = True
         try:
-            from app.runtime.integration import gate_action
             _auto_allowed, _why = gate_action("install_tool", high_risk=True)
         except Exception:  # noqa: BLE001
             _auto_allowed = True
@@ -836,7 +835,6 @@ class Orchestrator:
         self._route_intent(task)
         # --- spec 10/12/41 augmentation (additive; degrades cleanly) ---
         try:
-            from app.runtime.integration import analyze_task, route_agent, emit
             from app.agents.registry import get_registry
             emit("TASK_CREATED", execution_id=task.id, agent_id=task.agent_name, detail=task.prompt[:120])
             _spec = analyze_task(task.prompt)
@@ -934,13 +932,11 @@ class Orchestrator:
             final_text, tokens = await self._run_cognition_loop(task, agent, on_event=on_event, proactive_context=proactive_context)
             # --- spec 27/41: verification events (additive; degrades cleanly) ---
             try:
-                from app.runtime.integration import emit as _emit
                 _emit("VERIFICATION_STARTED", execution_id=task.id, agent_id=agent.name)
             except Exception:  # noqa: BLE001
                 pass
             validation = await self._validator.validate(task.prompt, final_text)
             try:
-                from app.runtime.integration import emit as _emit
                 _emit("VERIFICATION_PASSED" if validation.valid else "VERIFICATION_FAILED",
                       execution_id=task.id, agent_id=agent.name,
                       detail="; ".join(validation.issues) if validation.issues else "ok")
@@ -997,7 +993,6 @@ class Orchestrator:
                 )
                 self._memory.save_episodes()
                 try:
-                    from app.runtime.integration import emit as _emit
                     _emit("MEMORY_UPDATED", execution_id=task.id, agent_id=agent.name,
                           detail="episodic stored")
                 except Exception:  # noqa: BLE001
@@ -1033,22 +1028,7 @@ class Orchestrator:
                     logger.warning("agent brain remember failed: %s", exc)
 
             clean = self._formatter.format(final_text)
-            # --- spec 28/41/12 augmentation (additive; degrades cleanly) ---
-            try:
-                from app.runtime.integration import (
-                    record_evaluation, record_outcome, emit, evaluation_summary)
-                card = record_evaluation(
-                    correctness=1.0 if reflection.satisfactory else 0.5,
-                    verification=1.0 if validation.valid else 0.0,
-                    agent_id=agent.name,
-                    metadata={"task": task.prompt[:120]})
-                record_outcome(agent.name, bool(reflection.satisfactory))
-                emit("AGENT_COMPLETED", execution_id=task.id, agent_id=agent.name,
-                     detail=f"score={card.get('overall')}")
-                task._evaluation = card
-                task._eval_summary = evaluation_summary()
-            except Exception:  # noqa: BLE001
-                pass
+            # --- spec 28/41/12 augmentation removed (app.runtime.integration deleted) ---
             task.complete(clean, data={"tokens_used": tokens, "issues": validation.issues, "agent": agent.name}, tokens_used=tokens)
             await self._memory.remember(clean, long_term=False)
             # --- Advanced memory: store task result ---
@@ -1270,8 +1250,6 @@ class Orchestrator:
             # (never auto-applied; requires autonomy level 5 + explicit authorization).
             try:
                 from app.learning import FailureClassifier
-                from app.improvement import SelfImprovement
-                from app.runtime.integration import emit
                 kind = FailureClassifier.classify(str(exc))
                 alt = FailureClassifier.safe_alternative(kind)
                 emit("IMPROVEMENT_PROPOSED", agent_id=agent.name,
@@ -1395,7 +1373,6 @@ class Orchestrator:
         tool_outputs: list[str] = []
         # --- spec 30 augmentation: ModelRouter recommends a model for this step ---
         try:
-            from app.runtime.integration import choose_model, emit
             _coding = any(k in (task.prompt or "").lower() for k in ("code", "python", "function", "debug", "script"))
             _reasoning = any(k in (task.prompt or "").lower() for k in ("why", "reason", "prove", "analyze", "design"))
             _model_rec = choose_model(complexity="high" if (_coding or _reasoning) else "low",
@@ -1501,7 +1478,6 @@ class Orchestrator:
                 for call in resp.tool_calls:
                     args = self._parse_args(call.get("arguments", "{}"))
                     try:
-                        from app.runtime.integration import emit as _emit
                         _emit("TOOL_SELECTED", execution_id=task.id, agent_id=agent.name,
                               detail=call.get("name", "tool"))
                         _emit("TOOL_STARTED", execution_id=task.id, agent_id=agent.name,
@@ -1515,7 +1491,6 @@ class Orchestrator:
                             pass
                     result = await self._tools.run(call["name"], args, agent=agent)
                     try:
-                        from app.runtime.integration import emit as _emit
                         _emit("TOOL_COMPLETED", execution_id=task.id, agent_id=agent.name,
                               detail=call.get("name", "tool"))
                     except Exception:  # noqa: BLE001
@@ -1826,7 +1801,6 @@ class Orchestrator:
         except Exception:  # noqa: BLE001
             args = {}
         try:
-            from app.runtime.integration import emit as _emit
             _emit("TOOL_SELECTED", execution_id=task.id, agent_id=agent.name, detail=chosen)
             _emit("TOOL_STARTED", execution_id=task.id, agent_id=agent.name, detail=chosen)
         except Exception:  # noqa: BLE001
@@ -1834,7 +1808,6 @@ class Orchestrator:
         result = await self._tools.run(chosen, args, agent=agent)
         out = str(result.output)
         try:
-            from app.runtime.integration import emit as _emit
             _emit("TOOL_COMPLETED", execution_id=task.id, agent_id=agent.name, detail=chosen)
         except Exception:  # noqa: BLE001
             pass

@@ -163,9 +163,6 @@ async def _run(task, agent):
 # with integrated voice (espeak-ng + Kokoro/F5-TTS), shell commands, and the
 # full MOON brain behind it. No browser or web UI involved.
 # ---------------------------------------------------------------------------
-def _cmd_terminal() -> int:
-    from app.cli.main import main as _cli_main
-    raise SystemExit(_cli_main())
 
 
 # ---------------------------------------------------------------------------
@@ -207,19 +204,6 @@ def _cmd_status() -> int:
         return 1
 
 
-def _cmd_monitor() -> int:
-    """Run the health monitor + self-heal script."""
-    import subprocess
-
-    project = os.path.dirname(os.path.abspath(__file__))
-    script = os.path.join(project, "scripts", "moon_monitor.py")
-    env = dict(os.environ)
-    env.pop("PYTHONPATH", None)
-    py = os.path.join(project, ".venv", "bin", "python")
-    if not os.path.exists(py):
-        py = sys.executable
-    r = subprocess.run([py, script], cwd=project, env=env)
-    return r.returncode
 
 
 def _cmd_doctor() -> int:
@@ -247,7 +231,6 @@ def _cmd_doctor() -> int:
     # 3. Project package imports
     try:
         import app.brain.orchestrator  # noqa: F401
-        import app.terminal_interface  # noqa: F401
         add("Project imports", True, "app package imports clean")
     except Exception as exc:  # noqa: BLE001
         add("Project imports", False, f"import error: {exc}")
@@ -324,7 +307,7 @@ def _cmd_doctor() -> int:
 
 
 def _cmd_backup() -> int:
-    from app.runtime.backup import backup
+    from app.backup import backup
     d = backup()
     print(f"BACKUP COMPLETE -> {d}")
     return 0
@@ -335,7 +318,7 @@ def _cmd_restore() -> int:
     if len(_sys.argv) < 2:
         print("usage: python -m moon restore <snapshot-dir>")
         return 2
-    from app.runtime.backup import restore
+    from app.backup import restore
     snap = _sys.argv[-1]
     restored = restore(Path(snap))
     print(f"RESTORE COMPLETE -> restored: {', '.join(restored) or 'nothing'}")
@@ -419,9 +402,6 @@ def main() -> None:
     #   moon / moon terminal / moon run  ->  Hermes-style TUI (moonscope)
     #   moon cli  ->  readline REPL (fallback, Hermes-feature-rich)
     #   moon terminal-moon  ->  standalone MOON Terminal (terminal_moon/ sub-project)
-    sub.add_parser("terminal", help="Launch MOON's Hermes-style Textual TUI (moonscope)")
-    sub.add_parser("cli", help="MOON's readline REPL (Hermes-feature-rich, fallback)")
-    sub.add_parser("terminal-moon", help="Launch standalone MOON Terminal (terminal_moon/ sub-project)")
     sub.add_parser("telegram", help="Launch MOON's Telegram bot listener (polling)")
     sub.add_parser("doctor", help="Health check: Python/deps/config/DB/agents/tools/model/git")
     sub.add_parser("status", help="Check the running MOON backend health endpoint")
@@ -432,7 +412,6 @@ def main() -> None:
     sub.add_parser("uninstall", help="Remove MOON auto-start wiring (launcher, services, desktop)")
     sub.add_parser("update", help="Safe update: git pull --ff-only + pip install -e . --upgrade")
     sub.add_parser("version", help="Print MOON version")
-    sub.add_parser("monitor", help="Run health monitor + self-heal (backend, models, git sync)")
 
     args, remaining = ap.parse_known_args()
     _ensure_default_peer()
@@ -441,22 +420,16 @@ def main() -> None:
         if task:
             asyncio.run(_run(task, args.agent))
         else:
-            from app.tui import main as tui_main
-            raise SystemExit(tui_main())
+            print("No task given. Use: moon run \"<task>\" or moon <subcommand>")
+            return
     elif args.cmd == "models":
         asyncio.run(_prefetch_models())
     elif args.cmd == "terminal":
-        from app.tui import main as tui_main
-        raise SystemExit(tui_main())
+        print("Terminal UI removed. Use: moon run \"<task>\" or moon api", file=sys.stderr)
+        return 1
     elif args.cmd == "cli":
-        import sys as _sys
-        _orig = _sys.argv[:]
-        _sys.argv = _orig[:1] + _orig[2:]
-        try:
-            from app.cli.main import main as _cli_main
-            raise SystemExit(_cli_main())
-        finally:
-            _sys.argv = _orig
+        print("CLI removed. Use: moon run \"<task>\" or moon api", file=sys.stderr)
+        return 1
     elif args.cmd == "status":
         raise SystemExit(_cmd_status())
     elif args.cmd == "backup":
@@ -483,9 +456,8 @@ def main() -> None:
     elif args.cmd == "version":
         _cmd_version()
     else:
-        # No subcommand (bare `moon`) -> moonscope TUI (default terminal).
-        from app.tui import main as tui_main
-        raise SystemExit(tui_main())
+        # No subcommand -> show help
+        ap.print_help()
 
 
 if __name__ == "__main__":
