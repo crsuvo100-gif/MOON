@@ -1,0 +1,19 @@
+[Unit]
+Description=MOON moonscope 백엔드 + TUI + LLM 종합 모니터
+Documentation=file:///home/meow/Projects/MOON/DEPLOY.md
+After=network-online.target moon-terminal.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/meow/Projects/MOON/.venv/bin/python /home/meow/Projects/MOON/moonscope_tui_monitor.py
+Restart=on-failure
+RestartSec=10
+WorkingDirectory=/home/meow/Projects/MOON
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=moonscope-tui-monitor
+Environment=PYTHONPATH=/home/meow/Projects/MOON
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=MOON moonscope TUI 모니터 타이머
+Documentation=file:///home/meow/Projects/MOON/DEPLOY.md
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=30
+Unit=moonscope-tui-monitor.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

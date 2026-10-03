@@ -1,0 +1,12 @@
+[Unit]
+Description=MOON moonscope 백엔드(8777) 모니터링 타이머
+Documentation=file:///home/meow/Projects/MOON/README.md
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=30
+Unit=moonscope-monitor.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

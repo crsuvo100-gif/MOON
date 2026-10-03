@@ -39,3 +39,6 @@ env/
 # Secrets
 .env
 .env.*
+
+# MOON runtime state
+.moon/
