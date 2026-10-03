@@ -42,3 +42,6 @@ env/
 
 # MOON runtime state
 .moon/
+
+# Capability manager runtime output (auto-acquired plugins)
+plugins/generated/
