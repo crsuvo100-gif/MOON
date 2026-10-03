@@ -1,0 +1,51 @@
+{
+  "entities": [
+    {
+      "id": "6b47b050",
+      "name": "TestEntity",
+      "type": "concept",
+      "properties": {
+        "key": "value"
+      },
+      "confidence": 1.0
+    },
+    {
+      "id": "eae00d6c",
+      "name": "PersistentEntity",
+      "type": "concept",
+      "properties": {},
+      "confidence": 1.0
+    }
+  ],
+  "relationships": [],
+  "facts": [
+    {
+      "id": "0eb022fa",
+      "statement": "Test fact",
+      "source": "agent",
+      "confidence": 0.9,
+      "verified": false
+    },
+    {
+      "id": "f807ade6",
+      "statement": "Test fact",
+      "source": "agent",
+      "confidence": 0.9,
+      "verified": false
+    },
+    {
+      "id": "f280adce",
+      "statement": "Test fact",
+      "source": "agent",
+      "confidence": 0.9,
+      "verified": false
+    },
+    {
+      "id": "17e9e87b",
+      "statement": "Test fact",
+      "source": "agent",
+      "confidence": 0.9,
+      "verified": false
+    }
+  ]
+}

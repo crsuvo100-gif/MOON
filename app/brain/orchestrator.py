@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -122,6 +123,7 @@ class Orchestrator:
         self._agent_workflow = None
         self._skill_orchestrator = None
         self._context_orchestrator = None
+        self._professional_orchestrator = None
         # Shared lock state across CLI + web backend + WebSocket so an unlock
         # in ANY surface (HUD, `moon run`, voice, TUI) persists for ALL others.
         if lock_state_file is None:
@@ -353,6 +355,22 @@ class Orchestrator:
             logger.info("Advanced context system init skipped: %s", exc)
             self._context_orchestrator = None
 
+        # --- Professional agent system (communication, quality, self-healing) ---
+        try:
+            from app.agents.professional.professional_orchestrator import ProfessionalAgentOrchestrator
+            self._professional_orchestrator = ProfessionalAgentOrchestrator(
+                max_concurrent_tasks=5,
+                quality_threshold=0.7,
+                enable_consensus=True,
+                enable_self_healing=True,
+                enable_proactive=True,
+            )
+            await self._professional_orchestrator.initialize()
+            logger.info("Professional agent system initialized")
+        except Exception as exc:  # noqa: BLE001
+            logger.info("Professional agent system init skipped: %s", exc)
+            self._professional_orchestrator = None
+
         # Index the bundled Hermes skill corpus into the knowledge base so the
         # skills are retrievable via semantic recall (MOON can use them).
         try:
@@ -508,6 +526,13 @@ class Orchestrator:
                 logger.info("Context snapshot at shutdown: %d items, %.2f utilization",
                             snap.window_summary.get("total_items", 0),
                             snap.window_summary.get("utilization", 0.0))
+            except Exception:  # noqa: BLE001
+                pass
+        # --- Professional agent system shutdown ---
+        prof_orch = getattr(self, "_professional_orchestrator", None)
+        if prof_orch is not None:
+            try:
+                await prof_orch.shutdown()
             except Exception:  # noqa: BLE001
                 pass
         logger.info("Orchestrator torn down")
@@ -1159,6 +1184,77 @@ class Orchestrator:
                             "sources": ctx_state.sources,
                             "recommendations": ctx_state.recommendations,
                         }
+                except Exception:  # noqa: BLE001
+                    pass
+            # --- Professional agent system: quality gate + analytics + proactive ---
+            if self._professional_orchestrator is not None:
+                try:
+                    # Quality gate: validate output before returning
+                    quality_result = await self._professional_orchestrator._quality_gate.validate(
+                        output=clean,
+                        task=task.prompt,
+                        context="",
+                    )
+                    task.data["professional_quality"] = {
+                        "score": quality_result.overall_score,
+                        "passed": quality_result.passed,
+                        "level": quality_result.level.value,
+                        "checks": [
+                            {
+                                "stage": c.stage.value,
+                                "passed": c.passed,
+                                "score": c.score,
+                                "issues": c.issues,
+                            }
+                            for c in quality_result.checks
+                        ],
+                    }
+                    # Record execution analytics
+                    from app.agents.professional.execution_analytics import ExecutionRecord
+                    await self._professional_orchestrator._analytics.record_execution(
+                        ExecutionRecord(
+                            execution_id=task.id,
+                            task_type="general",
+                            agent_name=agent.name,
+                            start_time=time.time(),
+                            end_time=time.time(),
+                            success=reflection.satisfactory,
+                            tokens_used=tokens,
+                            metadata={
+                                "quality_score": quality_result.overall_score,
+                                "quality_passed": quality_result.passed,
+                            },
+                        )
+                    )
+                    # Self-healing: check for issues
+                    if self._professional_orchestrator._self_healing is not None:
+                        health = self._professional_orchestrator._self_healing.get_health()
+                        if isinstance(health, dict):
+                            unhealthy = [
+                                name for name, check in health.items()
+                                if check.status.value in ("unhealthy", "degraded")
+                            ]
+                            if unhealthy:
+                                task.data["professional_health"] = {
+                                    "unhealthy_components": unhealthy,
+                                    "total_components": len(health),
+                                }
+                    # Proactive suggestions
+                    if self._professional_orchestrator._proactive is not None:
+                        suggestions = await self._professional_orchestrator._proactive.analyze(
+                            conversation=[{"role": "user", "content": task.prompt}],
+                            current_task=task.prompt,
+                        )
+                        if suggestions:
+                            task.data["professional_suggestions"] = [
+                                {
+                                    "type": s.suggestion_type.value,
+                                    "priority": s.priority.value,
+                                    "text": s.text,
+                                    "confidence": s.confidence,
+                                }
+                                for s in suggestions
+                            ]
                 except Exception:  # noqa: BLE001
                     pass
             # spec 31: mark the execution job SUCCESS
