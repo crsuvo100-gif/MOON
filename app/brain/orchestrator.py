@@ -140,6 +140,11 @@ class Orchestrator:
         self._skill_orchestrator = None
         self._context_orchestrator = None
         self._professional_orchestrator = None
+        # spec 17/18/19/37: provider-independent brain routing + recorded fallback
+        self._brain_router = None
+        # spec 31/36: live agent supervision + bounded recovery decisions
+        self._supervisor = None
+        self._recovery_policy = None
         # Shared lock state across CLI + web backend + WebSocket so an unlock
         # in ANY surface (HUD, `moon run`, voice, TUI) persists for ALL others.
         if lock_state_file is None:
@@ -386,6 +391,68 @@ class Orchestrator:
         except Exception as exc:  # noqa: BLE001
             logger.info("Professional agent system init skipped: %s", exc)
             self._professional_orchestrator = None
+
+        # --- Spec 17/18/19/37: brain provider abstraction + router + fallback --
+        try:
+            from app.runtime.brain_provider import BrainRouter, BrainSpec, available_providers
+
+            specs: dict[str, BrainSpec] = {}
+
+            def _mk(model: str, *, role: str, remote: bool = False,
+                    ram: int = 0, ctx: int = 8192) -> BrainSpec | None:
+                if not model:
+                    return None
+                return BrainSpec(
+                    model_id=model,
+                    provider="openai_compatible" if remote else "ollama",
+                    base_url=(getattr(self._settings, "strong_model_base_url", "")
+                              or cfg.base_url) if remote else cfg.base_url,
+                    api_key=cfg.api_key if not remote else "",
+                    context_limit=ctx,
+                    temperature=getattr(self._settings, "model_temperature", 0.7),
+                    max_tokens=getattr(self._settings, "model_max_tokens", 1024),
+                    timeout=getattr(self._settings, "model_timeout", 60.0),
+                    is_remote=remote, est_ram_mb=ram,
+                )
+
+            _d = _mk(cfg.model_name, role="default")
+            if _d:
+                specs["default"] = _d
+            _s = _mk(getattr(self._settings, "strong_model_name", ""), role="strong", ctx=32768)
+            if _s:
+                specs["strong"] = _s
+            # Per-agent brains as distinct roles (spec 16/47).
+            if getattr(self, "_agent_models", None) is not None:
+                for role in ("coding", "math", "research", "writing", "security"):
+                    try:
+                        m = self._agent_models._preferred(role)
+                    except Exception:  # noqa: BLE001
+                        m = None
+                    sp = _mk(m or "", role=role)
+                    if sp:
+                        specs[role] = sp
+            self._brain_router = BrainRouter(specs)
+            logger.info("Brain router initialized: %d brains across providers %s",
+                        len(specs), available_providers())
+        except Exception as exc:  # noqa: BLE001
+            logger.info("Brain router init skipped: %s", exc)
+            self._brain_router = None
+
+        # --- Spec 31/36: supervision + bounded failure-recovery policy ---------
+        try:
+            from app.agents.advanced.supervision import Supervisor
+            from app.brain.recovery_policy import RecoveryPolicy
+
+            self._supervisor = Supervisor(
+                idle_timeout=getattr(self._settings, "model_timeout", 60.0) * 2,
+                max_retries=2,
+            )
+            self._recovery_policy = RecoveryPolicy(max_attempts=3)
+            logger.info("Supervisor + recovery policy initialized")
+        except Exception as exc:  # noqa: BLE001
+            logger.info("Supervisor init skipped: %s", exc)
+            self._supervisor = None
+            self._recovery_policy = None
 
         # Index the bundled Hermes skill corpus into the knowledge base so the
         # skills are retrievable via semantic recall (MOON can use them).
@@ -884,6 +951,12 @@ class Orchestrator:
         task.mark_running()
         self._history.clear()
         self._route_intent(task)
+        # --- spec 31: begin supervision of this task's agent ---
+        if self._supervisor is not None:
+            try:
+                self._supervisor.start(task.agent_name or "auto", task.id)
+            except Exception:  # noqa: BLE001
+                pass
         # --- spec 10/12/41 augmentation (additive; degrades cleanly) ---
         try:
             from app.agents.registry import get_registry
@@ -1325,6 +1398,37 @@ class Orchestrator:
             # spec 31: mark the execution job FAILED
             self._exec_transition(task.id, "FAILED", agent_id=agent.name, task=task.prompt,
                                   result={"error": str(exc)})
+            # --- spec 31/36: supervise the failure and DECIDE (never loop) ---
+            try:
+                if self._supervisor is not None:
+                    self._supervisor.finish(task.id, failed=True, detail=str(exc)[:160])
+                if self._recovery_policy is not None:
+                    from app.brain.recovery_policy import FailureContext
+
+                    _brain_ok = True
+                    if self._brain_router is not None:
+                        try:
+                            _h = self._brain_router.health("default")
+                            _brain_ok = True if _h is None else bool(_h.available)
+                        except Exception:  # noqa: BLE001
+                            _brain_ok = False
+                    ctx = FailureContext(
+                        agent=agent.name, task=task.prompt, error=str(exc),
+                        attempt=int(task.data.get("_recovery_attempts", 0)),
+                        max_attempts=3,
+                        brain_healthy=_brain_ok,
+                        other_agents=[a for a in self._agents if a != agent.name],
+                        task_is_composite=len(self._split_subtasks(task.prompt)) > 1,
+                        high_risk=bool(getattr(self._settings, "enable_dangerous_tools", False)),
+                    )
+                    decision = self._recovery_policy.decide(ctx)
+                    task.data["_recovery_decision"] = decision.to_dict()
+                    logger.warning("Recovery decision for task %s: %s (%s)",
+                                   task.id, decision.action.value, decision.reason)
+                    emit("RECOVERY_DECISION", execution_id=task.id, agent_id=agent.name,
+                         detail=f"{decision.action.value}: {decision.reason}")
+            except Exception:  # noqa: BLE001
+                pass
             # spec 25/26/29: classify failure + emit a PROPOSAL-ONLY improvement
             # (never auto-applied; requires autonomy level 5 + explicit authorization).
             try:

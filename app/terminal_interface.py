@@ -819,6 +819,34 @@ async def api_health(request: Request):
         return JSONResponse({"status": "FAILED", "error": str(exc)}, status_code=503)
 
 
+@app.get("/api/brains")
+async def api_brains(request: Request):
+    """Spec 18/19: brain inventory with live health per configured brain.
+
+    Reports provider, model, endpoint, context limit, latency, availability and
+    resource requirement for every registered brain, plus the recorded fallback
+    history (spec 37) and live supervision snapshot (spec 31).
+    """
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        orch = await _get_orchestrator()
+        br = getattr(orch, "_brain_router", None)
+        out: dict[str, object] = {
+            "router_present": br is not None,
+            "brains": br.health_all() if br is not None else {},
+            "fallbacks": br.fallback_history() if br is not None else [],
+        }
+        sup = getattr(orch, "_supervisor", None)
+        out["supervision"] = sup.snapshot() if sup is not None else {}
+        rp = getattr(orch, "_recovery_policy", None)
+        out["recovery_policy"] = {"max_attempts": rp._max} if rp is not None else {}
+        return JSONResponse(out)
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 @app.get("/api/brain-stats")
 async def api_brain_stats(request: Request):
     """MOON's brain-core learning profile (accumulated task history).

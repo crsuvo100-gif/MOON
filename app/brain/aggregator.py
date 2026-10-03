@@ -18,6 +18,7 @@ Statuses follow spec 28:
 from __future__ import annotations
 
 import re
+import time
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from enum import Enum
@@ -43,20 +44,26 @@ class AgentEnvelope:
 
     Every agent -> Main Brain message carries these fields. ``evidence`` is what
     makes a claim checkable; an envelope with no evidence can never be VERIFIED.
+
+    Field set follows spec 24 exactly: task_id, agent_id, message_type,
+    timestamp, status, objective, input, result, evidence, errors, warnings,
+    next_action, confidence, artifacts.
     """
 
     task_id: str = ""
     agent_id: str = ""
+    message_type: str = "TASK_RESULT"
+    timestamp: float = field(default_factory=time.time)
     status: str = "completed"
     objective: str = ""
+    input: str = ""
     result: str = ""
     evidence: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
-    artifacts: list[str] = field(default_factory=list)
-    confidence: float = 0.5
     next_action: str = ""
-    message_type: str = "TASK_RESULT"
+    confidence: float = 0.5
+    artifacts: list[str] = field(default_factory=list)
 
     @property
     def succeeded(self) -> bool:
@@ -64,11 +71,12 @@ class AgentEnvelope:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "task_id": self.task_id, "agent_id": self.agent_id, "status": self.status,
-            "objective": self.objective, "result": self.result, "evidence": self.evidence,
-            "errors": self.errors, "warnings": self.warnings, "artifacts": self.artifacts,
-            "confidence": self.confidence, "next_action": self.next_action,
-            "message_type": self.message_type,
+            "task_id": self.task_id, "agent_id": self.agent_id,
+            "message_type": self.message_type, "timestamp": self.timestamp,
+            "status": self.status, "objective": self.objective, "input": self.input,
+            "result": self.result, "evidence": self.evidence, "errors": self.errors,
+            "warnings": self.warnings, "next_action": self.next_action,
+            "confidence": self.confidence, "artifacts": self.artifacts,
         }
 
 
