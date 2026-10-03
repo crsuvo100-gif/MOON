@@ -106,25 +106,26 @@ KOKORO_FILES = {
     "voices-v1.0.bin": f"{KOKORO_RELEASE}/voices-v1.0.bin",
 }
 
-# Systemd service templates (from deploy/ directory, inlined).
+# Systemd service templates (canonical, mirrored from deploy/).
 SYSTEMD_UNITS = {
     "moon-terminal.service": """\
 [Unit]
-Description=MOON Terminal (TUI Agent Interface)
+Description=MOON Agent Control Plane (local ASGI API)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=%u
 WorkingDirectory=%s
-ExecStart=%s/.venv/bin/python main.py terminal
-Restart=on-failure
-RestartSec=5
-KillMode=mixed
-KillSignal=SIGTERM
-TimeoutStopSec=30
-Environment=PYTHONUNBUFFERED=1
+# Run uvicorn directly so systemd tracks the real long-running server process
+# (main.py terminal launches a Textual TUI that exits without a TTY, leaving
+# the unit in a restart loop). Keep the control plane local by default.
+ExecStart=%s/.venv/bin/python -m uvicorn app.terminal_interface:app --host 127.0.0.1 --port 8777 --log-level info
+Environment=PYTHONPATH=
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=default.target
@@ -161,18 +162,22 @@ WantedBy=timers.target
 """,
     "moon-hud.service": """\
 [Unit]
-Description=MOON Web HUD (Neural Core)
-After=network-online.target
-Wants=network-online.target
+Description=MOON HUD window keeper (reopens the NEURAL CORE window if closed)
+After=network-online.target moon-terminal.service
+Wants=network-online.target moon-terminal.service
 
 [Service]
 Type=simple
-User=%u
 WorkingDirectory=%s
-ExecStart=%s/.venv/bin/python main.py hud
+Environment=PYTHONPATH=
+# The HUD opens a real X11 window; a login-started user service may not inherit
+# DISPLAY, so set it explicitly (Kali/X11 uses :0).
+Environment=DISPLAY=:0
+ExecStart=%s/.venv/bin/python scripts/open_hud.py
 Restart=on-failure
 RestartSec=5
-Environment=PYTHONUNBUFFERED=1
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=default.target
@@ -668,6 +673,20 @@ def install_service() -> None:
 
     moon_terminal_path = str(ROOT)
     python_path = str(VENV / "bin" / "python")
+
+    # Remove stale/obsolete MOON units left by older layouts (e.g. the removed
+    # Moon_Twin sub-project) so a fresh install can never inherit a crash loop.
+    # Neither moon.service nor moon-agent.service is shipped by this installer.
+    for stale in ("moon.service", "moon-agent.service"):
+        stale_path = user_units_dir / stale
+        if stale_path.exists():
+            _run(["systemctl", "--user", "stop", stale], check=False)
+            _run(["systemctl", "--user", "disable", stale], check=False)
+            try:
+                stale_path.unlink()
+            except OSError:
+                pass
+            warn(f"removed stale unit: {stale}")
 
     units_to_write = {
         "moon-terminal.service": SYSTEMD_UNITS["moon-terminal.service"]
