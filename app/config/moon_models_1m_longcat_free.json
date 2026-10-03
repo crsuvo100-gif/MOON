@@ -1,0 +1,408 @@
+{
+  "family": "moon-1m-longcat-free",
+  "context_window": 1000000,
+  "main_brain": {
+    "default": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "main_brain_default",
+      "agent": null,
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "strong": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "main_brain_strong_accuracy_gate",
+      "agent": null,
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    }
+  },
+  "agents": {
+    "audio": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "audio",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "blue_team": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "blue_team",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "browser": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "browser",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "coding": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "coding",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "coordinator": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "coordinator",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "critic": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "critic",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "cyber": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "cyber",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "data_science": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "data_science",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "debug": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "debug",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "design": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "design",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "fact_checker": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "fact_checker",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "finance": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "finance",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "forensics": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "forensics",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "github_sync": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "github_sync",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "infra": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "infra",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "legal": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "legal",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "manager": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "manager",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "math": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "math",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "medical": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "medical",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "memory": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "memory",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "planning": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "planning",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "purple_team": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "purple_team",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "qa": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "qa",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "red_team": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "red_team",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "research": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "research",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "reverse_eng": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "reverse_eng",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "review": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "review",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "router": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "router",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "science": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "science",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "search": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "search",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "security": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "security",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "siem": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "siem",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "strategist": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "strategist",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "summarizer": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "summarizer",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "threat_hunt": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "threat_hunt",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "toolsmith": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "toolsmith",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "translation": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "translation",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "writing": {
+      "model_id": "longcat-2.5-preview:free",
+      "role": "agent",
+      "agent": "writing",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    }
+  },
+  "agents_multimodal": {
+    "audio": {
+      "modality_model": "longcat-2.5-preview:free",
+      "fallback_text_model": "longcat-2.5-preview:free",
+      "context_window": 1000000
+    },
+    "vision": {
+      "modality_model": "longcat-2.5-preview:free",
+      "fallback_text_model": "longcat-2.5-preview:free",
+      "context_window": 1000000
+    },
+    "voice": {
+      "modality_model": "longcat-2.5-preview:free",
+      "fallback_text_model": "longcat-2.5-preview:free",
+      "context_window": 1000000
+    }
+  },
+  "agent_count": 38,
+  "recommended_for_capable_hw": {
+    "audio": "longcat-2.5-preview:free",
+    "blue_team": "longcat-2.5-preview:free",
+    "coding": "longcat-2.5-preview:free",
+    "cyber": "longcat-2.5-preview:free",
+    "data_science": "longcat-2.5-preview:free",
+    "debug": "longcat-2.5-preview:free",
+    "finance": "longcat-2.5-preview:free",
+    "forensics": "longcat-2.5-preview:free",
+    "legal": "longcat-2.5-preview:free",
+    "math": "longcat-2.5-preview:free",
+    "medical": "longcat-2.5-preview:free",
+    "purple_team": "longcat-2.5-preview:free",
+    "red_team": "longcat-2.5-preview:free",
+    "research": "longcat-2.5-preview:free",
+    "reverse_eng": "longcat-2.5-preview:free",
+    "science": "longcat-2.5-preview:free",
+    "security": "longcat-2.5-preview:free",
+    "siem": "longcat-2.5-preview:free",
+    "threat_hunt": "longcat-2.5-preview:free",
+    "vision": "longcat-2.5-preview:free"
+  }
+}

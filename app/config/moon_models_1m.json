@@ -1,0 +1,408 @@
+{
+  "family": "moon-1m",
+  "context_window": 1000000,
+  "main_brain": {
+    "default": {
+      "model_id": "qwen2.5:1.5b",
+      "role": "main_brain_default",
+      "agent": null,
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "strong": {
+      "model_id": "qwen2.5:1.5b",
+      "role": "main_brain_strong_accuracy_gate",
+      "agent": null,
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    }
+  },
+  "agents": {
+    "audio": {
+      "model_id": "qwen2.5:1.5b",
+      "role": "agent",
+      "agent": "audio",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "blue_team": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "blue_team",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "browser": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "browser",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "coding": {
+      "model_id": "qwen2.5-coder:1.5b",
+      "role": "agent",
+      "agent": "coding",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "coordinator": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "coordinator",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "critic": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "critic",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "cyber": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "cyber",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "data_science": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "data_science",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "debug": {
+      "model_id": "qwen2.5-coder:1.5b",
+      "role": "agent",
+      "agent": "debug",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "design": {
+      "model_id": "qwen2.5:1.5b",
+      "role": "agent",
+      "agent": "design",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "fact_checker": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "fact_checker",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "finance": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "finance",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "forensics": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "forensics",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "github_sync": {
+      "model_id": "qwen2.5-coder:1.5b",
+      "role": "agent",
+      "agent": "github_sync",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "infra": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "infra",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "legal": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "legal",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "manager": {
+      "model_id": "deepseek-r1:1.5b",
+      "role": "agent",
+      "agent": "manager",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "math": {
+      "model_id": "deepseek-r1:1.5b",
+      "role": "agent",
+      "agent": "math",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "medical": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "medical",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "memory": {
+      "model_id": "qwen2.5:1.5b",
+      "role": "agent",
+      "agent": "memory",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "planning": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "planning",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "purple_team": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "purple_team",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "qa": {
+      "model_id": "qwen2.5-coder:1.5b",
+      "role": "agent",
+      "agent": "qa",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "red_team": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "red_team",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "research": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "research",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "reverse_eng": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "reverse_eng",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "review": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "review",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "router": {
+      "model_id": "qwen2.5:1.5b",
+      "role": "agent",
+      "agent": "router",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "science": {
+      "model_id": "deepseek-r1:1.5b",
+      "role": "agent",
+      "agent": "science",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "search": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "search",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "security": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "security",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "siem": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "siem",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "strategist": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "strategist",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "summarizer": {
+      "model_id": "qwen2.5:1.5b",
+      "role": "agent",
+      "agent": "summarizer",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "threat_hunt": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "threat_hunt",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "toolsmith": {
+      "model_id": "qwen2.5-coder:1.5b",
+      "role": "agent",
+      "agent": "toolsmith",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "translation": {
+      "model_id": "qwen2.5:3b",
+      "role": "agent",
+      "agent": "translation",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "writing": {
+      "model_id": "qwen2.5:1.5b",
+      "role": "agent",
+      "agent": "writing",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    }
+  },
+  "agents_multimodal": {
+    "audio": {
+      "modality_model": "qwen2-audio",
+      "fallback_text_model": "qwen2.5:1.5b",
+      "context_window": 1000000
+    },
+    "vision": {
+      "modality_model": "llava:7b",
+      "fallback_text_model": "qwen2.5:3b",
+      "context_window": 1000000
+    },
+    "voice": {
+      "modality_model": "qwen2-audio",
+      "fallback_text_model": "qwen2.5:1.5b",
+      "context_window": 1000000
+    }
+  },
+  "agent_count": 38,
+  "recommended_for_capable_hw": {
+    "audio": "qwen2-audio:7b",
+    "blue_team": "qwen3:8b",
+    "coding": "qwen2.5-coder:7b",
+    "cyber": "qwen3:8b",
+    "data_science": "qwen3:8b",
+    "debug": "qwen2.5-coder:7b",
+    "finance": "qwen3:8b",
+    "forensics": "qwen3:8b",
+    "legal": "qwen3:8b",
+    "math": "deepseek-r1:8b",
+    "medical": "qwen3:8b",
+    "purple_team": "qwen3:8b",
+    "red_team": "qwen3:8b",
+    "research": "qwen3:8b",
+    "reverse_eng": "qwen3:8b",
+    "science": "qwen3:8b",
+    "security": "qwen3:8b",
+    "siem": "qwen3:8b",
+    "threat_hunt": "qwen3:8b",
+    "vision": "llava:13b"
+  }
+}
