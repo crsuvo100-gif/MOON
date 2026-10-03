@@ -48,6 +48,18 @@ class ToolManager:
         tool = self._registry.get(name)
         if tool is None or name not in self._enabled:
             return ToolResult(name=name, output=None, success=False, error="tool not available")
+        # --- spec 51: rate-limit tool execution (no unlimited tool calls) ---
+        try:
+            from app.runtime.rate_limit import get_limiter
+
+            decision = get_limiter().check(f"tool:{name}")
+            if not decision.allowed:
+                logger.warning("tool '%s' rate-limited: %s", name, decision.reason)
+                return ToolResult(name=name, output=None, success=False,
+                                  error=f"rate limited ({decision.reason}); "
+                                        f"retry in {decision.retry_after:.2f}s")
+        except Exception:  # noqa: BLE001
+            pass
         # Safety gate: reject dangerous tools unless explicitly allowed
         if not self._allow_dangerous and hasattr(tool, 'is_dangerous') and tool.is_dangerous():
             logger.warning("tool %s blocked: dangerous tool not allowed", name)

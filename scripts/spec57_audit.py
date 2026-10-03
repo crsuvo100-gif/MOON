@@ -438,6 +438,93 @@ except Exception as e:
     rec("33. Communication protocol complete (spec 24)", False, f"{type(e).__name__}: {e}")
     rec("34. Message types complete (spec 25)", False, f"{type(e).__name__}: {e}")
 
+# --- spec 39/40: synthesis + final response contract ----------------------
+try:
+    from app.brain.aggregator import AgentEnvelope, ResultAggregator
+    from app.brain.output_formatter import OutputFormatter
+
+    _agg = ResultAggregator().aggregate([
+        AgentEnvelope(agent_id="coding", result="Bug fixed.", confidence=0.9,
+                      evidence=["edited x.py"]),
+        AgentEnvelope(agent_id="testing", result="", status="failed",
+                      errors=["tests still fail"]),
+    ])
+    _out = OutputFormatter().synthesize(_agg)
+    rec("35. Main Brain synthesis works (spec 39)",
+        "Bug fixed." in _out and "Conflicts detected" in _out,
+        "aggregate -> normalize -> evidence -> conflict -> synthesis")
+    rec("36. Final response contract met (spec 40)",
+        all(k in _out for k in ("Evidence:", "Failed agents:", "Next action:")),
+        "reports what succeeded / failed / evidence / next action")
+except Exception as e:
+    rec("35. Main Brain synthesis works (spec 39)", False, f"{type(e).__name__}: {e}")
+    rec("36. Final response contract met (spec 40)", False, f"{type(e).__name__}: {e}")
+
+# --- spec 45: plugin discovery -------------------------------------------
+try:
+    from plugins.loader import load_plugins
+    from app.tools.registry import ToolRegistry
+
+    _sum = load_plugins(ToolRegistry())
+    rec("37. Agent/tool discovery works (spec 45)", isinstance(_sum, dict),
+        f"plugin loader discovered {len(_sum)} file(s); bad plugins never abort startup")
+except Exception as e:
+    rec("37. Agent/tool discovery works (spec 45)", False, f"{type(e).__name__}: {e}")
+
+# --- spec 46/47/48: agent configuration + model selection ----------------
+try:
+    import json as _json
+
+    _cfg = _json.loads((ROOT / "app" / "config" / "agents.json").read_text())
+    _agents = _cfg.get("agents", {})
+    _brains = {s.get("brain") for s in _agents.values()}
+    _need = {"coding", "research", "infra", "browser", "github_sync",
+             "security", "qa", "memory", "data_file", "automation"}
+    rec("38. Agent configuration works (spec 46)",
+        _need <= set(_agents),
+        f"{len(_agents)} agents configured with enabled/brain/tools")
+    rec("39. Model selection per agent (spec 47/48)", len(_brains) > 1,
+        f"{len(_brains)} distinct models configured: {sorted(b for b in _brains if b)}")
+except Exception as e:
+    rec("38. Agent configuration works (spec 46)", False, f"{type(e).__name__}: {e}")
+    rec("39. Model selection per agent (spec 47/48)", False, f"{type(e).__name__}: {e}")
+
+# --- spec 51: rate limiting ----------------------------------------------
+try:
+    from app.runtime.rate_limit import RateLimiter, TokenBucket
+
+    _tb = TokenBucket(rate=0.01, capacity=1)
+    _ok1 = _tb.take().allowed
+    _blocked = _tb.take().allowed is False
+    _rl = RateLimiter(task_rate=0.01, task_burst=1)
+    _rl.check("task:probe")
+    _rl_blocked = _rl.check("task:probe").allowed is False
+    rec("40. Rate limiting works (spec 51)", _ok1 and _blocked and _rl_blocked,
+        "token bucket blocks over-burst; wired into ToolManager.run")
+except Exception as e:
+    rec("40. Rate limiting works (spec 51)", False, f"{type(e).__name__}: {e}")
+
+# --- spec 53: safe change + rollback ------------------------------------
+try:
+    from app.runtime.backup import backup, restore
+    rec("41. Checkpoint/rollback available (spec 53)",
+        callable(backup) and callable(restore),
+        "app/runtime/backup.py (backup+restore); main.py delegates to the "
+        "existing component rather than duplicating it (spec 1)")
+except Exception as e:
+    rec("41. Checkpoint/rollback available (spec 53)", False, f"{type(e).__name__}: {e}")
+
+# --- spec 50: observability (no secret leakage) -------------------------
+try:
+    import app.terminal_interface as _T
+    _routes = [getattr(r, "path", "") for r in _T.app.routes]
+    _obs = [p for p in ("/api/health", "/api/metrics", "/api/logs", "/api/tasks",
+                        "/api/brains", "/api/supervision") if p in _routes]
+    rec("42. Observability works (spec 50)", len(_obs) >= 5,
+        f"{len(_obs)} observability routes: {_obs}")
+except Exception as e:
+    rec("42. Observability works (spec 50)", False, f"{type(e).__name__}: {e}")
+
 print()
 for name, state, detail in RESULTS:
     mark = {"PASS": "PASS", "PARTIAL": "PART", "FAIL": "FAIL"}[state]

@@ -1,0 +1,95 @@
+{
+  "_comment": "Spec 46: agent configuration lives in CONFIG, not hard-coded model selection. Each agent declares enabled/brain/tools/permissions. The orchestrator reads this and overrides its defaults; anything absent falls back to the built-in behaviour (additive, never required).",
+  "version": 1,
+  "defaults": {
+    "enabled": true,
+    "tools": null,
+    "permissions": []
+  },
+  "agents": {
+    "coding": {
+      "enabled": true,
+      "brain": "qwen2.5-coder:1.5b",
+      "tools": ["file_manager", "terminal", "python_executor", "git", "system_command"],
+      "permissions": ["workspace.read", "workspace.write", "process.exec"],
+      "role": "Write and refactor code"
+    },
+    "research": {
+      "enabled": true,
+      "brain": "qwen2.5:3b",
+      "tools": ["web_search", "browser", "api_requests", "file_manager", "pdf_reader"],
+      "permissions": ["workspace.read", "network.http"],
+      "role": "Gather and synthesize facts"
+    },
+    "infra": {
+      "enabled": true,
+      "brain": "qwen2.5:3b",
+      "tools": ["terminal", "system_command", "system_info", "file_manager", "docker"],
+      "permissions": ["workspace.read", "process.exec"],
+      "role": "DevOps, infrastructure, deployment"
+    },
+    "browser": {
+      "enabled": true,
+      "brain": "qwen2.5:3b",
+      "tools": ["browser", "web_search"],
+      "permissions": ["network.http"],
+      "role": "Navigate and read web pages"
+    },
+    "github_sync": {
+      "enabled": true,
+      "brain": "qwen2.5-coder:1.5b",
+      "tools": ["git", "github_sync", "file_manager"],
+      "permissions": ["workspace.read", "workspace.write", "network.http"],
+      "role": "Automated GitHub sync and deploy"
+    },
+    "security": {
+      "enabled": true,
+      "brain": "qwen2.5:3b",
+      "tools": ["hardening_audit", "vuln_scanner", "log_analyzer", "file_manager", "system_info"],
+      "permissions": ["workspace.read"],
+      "role": "Security analysis and hardening"
+    },
+    "qa": {
+      "enabled": true,
+      "brain": "qwen2.5-coder:1.5b",
+      "tools": ["python_executor", "terminal", "file_manager"],
+      "permissions": ["workspace.read", "process.exec"],
+      "role": "Test and quality-assure outputs"
+    },
+    "memory": {
+      "enabled": true,
+      "brain": "qwen2.5:1.5b",
+      "tools": ["file_manager", "pdf_reader", "web_search"],
+      "permissions": ["workspace.read"],
+      "role": "Index and recall knowledge"
+    },
+    "data_file": {
+      "enabled": true,
+      "brain": "qwen2.5-coder:1.5b",
+      "tools": ["file_manager", "pdf_reader", "ocr", "database", "python_executor", "terminal"],
+      "permissions": ["workspace.read", "workspace.write"],
+      "role": "Read, transform and organize data and files"
+    },
+    "automation": {
+      "enabled": true,
+      "brain": "qwen2.5-coder:1.5b",
+      "tools": ["terminal", "python_executor", "file_manager", "system_command", "docker", "git"],
+      "permissions": ["workspace.read", "workspace.write", "process.exec"],
+      "role": "Automate recurring multi-step workflows"
+    },
+    "math": {
+      "enabled": true,
+      "brain": "deepseek-r1:1.5b",
+      "tools": [],
+      "permissions": [],
+      "role": "Solve mathematical problems"
+    },
+    "writing": {
+      "enabled": true,
+      "brain": "qwen2.5:1.5b",
+      "tools": ["file_manager"],
+      "permissions": ["workspace.read"],
+      "role": "Produce written content"
+    }
+  }
+}

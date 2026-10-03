@@ -307,39 +307,34 @@ def _cmd_doctor() -> int:
 
 
 def _cmd_backup() -> int:
-    """Snapshot runtime data into backups/ (pure-Python, stdlib only).
+    """Snapshot runtime data into backups/ using the EXISTING component.
 
-    Self-contained: no external backup module required.
+    Delegates to app/runtime/backup.py (spec 25) rather than reimplementing it
+    -- spec 1: never duplicate an equivalent system, reuse the existing one.
     """
-    import shutil
-    import time as _time
-
-    stamp = _time.strftime("%Y%m%d_%H%M%S")
-    dest = Path("backups") / f"moon_{stamp}"
-    dest.mkdir(parents=True, exist_ok=True)
-    copied: list[str] = []
-    for item in ("data", "connections", ".env"):
-        src = Path(item)
-        if not src.exists():
-            continue
-        try:
-            if src.is_dir():
-                shutil.copytree(src, dest / item, dirs_exist_ok=True)
-            else:
-                shutil.copy2(src, dest / item)
-            copied.append(item)
-        except Exception as exc:  # noqa: BLE001
-            print(f"WARN: could not back up {item}: {exc}")
-    print(f"BACKUP COMPLETE -> {dest}")
-    print(f"  included: {', '.join(copied) or 'nothing'}")
-    return 0
+    try:
+        from app.runtime.backup import backup
+    except Exception as exc:  # noqa: BLE001
+        print(f"backup unavailable: {exc}")
+        return 1
+    try:
+        dest = backup()
+        print(f"BACKUP COMPLETE -> {dest}")
+        return 0
+    except Exception as exc:  # noqa: BLE001
+        print(f"BACKUP FAILED: {exc}")
+        return 1
 
 
 def _cmd_restore() -> int:
-    """Restore a backups/moon_<timestamp> snapshot (pure-Python)."""
-    import shutil
+    """Restore a backups/moon_<timestamp> snapshot via the existing component."""
     import sys as _sys
 
+    try:
+        from app.runtime.backup import restore
+    except Exception as exc:  # noqa: BLE001
+        print(f"restore unavailable: {exc}")
+        return 1
     if len(_sys.argv) < 2:
         print("usage: python -m moon restore <snapshot-dir>")
         return 2
@@ -347,21 +342,13 @@ def _cmd_restore() -> int:
     if not snap.is_dir():
         print(f"snapshot not found: {snap}")
         return 2
-    restored: list[str] = []
-    for item in ("data", "connections", ".env"):
-        src = snap / item
-        if not src.exists():
-            continue
-        try:
-            if src.is_dir():
-                shutil.copytree(src, Path(item), dirs_exist_ok=True)
-            else:
-                shutil.copy2(src, Path(item))
-            restored.append(item)
-        except Exception as exc:  # noqa: BLE001
-            print(f"WARN: could not restore {item}: {exc}")
-    print(f"RESTORE COMPLETE -> restored: {', '.join(restored) or 'nothing'}")
-    return 0
+    try:
+        restored = restore(snap)
+        print(f"RESTORE COMPLETE -> restored: {', '.join(restored) or 'nothing'}")
+        return 0
+    except Exception as exc:  # noqa: BLE001
+        print(f"RESTORE FAILED: {exc}")
+        return 1
 
 
 def _cmd_setup() -> int:
@@ -494,6 +481,11 @@ def main() -> None:
         return 1
     elif args.cmd == "status":
         raise SystemExit(_cmd_status())
+    elif args.cmd == "doctor":
+        # Health check: Python/deps/config/DB/agents/tools/model/git.
+        # Was advertised by the subparser but had no dispatch branch, so
+        # `moon doctor` silently printed help instead of running the check.
+        raise SystemExit(_cmd_doctor())
     elif args.cmd == "backup":
         raise SystemExit(_cmd_backup())
     elif args.cmd == "restore":

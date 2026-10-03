@@ -569,6 +569,37 @@ class Orchestrator:
 
         tool_names = [t.name for t in registry.all()]
         self._agents = build_agents(tool_names)
+
+        # --- spec 46: agent CONFIGURATION from app/config/agents.json ---
+        # Config drives enabled/tools/permissions instead of hard-coded
+        # selection. Additive: an absent/!broken file leaves the built-ins alone.
+        try:
+            import json as _json
+
+            cfg_path = Path(__file__).resolve().parent.parent / "config" / "agents.json"
+            if cfg_path.is_file():
+                cfg = _json.loads(cfg_path.read_text(encoding="utf-8"))
+                for name, spec in (cfg.get("agents") or {}).items():
+                    if name not in self._agents:
+                        continue
+                    if spec.get("enabled") is False:
+                        self._agents.pop(name, None)
+                        logger.info("agent '%s' disabled by config", name)
+                        continue
+                    tools = spec.get("tools")
+                    if isinstance(tools, list):
+                        allowed = [t for t in tools if t in tool_names]
+                        self._agents[name].allowed_tools = allowed
+                    # remember the configured brain so AgentModelManager can use it
+                    brain = spec.get("brain")
+                    if brain:
+                        self._agent_config_brains = getattr(
+                            self, "_agent_config_brains", {}) or {}
+                        self._agent_config_brains[name] = brain
+                logger.info("agent config applied from %s", cfg_path.name)
+        except Exception as exc:  # noqa: BLE001
+            logger.info("agent config skipped: %s", exc)
+
         self._agent_order = list(self._agents.keys())
 
     async def teardown(self) -> None:
@@ -1296,11 +1327,12 @@ class Orchestrator:
                     logger.warning("agent brain remember failed: %s", exc)
 
             clean = self._formatter.format(final_text)
-            # --- spec 26/27/28/39: aggregate + conflict-check before synthesis ---
+            # --- spec 26/27/28/39/40: aggregate + conflict-check + SYNTHESIZE ---
             # The Main Brain must never report a single agent's raw text as if it
-            # were the verified combined result (spec 39). Build a structured
-            # envelope, aggregate, detect contradictions, and attach the outcome
-            # to the task. Additive + degrades cleanly.
+            # were the verified combined result. Aggregate, detect contradictions,
+            # and when there IS a conflict emit the spec-40 response contract
+            # (what succeeded / what failed / evidence / next action) instead of
+            # the unqualified answer. Additive + degrades cleanly.
             try:
                 from app.brain.aggregator import AgentEnvelope, ResultAggregator
 
@@ -1323,6 +1355,12 @@ class Orchestrator:
                         task.id, [c.to_dict() for c in _agg.conflicts])
                     emit("CONFLICT_DETECTED", execution_id=task.id, agent_id=agent.name,
                          detail=f"{len(_agg.conflicts)} conflict(s), status={_agg.status.value}")
+                    # spec 39/40: synthesize ONE coherent response that does not
+                    # claim success over a detected contradiction.
+                    _synth = self._formatter.synthesize(_agg, user_request=task.prompt)
+                    if _synth:
+                        clean = _synth
+                        task.data["synthesized"] = True
             except Exception as exc:  # noqa: BLE001
                 logger.info("result aggregation skipped: %s", exc)
             task.complete(clean, data={"tokens_used": tokens, "issues": validation.issues, "agent": agent.name}, tokens_used=tokens)
