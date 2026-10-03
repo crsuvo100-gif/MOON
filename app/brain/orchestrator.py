@@ -1044,7 +1044,35 @@ class Orchestrator:
                     logger.warning("agent brain remember failed: %s", exc)
 
             clean = self._formatter.format(final_text)
-            # --- spec 28/41/12 augmentation removed (app.runtime.integration deleted) ---
+            # --- spec 26/27/28/39: aggregate + conflict-check before synthesis ---
+            # The Main Brain must never report a single agent's raw text as if it
+            # were the verified combined result (spec 39). Build a structured
+            # envelope, aggregate, detect contradictions, and attach the outcome
+            # to the task. Additive + degrades cleanly.
+            try:
+                from app.brain.aggregator import AgentEnvelope, ResultAggregator
+
+                _env = AgentEnvelope(
+                    task_id=task.id, agent_id=agent.name,
+                    status="completed" if reflection.satisfactory else "failed",
+                    objective=task.prompt, result=clean,
+                    evidence=list(validation.issues) if validation.issues else [],
+                    errors=[] if reflection.satisfactory else list(reflection.improvements or []),
+                    confidence=0.85 if validation.valid else 0.4,
+                    next_action="verification",
+                )
+                _envelopes = [getattr(task, "_agent_envelopes", []), _env]
+                _flat = [e for sub in _envelopes for e in (sub if isinstance(sub, list) else [sub])]
+                _agg = ResultAggregator().aggregate(_flat)
+                task._aggregated = _agg.to_dict()
+                if _agg.has_conflict:
+                    logger.warning(
+                        "Result conflict on task %s: %s",
+                        task.id, [c.to_dict() for c in _agg.conflicts])
+                    emit("CONFLICT_DETECTED", execution_id=task.id, agent_id=agent.name,
+                         detail=f"{len(_agg.conflicts)} conflict(s), status={_agg.status.value}")
+            except Exception as exc:  # noqa: BLE001
+                logger.info("result aggregation skipped: %s", exc)
             task.complete(clean, data={"tokens_used": tokens, "issues": validation.issues, "agent": agent.name}, tokens_used=tokens)
             await self._memory.remember(clean, long_term=False)
             # --- Advanced memory: store task result ---
