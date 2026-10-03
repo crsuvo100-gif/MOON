@@ -120,6 +120,23 @@ def run_doctor(args: argparse.Namespace | None = None) -> None:
     except Exception as e:
         print_error(f"Backend: unreachable ({e})")
 
+    # Launcher path
+    checks_total += 1
+    try:
+        from pathlib import Path
+        launcher = Path.home() / ".local" / "bin" / "moon"
+        if launcher.exists():
+            content = launcher.read_text()
+            if "/tmp/" in content:
+                print_error(f"Launcher: {launcher} contains /tmp/ path (stale temp install)")
+            else:
+                print_success(f"Launcher: {launcher} OK")
+                checks_passed += 1
+        else:
+            print_warning(f"Launcher: {launcher} not found")
+    except Exception as e:
+        print_error(f"Launcher: {e}")
+
     print()
     print(f"Checks: {checks_passed}/{checks_total} passed")
     if checks_passed == checks_total:

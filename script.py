@@ -613,7 +613,7 @@ def install_f5_clone_model() -> None:
 # ---------------------------------------------------------------------------
 # 7. Launcher + desktop entry
 # ---------------------------------------------------------------------------
-def install_launcher() -> None:
+def install_launcher() -> bool:
     BIN_DIR.mkdir(parents=True, exist_ok=True)
     launcher = BIN_DIR / "moon"
     launcher.write_text(
@@ -624,6 +624,15 @@ def install_launcher() -> None:
     )
     launcher.chmod(0o755)
     ok(f"launcher installed: {launcher}")
+    # Verify launcher points to the correct install path (not a temp dir)
+    launcher_content = launcher.read_text(encoding="utf-8")
+    if str(ROOT) not in launcher_content:
+        err(f"Launcher verification FAILED: {launcher} does not reference {ROOT}")
+        return False
+    if "/tmp/" in launcher_content:
+        err(f"Launcher verification FAILED: {launcher} contains a /tmp/ path")
+        return False
+    ok("launcher path verification: PASS")
     if f":{os.environ.get('PATH','')}:\"\" not in f\":{BIN_DIR}:\"\"":
         warn(f"{BIN_DIR} not on PATH. Add: export PATH=\"$HOME/.local/bin:$PATH\"")
 
@@ -643,6 +652,7 @@ def install_launcher() -> None:
         )
         desk.chmod(0o755)
         ok(f"desktop entry: {desk}")
+    return True
 
 
 # ---------------------------------------------------------------------------
