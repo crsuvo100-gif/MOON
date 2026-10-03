@@ -375,7 +375,7 @@ class Orchestrator:
         try:
             from app.agents.professional.professional_orchestrator import ProfessionalAgentOrchestrator
             self._professional_orchestrator = ProfessionalAgentOrchestrator(
-                max_concurrent_tasks=5,
+                max_concurrent_tasks=getattr(self._settings, "professional_max_concurrent_tasks", 5),
                 quality_threshold=0.7,
                 enable_consensus=True,
                 enable_self_healing=True,
@@ -804,15 +804,50 @@ class Orchestrator:
         return persona_for(name)
 
     async def _run_parallel(self, subtasks: list[str], agent_name: str) -> str:
-        """Fan out subtasks to concurrent agent runs and merge their results."""
+        """Fan out subtasks to concurrent agent runs and merge their results.
+
+        Spec 32/33 (resource-aware routing): the fan-out width is capped by
+        ``settings.max_concurrent_agents`` and every subtask result is run
+        through the spec-26 aggregator before it is returned, so a conflicting
+        subtask answer is surfaced instead of being concatenated blindly.
+        """
+        limit = max(1, int(getattr(self._settings, "max_concurrent_agents", 1) or 1))
+        sem = asyncio.Semaphore(limit)
+
         async def _one(sub: str) -> str:
-            sub_task = Task.create(sub, agent_name=agent_name)
-            sub_task.mark_running()
-            self._history.clear()
-            txt, _ = await self._run_cognition_loop(sub_task, self._agents.get(agent_name, self._agents["planning"]))
-            return f"- {sub}\n  {txt}"
+            async with sem:
+                sub_task = Task.create(sub, agent_name=agent_name)
+                sub_task.mark_running()
+                self._history.clear()
+                txt, _ = await self._run_cognition_loop(
+                    sub_task, self._agents.get(agent_name, self._agents["planning"]))
+                return f"- {sub}\n  {txt}"
+
+        logger.info("parallel fan-out: %d subtasks, concurrency limit %d",
+                    len(subtasks), limit)
         results = await asyncio.gather(*[_one(s) for s in subtasks])
-        return "Complex goal decomposed and executed in parallel:\n\n" + "\n\n".join(results)
+
+        # Spec 26/27: aggregate the subtask answers instead of raw concatenation.
+        merged_body = "\n\n".join(results)
+        try:
+            from app.brain.aggregator import AgentEnvelope, ResultAggregator
+
+            envs = [
+                AgentEnvelope(agent_id=f"{agent_name}#{i}", objective=sub,
+                              result=res, confidence=0.6)
+                for i, (sub, res) in enumerate(zip(subtasks, results))
+            ]
+            agg = ResultAggregator().aggregate(envs)
+            if agg.has_conflict:
+                logger.warning("parallel fan-out conflicts: %s",
+                               [c.to_dict() for c in agg.conflicts])
+                merged_body += (
+                    "\n\n[conflicts detected between subtask results — "
+                    f"{len(agg.conflicts)}; status={agg.status.value}]")
+        except Exception as exc:  # noqa: BLE001
+            logger.info("parallel aggregation skipped: %s", exc)
+
+        return "Complex goal decomposed and executed in parallel:\n\n" + merged_body
 
     def _route_intent(self, task: Task) -> None:
         """Intent detection: when no explicit agent is set, pick one from the

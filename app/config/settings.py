@@ -230,6 +230,14 @@ class Settings(BaseSettings):
     tool_timeout: float = 30.0
     # Max sub-agents to run concurrently when a complex goal is fanned out.
     max_parallel_agents: int = 4
+    # Spec 33: concurrency policy. Max specialist agents executing at once.
+    # Set to 1 on low-resource hosts (single GPU / <=8GB RAM) so MOON never
+    # spawns several heavyweight local models simultaneously (spec 32).
+    max_concurrent_agents: int = 1
+    # Spec 32: refuse to load more than this many local models at once.
+    max_concurrent_models: int = 2
+    # Spec 33: professional task-queue width (spec 31 task_queue).
+    professional_max_concurrent_tasks: int = 5
 
     @property
     def cors_origins_list(self) -> list[str]:
