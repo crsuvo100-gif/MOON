@@ -17,3 +17,15 @@ class ShortTermMemory:
 
     def clear(self) -> None:
         self._buf.clear()
+
+    def search(self, keyword: str, limit: int = 5) -> list[str]:
+        """Search recent items by keyword."""
+        kw = keyword.lower()
+        return [item for item in self._buf if kw in item.lower()][-limit:]
+
+    def stats(self) -> dict[str, int]:
+        """Return basic stats."""
+        return {"total": len(self._buf)}
+
+    def __len__(self) -> int:
+        return len(self._buf)

@@ -31,6 +31,11 @@ from app.config.logging import get_logger
 from app.context.retriever import ContextRetriever
 from app.memory.conversation_history import ConversationHistory
 from app.memory.semantic_search import SemanticSearch
+from app.memory.enhanced_long_term import EnhancedLongTermMemory
+from app.memory.enhanced_short_term import EnhancedShortTermMemory
+from app.memory.memory_graph import MemoryGraph
+from app.memory.memory_stats import MemoryStatsCollector
+from app.memory.memory_maintenance import MemoryMaintenance
 from app.models.agent import AgentCard
 from app.models.message import Message
 from app.models.task import Task
@@ -228,12 +233,30 @@ class Orchestrator:
             dim=ecfg.dim, enabled=ecfg.enabled,
             base_url=ecfg.base_url, model_name=ecfg.model_name,
         )
-        stm = ShortTermMemory()
-        ltm = LongTermMemory(path=f"{self._settings.log_dir}/long_term.jsonl")
+        stm = EnhancedShortTermMemory(max_items=50, auto_promote_threshold=0.7)
+        ltm = EnhancedLongTermMemory(path=f"{self._settings.log_dir}/long_term.jsonl")
         store = InMemoryVectorStore()
         kb = KnowledgeBase(store, self._embeddings)
         self._memory = MemoryManager(short_term=stm, long_term=ltm, knowledge_base=kb)
         await self._memory.setup()
+
+        # Enhanced memory subsystems
+        self._memory_graph = MemoryGraph(
+            persist_path=f"{self._settings.log_dir}/memory_graph.json",
+            max_nodes=5000,
+        )
+        await self._memory_graph.setup()
+
+        self._memory_stats = MemoryStatsCollector()
+        self._memory_maintenance = MemoryMaintenance(
+            ltm=ltm,
+            stm=stm,
+            graph=self._memory_graph,
+            episodic=self._memory._episodic if hasattr(self._memory, '_episodic') else None,
+            kb=kb,
+            stats_collector=self._memory_stats,
+        )
+        await self._memory_maintenance.start()
 
         # Index the bundled Hermes skill corpus into the knowledge base so the
         # skills are retrievable via semantic recall (MOON can use them).

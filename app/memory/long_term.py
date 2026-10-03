@@ -83,3 +83,7 @@ class LongTermMemory:
             self._entries.clear()
         self._path.write_text("", encoding="utf-8")
         logger.info("LTM wiped: all entries removed")
+
+    def stats(self) -> dict[str, int]:
+        """Return basic stats."""
+        return {"total": len(self._entries)}
