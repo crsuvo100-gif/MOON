@@ -819,6 +819,49 @@ async def api_health(request: Request):
         return JSONResponse({"status": "FAILED", "error": str(exc)}, status_code=503)
 
 
+@app.get("/api/supervision")
+async def api_supervision(request: Request):
+    """Spec 31/41: live agent supervision + execution states for the UI.
+
+    Gives the terminal/HUD everything spec 41 requires to render:
+    active agent, agent status, progress, tool calls, and each execution's
+    state (RUNNING/VERIFYING/RETRYING/SUCCESS/FAILED/CANCELLED/ROLLED_BACK).
+    """
+    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
+        from fastapi import Response
+        return Response("Unauthorized", status_code=401)
+    try:
+        orch = await _get_orchestrator()
+        sup = getattr(orch, "_supervisor", None)
+        out: dict[str, object] = {
+            "supervision": sup.snapshot() if sup is not None else {},
+            "running_agents": len(getattr(orch, "_agent_brains", {}) or {}),
+        }
+        mgr = None
+        try:
+            mgr = orch._exec_manager()
+        except Exception:
+            pass
+        execs = []
+        if mgr is not None:
+            for attr in ("all", "list", "jobs"):
+                fn = getattr(mgr, attr, None)
+                if callable(fn):
+                    try:
+                        items = fn() or []
+                        execs = [i.to_dict() if hasattr(i, "to_dict") else i
+                                 for i in items][:50]
+                        break
+                    except Exception:
+                        continue
+        out["executions"] = execs
+        out["execution_states"] = [s.value for s in __import__(
+            "app.execution", fromlist=["ExecState"]).ExecState]
+        return JSONResponse(out)
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 @app.get("/api/brains")
 async def api_brains(request: Request):
     """Spec 18/19: brain inventory with live health per configured brain.

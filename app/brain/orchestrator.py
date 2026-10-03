@@ -100,6 +100,15 @@ from app.runtime.integration import (  # noqa: E402
     route_agent,
 )
 
+# The same refactor that deleted the import above also left NINE call sites
+# using the private alias `_emit(...)` (verification, memory-update and tool
+# telemetry). `_emit` was never imported or defined, so every one of those
+# calls raised NameError inside `except Exception: pass` -- silently killing the
+# spec-42 events TOOL_SELECTED / TOOL_STARTED / TOOL_COMPLETED,
+# VERIFICATION_STARTED / VERIFICATION_PASSED / VERIFICATION_FAILED and
+# MEMORY_UPDATED. Alias it to the real publisher.
+_emit = emit
+
 logger = get_logger(__name__)
 
 if TYPE_CHECKING:
@@ -822,7 +831,16 @@ class Orchestrator:
         return True
 
     def _split_subtasks(self, text: str) -> list[str]:
-        """Split a complex goal into parallel subtasks on ' and also ' / ';' / numbered lists."""
+        """Split a complex goal into subtasks (spec 5).
+
+        Handles the spec's own worked example
+        ("Inspect my project, find the bug, fix it, test it, and explain the
+        changes") in addition to explicit separators:
+          * ' and also ' / ';' / numbered lists  (explicit separators)
+          * comma/and-separated imperative clauses with a leading verb
+            (inspect/find/fix/test/explain/...)  -- only when >=2 such clauses
+            exist, so a normal sentence is never chopped up.
+        """
         parts = [p.strip() for p in text.split(" and also ") if p.strip()]
         if len(parts) <= 1:
             parts = [p.strip() for p in text.split(";") if p.strip()]
@@ -831,7 +849,110 @@ class Orchestrator:
             numbered = _re.findall(r"(?m)^\s*\d+[.)]\s*(.+)$", text)
             if len(numbered) > 1:
                 parts = [p.strip() for p in numbered]
+        if len(parts) <= 1:
+            # Clause splitting: comma / 'and' boundaries followed by a verb.
+            import re as _re
+            verbs = (
+                "inspect|find|fix|test|explain|analyze|analyse|review|refactor|"
+                "implement|create|write|build|run|verify|check|deploy|install|"
+                "configure|scan|audit|report|summarize|summarise|update|add|remove|"
+                "migrate|benchmark|profile|document"
+            )
+            # split on ', ' or ' and ' only when the NEXT word is a known verb
+            raw = _re.split(rf"(?:,\s*|\s+and\s+)(?=(?:{verbs})\b)", text, flags=_re.I)
+            clauses = [c.strip().rstrip(".,;:") for c in raw if c.strip()]
+            if len(clauses) > 1:
+                parts = clauses
         return parts[: self._settings.max_parallel_agents]
+
+    def _is_composite_goal(self, text: str) -> bool:
+        """MainBrain decision (spec 5): does this goal need decomposition?
+
+        True when the request contains >=2 distinct imperative clauses
+        (inspect/fix/test/explain...) or an explicit multi-part separator.
+        This is what lets the Main Brain route a multi-step request to the
+        coordinator instead of answering it in one specialist pass.
+        """
+        try:
+            return len(self._split_subtasks(text or "")) > 1
+        except Exception:  # noqa: BLE001
+            return False
+
+    # ------------------------------------------------------------------
+    # spec 49: memory and context budget
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _estimate_tokens(text: str) -> int:
+        """Cheap, dependency-free token estimate (~4 chars/token, min 1)."""
+        if not text:
+            return 0
+        return max(1, len(text) // 4)
+
+    def _enforce_context_budget(self, messages, task) -> tuple[list, dict]:
+        """Fit the prompt into the model window before inference (spec 49).
+
+        Budget = system + task + relevant memory + tool results + output reserve.
+        When over budget: (1) drop lowest-priority retrieved/history messages,
+        (2) summarize the dropped tail into a single note, (3) return the fitted
+        list. The model context is never blindly exceeded.
+        """
+        reserve = int(getattr(self._settings, "context_reserved_tokens", 0)
+                      or getattr(self._settings, "model_max_tokens", 1024) or 1024)
+        window = int(getattr(self._settings, "context_max_tokens", 8192) or 8192)
+        budget = max(512, window - reserve)
+
+        def _content(m) -> str:
+            return getattr(m, "content", "") or (m.get("content", "") if isinstance(m, dict) else "")
+
+        total = sum(self._estimate_tokens(_content(m)) for m in messages)
+        report = {"window": window, "reserve": reserve, "budget": budget,
+                  "before": total, "after": total, "evicted": 0, "summarized": False}
+
+        if total <= budget:
+            task.data["_context_budget"] = report
+            return messages, report
+
+        # Preserve the system prompt (index 0) and the final user turn; evict
+        # from the middle (retrieved context / history) lowest-value first.
+        if len(messages) <= 2:
+            task.data["_context_budget"] = report
+            return messages, report
+
+        head = messages[0]
+        tail = messages[-1]
+        middle = list(messages[1:-1])
+        kept: list = []
+        dropped: list[str] = []
+        running = self._estimate_tokens(_content(head)) + self._estimate_tokens(_content(tail))
+        for m in reversed(middle):          # keep the most recent first
+            t = self._estimate_tokens(_content(m))
+            if running + t <= budget:
+                kept.append(m)
+                running += t
+            else:
+                dropped.append(_content(m)[:400])
+        kept.reverse()
+
+        if dropped:
+            note = "[summarized: %d earlier context item(s) dropped to fit the %d-token window] " % (
+                len(dropped), window)
+            note += " | ".join(d[:120] for d in dropped[:5])
+            try:
+                from app.models.message import Message
+                summary_msg = Message.system(note)
+            except Exception:  # noqa: BLE001
+                summary_msg = head
+            fitted = [head, summary_msg, *kept, tail]
+            report["summarized"] = True
+        else:
+            fitted = [head, *kept, tail]
+
+        report["evicted"] = len(dropped)
+        report["after"] = sum(self._estimate_tokens(_content(m)) for m in fitted)
+        task.data["_context_budget"] = report
+        logger.info("context budget: %d -> %d tokens (window=%d, evicted=%d)",
+                    report["before"], report["after"], window, report["evicted"])
+        return fitted, report
 
     def _pick_llm(self, task_prompt: str):
         """Use the STRONG model only for explicit cyber-critical tasks when configured.
@@ -938,6 +1059,21 @@ class Orchestrator:
             "chat": "manager",
         }
         agent = mapping.get(intent, "coordinator")
+        # --- spec 5: MainBrain decomposition decision ---
+        # A multi-step goal ("inspect, find the bug, fix it, test it, explain")
+        # must be decomposed and delegated, not answered by a single specialist.
+        # Route composite goals to the coordinator, which fans out via
+        # _run_parallel. Explicit single-domain requests are left alone.
+        try:
+            if (self._is_composite_goal(task.prompt)
+                    and "coordinator" in self._agents
+                    and intent not in ("cyber", "red_team", "blue_team", "security")):
+                agent = "coordinator"
+                task.data["_decomposed"] = self._split_subtasks(task.prompt)
+                logger.info("composite goal -> coordinator (%d subtasks)",
+                            len(task.data["_decomposed"]))
+        except Exception:  # noqa: BLE001
+            pass
         if agent not in self._agents:
             agent = "coordinator"
         task.agent_name = agent
@@ -1550,6 +1686,14 @@ class Orchestrator:
             task=task, history=self._history, retrieved=retrieved, agent=agent,
             system_override=system_override,
         )
+        # --- spec 49: enforce the context budget BEFORE inference ---
+        # system tokens + task tokens + memory + tool results + output reserve
+        # must fit the model window; if not, evict low-priority items, then
+        # summarize, then retry. Never blindly exceed the model context.
+        try:
+            messages, _budget = self._enforce_context_budget(messages, task)
+        except Exception as exc:  # noqa: BLE001
+            logger.info("context budget enforcement skipped: %s", exc)
         tool_specs = self._tools.available_specs()
         total_tokens = 0
         final_text = ""

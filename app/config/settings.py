@@ -238,6 +238,10 @@ class Settings(BaseSettings):
     max_concurrent_models: int = 2
     # Spec 33: professional task-queue width (spec 31 task_queue).
     professional_max_concurrent_tasks: int = 5
+    # Spec 49: model context window + output reserve used to budget the prompt
+    # before inference (system + task + memory + tool results + reserve).
+    context_max_tokens: int = 8192
+    context_reserved_tokens: int = 1024
 
     @property
     def cors_origins_list(self) -> list[str]:
