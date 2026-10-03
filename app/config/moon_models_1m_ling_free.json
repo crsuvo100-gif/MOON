@@ -1,0 +1,408 @@
+{
+  "family": "moon-1m-ling-free",
+  "context_window": 1000000,
+  "main_brain": {
+    "default": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "main_brain_default",
+      "agent": null,
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "strong": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "main_brain_strong_accuracy_gate",
+      "agent": null,
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    }
+  },
+  "agents": {
+    "audio": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "audio",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "blue_team": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "blue_team",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "browser": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "browser",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "coding": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "coding",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "coordinator": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "coordinator",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "critic": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "critic",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "cyber": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "cyber",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "data_science": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "data_science",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "debug": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "debug",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "design": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "design",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "fact_checker": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "fact_checker",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "finance": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "finance",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "forensics": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "forensics",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "github_sync": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "github_sync",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "infra": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "infra",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "legal": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "legal",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "manager": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "manager",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "math": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "math",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "medical": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "medical",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "memory": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "memory",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "planning": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "planning",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "purple_team": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "purple_team",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "qa": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "qa",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "red_team": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "red_team",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "research": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "research",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "reverse_eng": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "reverse_eng",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "review": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "review",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "router": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "router",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "science": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "science",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "search": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "search",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "security": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "security",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "siem": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "siem",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "strategist": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "strategist",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "summarizer": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "summarizer",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "threat_hunt": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "threat_hunt",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "toolsmith": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "toolsmith",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "translation": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "translation",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    },
+    "writing": {
+      "model_id": "ling-3.0-flash-sante:free",
+      "role": "agent",
+      "agent": "writing",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_system_messages": true
+    }
+  },
+  "agents_multimodal": {
+    "audio": {
+      "modality_model": "ling-3.0-flash-sante:free",
+      "fallback_text_model": "ling-3.0-flash-sante:free",
+      "context_window": 1000000
+    },
+    "vision": {
+      "modality_model": "ling-3.0-flash-sante:free",
+      "fallback_text_model": "ling-3.0-flash-sante:free",
+      "context_window": 1000000
+    },
+    "voice": {
+      "modality_model": "ling-3.0-flash-sante:free",
+      "fallback_text_model": "ling-3.0-flash-sante:free",
+      "context_window": 1000000
+    }
+  },
+  "agent_count": 38,
+  "recommended_for_capable_hw": {
+    "audio": "ling-3.0-flash-sante:free",
+    "blue_team": "ling-3.0-flash-sante:free",
+    "coding": "ling-3.0-flash-sante:free",
+    "cyber": "ling-3.0-flash-sante:free",
+    "data_science": "ling-3.0-flash-sante:free",
+    "debug": "ling-3.0-flash-sante:free",
+    "finance": "ling-3.0-flash-sante:free",
+    "forensics": "ling-3.0-flash-sante:free",
+    "legal": "ling-3.0-flash-sante:free",
+    "math": "ling-3.0-flash-sante:free",
+    "medical": "ling-3.0-flash-sante:free",
+    "purple_team": "ling-3.0-flash-sante:free",
+    "red_team": "ling-3.0-flash-sante:free",
+    "research": "ling-3.0-flash-sante:free",
+    "reverse_eng": "ling-3.0-flash-sante:free",
+    "science": "ling-3.0-flash-sante:free",
+    "security": "ling-3.0-flash-sante:free",
+    "siem": "ling-3.0-flash-sante:free",
+    "threat_hunt": "ling-3.0-flash-sante:free",
+    "vision": "ling-3.0-flash-sante:free"
+  }
+}
