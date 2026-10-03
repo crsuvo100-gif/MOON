@@ -64,5 +64,8 @@ class ModelRouter:
         return ModelChoice(local or "local", local_url or "", "default", is_remote=False)
 
     def to_dict(self, choice: ModelChoice) -> dict[str, Any]:
-        return {"name": choice.name, "base_url": choice.base_url,
+        # "model" is the canonical key the orchestrator emits/reports; "name" is
+        # kept for existing callers. Emitting only "name" made MODEL_SELECTED
+        # events carry detail=None.
+        return {"model": choice.name, "name": choice.name, "base_url": choice.base_url,
                 "reason": choice.reason, "is_remote": choice.is_remote}

@@ -1199,7 +1199,13 @@ class Orchestrator:
                 logger.info("parallel fan-out fell back to standard loop: %s", exc)
 
         # --- Advanced: fast-path for simple queries (speed) ---
-        if self._settings.enable_fast_path and self._is_simple_query(task.prompt) and task.agent_name != "auto":
+        # NOTE: the fast path is reserved for EXPLICIT single-domain requests.
+        # It previously fired whenever the caller passed any agent name, which
+        # meant the coordinator fan-out (spec 5) and intent routing were bypassed
+        # and the reported agent did not match the routing decision.
+        if (self._settings.enable_fast_path and self._is_simple_query(task.prompt)
+                and task.agent_name not in ("auto", "coordinator")
+                and not self._is_composite_goal(task.prompt)):
             try:
                 text, tokens = await self._fast_answer(task, agent)
                 # spec 6/17: if the prompt explicitly requested a known tool,
@@ -1227,8 +1233,53 @@ class Orchestrator:
                 pass
 
         lesson = ""
+        # --- spec 31: supervise the run and ACT if the agent stalls ---
+        # Detection alone was useless (nothing consulted it). Wrap the cognition
+        # loop in a watchdog that, on timeout, records a stuck event, applies the
+        # bounded recovery decision, and cancels the task instead of hanging the
+        # caller forever (spec 31 steps 2-4, spec 51 no-infinite-loops).
+        _task_timeout = float(getattr(self._settings, "task_timeout", 180.0) or 180.0)
         try:
-            final_text, tokens = await self._run_cognition_loop(task, agent, on_event=on_event, proactive_context=proactive_context)
+            final_text, tokens = await asyncio.wait_for(
+                self._run_cognition_loop(task, agent, on_event=on_event,
+                                         proactive_context=proactive_context),
+                timeout=_task_timeout,
+            )
+            if self._supervisor is not None:
+                self._supervisor.beat(task.id, note="cognition loop complete")
+        except asyncio.TimeoutError:
+            # 1. detect  2. stop/cancel if safe  3. decide  4. update plan
+            logger.warning("task %s exceeded task_timeout (%.0fs) -- supervising",
+                           task.id, _task_timeout)
+            if self._supervisor is not None:
+                try:
+                    self._supervisor.cancel(task.id)
+                    _dec = self._supervisor.decide(task.id)
+                    task.data["_supervision"] = _dec
+                    logger.warning("supervisor decision: %s (%s)",
+                                   _dec.get("action"), _dec.get("reason"))
+                    emit("AGENT_STUCK", execution_id=task.id, agent_id=agent.name,
+                         detail=f"{_dec.get('action')}: {_dec.get('reason')}")
+                except Exception:  # noqa: BLE001
+                    pass
+            task.fail(f"timed out after {_task_timeout:.0f}s (agent supervised and cancelled)")
+            self._exec_transition(task.id, "FAILED", agent_id=agent.name,
+                                  task=task.prompt,
+                                  result={"error": "task_timeout", "supervised": True})
+            if self._recovery_policy is not None:
+                try:
+                    from app.brain.recovery_policy import FailureContext
+
+                    task.data["_recovery_decision"] = self._recovery_policy.decide(
+                        FailureContext(agent=agent.name, task=task.prompt,
+                                       error="timeout", attempt=1,
+                                       other_agents=[a for a in self._agents
+                                                     if a != agent.name])
+                    ).to_dict()
+                except Exception:  # noqa: BLE001
+                    pass
+            return task
+        try:
             # --- spec 27/41: verification events (additive; degrades cleanly) ---
             try:
                 _emit("VERIFICATION_STARTED", execution_id=task.id, agent_id=agent.name)

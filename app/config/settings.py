@@ -242,6 +242,10 @@ class Settings(BaseSettings):
     # before inference (system + task + memory + tool results + reserve).
     context_max_tokens: int = 8192
     context_reserved_tokens: int = 1024
+    # Spec 31/51: hard wall-clock cap for a single task's cognition loop. When
+    # exceeded the Supervisor cancels the task and applies the recovery decision
+    # instead of hanging the caller forever.
+    task_timeout: float = 180.0
 
     @property
     def cors_origins_list(self) -> list[str]:
