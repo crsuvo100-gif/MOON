@@ -1,0 +1,13 @@
+{
+  "models": {
+    "longcat-2.5-preview:free": {
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_vision": false,
+      "supports_system_messages": true,
+      "temperature_range": [0.0, 2.0],
+      "description": "LongCat 2.5 preview model (free tier) with 1M token context window"
+    }
+  }
+}
