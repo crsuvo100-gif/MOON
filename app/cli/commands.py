@@ -263,4 +263,4 @@ class CLIState:
         self.messages: list = messages if messages is not None else []
         self.last_response = None
         self.last_prompt = None
-        self.locked = True  # CLI starts locked; 'MOON love you 3000' unlocks
+        self.locked = False  # MOON is always unlocked

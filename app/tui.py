@@ -85,7 +85,7 @@ class StatusHUD(Static):
     tokens_per_sec = reactive(0.0)
     latency_ms = reactive(0.0)
     uptime_s = reactive(0.0)
-    locked = reactive(True)
+    locked = reactive(False)
 
     _start_time: float = 0.0
     _last_tokens: int = 0
@@ -345,10 +345,10 @@ class Moonscope(App):
         hud.model_name = s.model_name
         hud.agent_name = "auto"
         hud.session_id = session_id
-        hud.locked = True  # boot locked — await 'MOON love you 3000'
+        hud.locked = False  # MOON is always unlocked
 
-        # State: also lock CLIState so unlock phrase is checked
-        self._state.locked = True
+        # State: also unlock CLIState
+        self._state.locked = False
 
         # Start HUD update timer (every 2s)
         self._hud_timer = self.set_interval(2, self._tick_hud)
@@ -479,31 +479,7 @@ class Moonscope(App):
         self.query_one(ChatPanel).messages = self._chat_messages
         self.query_one(BrainHUD).set_tokens(len(text.split()))
 
-        # Check for lock
-        if self._state and getattr(self._state, "locked", False):
-            from app.brain.lock import SessionLock
-            notice = SessionLock().observe(text)
-            # observe() returns unlock notice ("unlocked") or locked rejection
-            # ("locked") — both truthy; distinguish by keyword.
-            if notice and "unlocked" in notice.lower():
-                self._state.locked = False
-                self.query_one(BrainHUD).locked = False
-                self._chat_messages.append({
-                    "role": "agent",
-                    "content": notice,
-                })
-                self.query_one(ChatPanel).messages = self._chat_messages
-                return
-            else:
-                self._chat_messages.append({
-                    "role": "system",
-                    "content": notice or f"\U0001f512 Locked. Say '{UNLOCK_PHRASE}' to unlock.",
-                })
-                self.query_one(ChatPanel).messages = self._chat_messages
-                return
-
-        # Unlock phrase also works as first message even when already unlocked
-        # (some users type it anyway — acknowledge gracefully, don't re-lock).
+        # MOON is always unlocked — no lock check needed.
 
         # Dispatch slash commands
         if text.startswith("/"):
@@ -945,7 +921,7 @@ class BrainHUD(Static):
     tokens_per_sec = reactive(0.0)
     latency_ms = reactive(0.0)
     uptime_s = reactive(0.0)
-    locked = reactive(True)
+    locked = reactive(False)
     brain_emotion = reactive("normal")
     pipeline_active = reactive([])  # list of active pipeline stage keys
 
