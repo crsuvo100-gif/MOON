@@ -84,6 +84,22 @@ from app.connector.tool import GlobalConnectorTool
 from app.tools.huggingface_deploy import HuggingFaceDeployTool
 from app.tools.huggingface_tool import HuggingFaceTool
 
+# --- Spec runtime integration glue (spec 10/12/28/30/41/46) ----------------
+# The 0af96c2 refactor deleted app/runtime/* and with it this import, leaving
+# emit() / analyze_task() / route_agent() / choose_model() called but UNDEFINED.
+# Every call site sits inside `try/except Exception: pass`, so each augmentation
+# silently no-op'd instead of failing loudly (no GoalSpec, no routing refinement,
+# no model recommendation, zero events on the bus). Restored here.
+from app.runtime.integration import (  # noqa: E402
+    analyze_task,
+    choose_model,
+    emit,
+    gate_action,
+    record_evaluation,
+    record_outcome,
+    route_agent,
+)
+
 logger = get_logger(__name__)
 
 if TYPE_CHECKING:
