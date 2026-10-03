@@ -121,6 +121,7 @@ class Orchestrator:
         self._cognitive_loop = None
         self._agent_workflow = None
         self._skill_orchestrator = None
+        self._context_orchestrator = None
         # Shared lock state across CLI + web backend + WebSocket so an unlock
         # in ANY surface (HUD, `moon run`, voice, TUI) persists for ALL others.
         if lock_state_file is None:
@@ -329,7 +330,7 @@ class Orchestrator:
             logger.info("Agent workflow init skipped: %s", exc)
             self._agent_workflow = None
 
-        # --- Advanced skill system (discovery, matching, chaining, context) --
+        # --- Advanced skill system (discovery, matching, chaining, context) ---
         try:
             from app.skills.advanced.skill_orchestrator import SkillOrchestrator
             self._skill_orchestrator = SkillOrchestrator()
@@ -339,6 +340,18 @@ class Orchestrator:
         except Exception as exc:  # noqa: BLE001
             logger.info("Advanced skill system init skipped: %s", exc)
             self._skill_orchestrator = None
+
+        # --- Advanced context self-function system ---
+        try:
+            from app.context.advanced.context_orchestrator import ContextOrchestrator
+            self._context_orchestrator = ContextOrchestrator(
+                max_tokens=getattr(self._settings, 'context_max_tokens', 8000),
+                reserved_tokens=getattr(self._settings, 'context_reserved_tokens', 2000),
+            )
+            logger.info("Advanced context self-function system initialized")
+        except Exception as exc:  # noqa: BLE001
+            logger.info("Advanced context system init skipped: %s", exc)
+            self._context_orchestrator = None
 
         # Index the bundled Hermes skill corpus into the knowledge base so the
         # skills are retrievable via semantic recall (MOON can use them).
@@ -484,6 +497,17 @@ class Orchestrator:
             try:
                 # SkillOrchestrator has no async shutdown; just clear references
                 skill_orch._initialized = False
+            except Exception:  # noqa: BLE001
+                pass
+        # --- Advanced context self-function system shutdown ---
+        ctx_orch = getattr(self, "_context_orchestrator", None)
+        if ctx_orch is not None:
+            try:
+                # Record final snapshot for analytics
+                snap = ctx_orch.get_snapshot()
+                logger.info("Context snapshot at shutdown: %d items, %.2f utilization",
+                            snap.window_summary.get("total_items", 0),
+                            snap.window_summary.get("utilization", 0.0))
             except Exception:  # noqa: BLE001
                 pass
         logger.info("Orchestrator torn down")
@@ -1123,6 +1147,20 @@ class Orchestrator:
                     }
                 except Exception:  # noqa: BLE001
                     pass
+            # --- Advanced context self-function: record context analytics ---
+            if self._context_orchestrator is not None:
+                try:
+                    ctx_state = self._context_orchestrator.assess()
+                    if ctx_state:
+                        task.data["context_system"] = {
+                            "health": ctx_state.health.value,
+                            "utilization": ctx_state.utilization,
+                            "total_items": ctx_state.total_items,
+                            "sources": ctx_state.sources,
+                            "recommendations": ctx_state.recommendations,
+                        }
+                except Exception:  # noqa: BLE001
+                    pass
             # spec 31: mark the execution job SUCCESS
             self._exec_transition(task.id, "SUCCESS", agent_id=agent.name, task=task.prompt,
                                   result={"status": "done", "agent": agent.name})
@@ -1218,6 +1256,39 @@ class Orchestrator:
                         ]
             except Exception as exc:  # noqa: BLE001
                 logger.debug("Skill matching failed (skipped): %s", exc)
+        # --- Advanced context self-function: inject context into retrieved ---
+        if self._context_orchestrator is not None:
+            try:
+                # Add retrieved items to context window
+                for r in retrieved:
+                    content = r.get("content", "") if isinstance(r, dict) else getattr(r, "content", "")
+                    if content:
+                        self._context_orchestrator.add(
+                            content,
+                            source=r.get("source", "retrieval") if isinstance(r, dict) else getattr(r, "source", "retrieval"),
+                            relevance=r.get("score", 0.5) if isinstance(r, dict) else getattr(r, "relevance", 0.5),
+                            importance=0.6,
+                        )
+                # Assess context health
+                ctx_state = self._context_orchestrator.assess()
+                if ctx_state and ctx_state.health.value in ("warning", "critical", "overflow"):
+                    # Compress if needed
+                    self._context_orchestrator.compress()
+                    logger.info("Context compressed due to %s health", ctx_state.health.value)
+                # Inject context into prompt
+                ctx_result = self._context_orchestrator.inject(
+                    base_prompt=task.prompt,
+                    system_prefix=system_override,
+                )
+                if ctx_result.injected_tokens > 0:
+                    # Add injected context to retrieved for the context builder
+                    retrieved.append({
+                        "content": f"[context window] {ctx_result.prompt[:500]}",
+                        "score": 0.9,
+                        "source": "context_window",
+                    })
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("Context self-function failed (skipped): %s", exc)
         messages = await self._context.build(
             task=task, history=self._history, retrieved=retrieved, agent=agent,
             system_override=system_override,
