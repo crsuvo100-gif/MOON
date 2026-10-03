@@ -117,6 +117,7 @@ class Orchestrator:
         self._consolidator = None
         self._advanced_memory = None
         self._advanced_agents = None
+        self._advanced_brain = None
         # Shared lock state across CLI + web backend + WebSocket so an unlock
         # in ANY surface (HUD, `moon run`, voice, TUI) persists for ALL others.
         if lock_state_file is None:
@@ -286,6 +287,19 @@ class Orchestrator:
             logger.info("Advanced agent system init skipped: %s", exc)
             self._advanced_agents = None
 
+        # --- Advanced brain system (ReAct, DAG, metacognition, reflection) ---
+        try:
+            from app.brain.advanced.brain_orchestrator import BrainOrchestrator
+            self._advanced_brain = BrainOrchestrator(
+                llm=self._llm,
+                max_iterations=5,
+                max_tool_calls=10,
+            )
+            logger.info("Advanced brain system initialized")
+        except Exception as exc:  # noqa: BLE001
+            logger.info("Advanced brain system init skipped: %s", exc)
+            self._advanced_brain = None
+
         # Index the bundled Hermes skill corpus into the knowledge base so the
         # skills are retrievable via semantic recall (MOON can use them).
         try:
@@ -415,6 +429,13 @@ class Orchestrator:
         if advanced_agents is not None:
             try:
                 await advanced_agents.shutdown()
+            except Exception:  # noqa: BLE001
+                pass
+        # --- Advanced brain system shutdown ---
+        advanced_brain = getattr(self, "_advanced_brain", None)
+        if advanced_brain is not None:
+            try:
+                await advanced_brain.shutdown()
             except Exception:  # noqa: BLE001
                 pass
         logger.info("Orchestrator torn down")
@@ -969,6 +990,49 @@ class Orchestrator:
                         success=reflection.satisfactory,
                         lesson=lesson,
                     )
+                except Exception:  # noqa: BLE001
+                    pass
+            # --- Advanced brain: metacognition + uncertainty + reflection ---
+            if self._advanced_brain is not None:
+                try:
+                    # Deep reflection on the task execution
+                    from app.brain.advanced.reflection import ReflectionLevel
+                    reflection_result = await self._advanced_brain._reflection.reflect(
+                        task=task.prompt,
+                        approach=f"agent:{agent.name}",
+                        outcome=clean[:500],
+                        success=reflection.satisfactory,
+                        iterations=tokens // 100 if tokens else 1,
+                        errors=validation.issues,
+                        level=ReflectionLevel.TASK,
+                    )
+                    # Uncertainty estimation
+                    uncertainty_result = await self._advanced_brain._uncertainty.estimate(
+                        model_confidence=0.8 if reflection.satisfactory else 0.3,
+                        task_complexity=0.5,
+                        task_type="general",
+                    )
+                    # Metacognitive update
+                    await self._advanced_brain._meta.update(
+                        confidence=uncertainty_result.confidence,
+                        uncertainty=uncertainty_result.uncertainty,
+                        latency=tokens / 100 if tokens else 0.1,
+                        error=not reflection.satisfactory,
+                        success=reflection.satisfactory,
+                    )
+                    # Store reflection in task data
+                    task.data["advanced_brain"] = {
+                        "reflection": {
+                            "critique": reflection_result.critique,
+                            "lessons": reflection_result.lessons_learned,
+                            "improvements": reflection_result.improvements,
+                        },
+                        "uncertainty": {
+                            "confidence": uncertainty_result.confidence,
+                            "uncertainty": uncertainty_result.uncertainty,
+                        },
+                        "metacognition": self._advanced_brain._meta.get_summary(),
+                    }
                 except Exception:  # noqa: BLE001
                     pass
             # spec 31: mark the execution job SUCCESS
