@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from app.agents.advanced.performance import TaskExecution
 from app.brain.agent_brain import AgentBrain
 from app.brain.agent_model_manager import AgentModelManager
 from app.brain.context_builder import ContextBuilder
@@ -115,6 +116,7 @@ class Orchestrator:
         self._agent_model_overrides: dict[str, str | None] = {}
         self._consolidator = None
         self._advanced_memory = None
+        self._advanced_agents = None
         # Shared lock state across CLI + web backend + WebSocket so an unlock
         # in ANY surface (HUD, `moon run`, voice, TUI) persists for ALL others.
         if lock_state_file is None:
@@ -274,6 +276,16 @@ class Orchestrator:
             logger.info("Advanced memory system init skipped: %s", exc)
             self._advanced_memory = None
 
+        # --- Advanced agent system (pipeline, coordination, learning) ---
+        try:
+            from app.agents.advanced.orchestrator import AdvancedAgentOrchestrator
+            self._advanced_agents = AdvancedAgentOrchestrator()
+            await self._advanced_agents.initialize(agent_id="orchestrator")
+            logger.info("Advanced agent system initialized")
+        except Exception as exc:  # noqa: BLE001
+            logger.info("Advanced agent system init skipped: %s", exc)
+            self._advanced_agents = None
+
         # Index the bundled Hermes skill corpus into the knowledge base so the
         # skills are retrievable via semantic recall (MOON can use them).
         try:
@@ -396,6 +408,13 @@ class Orchestrator:
         if getattr(self, "_advanced_memory", None) is not None:
             try:
                 await self._advanced_memory.shutdown()
+            except Exception:  # noqa: BLE001
+                pass
+        # --- Advanced agent system shutdown ---
+        advanced_agents = getattr(self, "_advanced_agents", None)
+        if advanced_agents is not None:
+            try:
+                await advanced_agents.shutdown()
             except Exception:  # noqa: BLE001
                 pass
         logger.info("Orchestrator torn down")
@@ -919,6 +938,35 @@ class Orchestrator:
                 try:
                     await self._advanced_memory.after_task(
                         task.prompt, clean, success=reflection.satisfactory,
+                        lesson=lesson,
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
+            # --- Advanced agents: record performance + share context + learn ---
+            if self._advanced_agents is not None:
+                try:
+                    await self._advanced_agents._performance.record(
+                        TaskExecution(
+                            task_id=task.id,
+                            agent_id=agent.name,
+                            start_time=0,
+                            end_time=0,
+                            success=reflection.satisfactory,
+                            tokens_used=tokens,
+                            quality_score=1.0 if reflection.satisfactory else 0.5,
+                        )
+                    )
+                    await self._advanced_agents.share_context(
+                        task_id=task.id,
+                        agent_id=agent.name,
+                        content=clean[:500],
+                        context_type="result",
+                    )
+                    await self._advanced_agents._learning.record_outcome(
+                        agent_id=agent.name,
+                        task_prompt=task.prompt,
+                        outcome=clean[:500],
+                        success=reflection.satisfactory,
                         lesson=lesson,
                     )
                 except Exception:  # noqa: BLE001
