@@ -190,6 +190,48 @@ class Settings(BaseSettings):
     embedding_model: str = "all-MiniLM-L6-v2"
     embedding_dim: int = 384
 
+    # --- Cognitive memory (spec 26/27/32/52/57/84) ---
+    memory_path: str = Field(
+        default="~/.moon/memory",
+        description="Local memory data directory (SQLite, vectors, cache, sync, backups).",
+    )
+    memory_db_url: str = Field(
+        default="",
+        description="Cloud PostgreSQL URL for global memory. Empty = local-only mode.",
+    )
+    memory_sync_enabled: bool = Field(
+        default=True,
+        description="Enable cloud synchronization. When False, MOON operates local-only.",
+    )
+    memory_sync_interval: int = Field(
+        default=300,
+        description="Seconds between periodic sync attempts (spec 57).",
+    )
+    memory_max_records: int = Field(
+        default=100_000,
+        description="Maximum local memory records before archival (spec 52).",
+    )
+    memory_context_budget: int = Field(
+        default=2048,
+        description="Token budget for memory injected into model context (spec 25).",
+    )
+    memory_backup_path: str = Field(
+        default="~/.moon/memory/backups",
+        description="Backup storage directory (spec 46/47).",
+    )
+    memory_cache_enabled: bool = Field(
+        default=True,
+        description="Enable memory retrieval cache (spec 53/54).",
+    )
+    memory_cache_ttl: int = Field(
+        default=60,
+        description="Memory cache TTL in seconds (spec 53).",
+    )
+    memory_offline_mode: bool = Field(
+        default=False,
+        description="Force offline mode — no cloud sync attempts (spec 31).",
+    )
+
     redis_url: str = ""
     task_queue_backend: Literal["memory", "redis"] = "memory"
 
