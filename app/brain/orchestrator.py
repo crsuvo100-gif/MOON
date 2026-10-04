@@ -1068,7 +1068,18 @@ class Orchestrator:
 
         logger.info("parallel fan-out: %d subtasks, concurrency limit %d",
                     len(subtasks), limit)
-        results = await asyncio.gather(*[_one(s) for s in subtasks])
+        # spec 52/58: bound the fan-out. Each subtask may now run a tool, and a
+        # tool like python_executor spawns `pytest`, which imports the whole MOON
+        # app (including the 88k-vector knowledge base). Running all subtasks at
+        # once peaked at 311 MB and got the unit OOM-killed on a 3.7 GB host.
+        # A semaphore keeps the peak bounded without serialising the fan-out.
+        sem = asyncio.Semaphore(max(1, min(limit, 2)))
+
+        async def _bounded(s: str) -> str:
+            async with sem:
+                return await _one(s)
+
+        results = await asyncio.gather(*[_bounded(s) for s in subtasks])
 
         # Spec 26/27: aggregate the subtask answers instead of raw concatenation.
         merged_body = "\n\n".join(results)
