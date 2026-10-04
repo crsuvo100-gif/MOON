@@ -1152,10 +1152,18 @@ class Orchestrator:
             task._goal_spec = _spec  # structured analysis (spec 10)
             known = list(self._agents.keys())
             refined = route_agent(_spec, known, task.agent_name)
+            # --- spec 5 vs spec 12 precedence ---
+            # The decomposition decision wins. A composite goal was routed to
+            # the coordinator on purpose; letting capability refinement replace
+            # it would silently drop the fan-out and answer a 4-step request in
+            # a single specialist pass. Refinement still applies to
+            # non-composite goals.
+            if getattr(task, "_decomposed", None):
+                refined = "coordinator"
             # Registry-driven capability selection (spec 12 / MOON 40-agent spec):
             # if the runtime router did not refine, ask the Agent Registry for a
             # capability match so the structured roster actually drives routing.
-            if not refined or refined not in self._agents:
+            if (not refined or refined not in self._agents) and not getattr(task, "_decomposed", None):
                 try:
                     cands = get_registry().select(capability=task.prompt)
                     if cands and cands[0].id in self._agents:
@@ -1304,6 +1312,26 @@ class Orchestrator:
             # 1. detect  2. stop/cancel if safe  3. decide  4. update plan
             logger.warning("task %s exceeded task_timeout (%.0fs) -- supervising",
                            task.id, _task_timeout)
+            # spec 5: a COMPOSITE goal whose agent loop timed out can still be
+            # satisfied by decomposing it -- fan the subtasks out (each a single
+            # grounded pass) rather than failing the whole request.
+            try:
+                _subs = self._split_subtasks(task.prompt)
+                if len(_subs) > 1:
+                    logger.info("timeout on composite goal -> fan-out fallback "
+                                "(%d subtasks)", len(_subs))
+                    _merged = await self._run_parallel(_subs, agent.name)
+                    task.complete(_merged, data={"agent": agent.name, "parallel": True,
+                                                 "decomposed_fallback": True})
+                    self._exec_transition(task.id, "SUCCESS", agent_id=agent.name,
+                                          task=task.prompt,
+                                          result={"status": "done", "parallel": True})
+                    if self._supervisor is not None:
+                        self._supervisor.finish(task.id, detail="decomposed fallback")
+                    _poller.cancel()
+                    return task
+            except Exception as _exc:  # noqa: BLE001
+                logger.info("decomposed fallback failed: %s", _exc)
             if self._supervisor is not None:
                 try:
                     self._supervisor.cancel(task.id)
