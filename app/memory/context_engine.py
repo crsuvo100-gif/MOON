@@ -170,12 +170,16 @@ class ContextEngine:
         budget = self.memory_token_budget()
         included: list[ContextItem] = []
         dropped: list[ContextItem] = []
-        used = 0
+        # The rendered block carries a header/footer and per-item "[scope/type]"
+        # prefix, so the raw content budget must be reduced by that overhead or
+        # the final text overshoots the budget.
+        overhead = estimate_tokens(MEMORY_BLOCK_HEADER + MEMORY_BLOCK_FOOTER)
+        used = overhead
         for it in items:
             if len(included) >= max_memories:
                 dropped.append(it)
                 continue
-            t = estimate_tokens(it.content)
+            t = estimate_tokens(it.content) + 4     # "- [scope/type] " prefix
             if used + t > budget:
                 dropped.append(it)
                 continue
