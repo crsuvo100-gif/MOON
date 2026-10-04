@@ -1238,7 +1238,18 @@ class Orchestrator:
         # loop in a watchdog that, on timeout, records a stuck event, applies the
         # bounded recovery decision, and cancels the task instead of hanging the
         # caller forever (spec 31 steps 2-4, spec 51 no-infinite-loops).
-        _task_timeout = float(getattr(self._settings, "task_timeout", 180.0) or 180.0)
+        #
+        # A DECOMPOSED goal (spec 5) legitimately needs more wall clock than a
+        # single query, so the budget scales with the subtask count (bounded by
+        # max_parallel_agents) rather than being a flat cap that would kill a
+        # valid multi-step run on a slow host.
+        _base = float(getattr(self._settings, "task_timeout", 180.0) or 180.0)
+        try:
+            _n_sub = max(1, len(self._split_subtasks(task.prompt)))
+        except Exception:  # noqa: BLE001
+            _n_sub = 1
+        _task_timeout = _base * (1 if _n_sub <= 1 else min(_n_sub, 4))
+        logger.info("task %s budget: %.0fs (%d subtask unit(s))", task.id, _task_timeout, _n_sub)
         try:
             final_text, tokens = await asyncio.wait_for(
                 self._run_cognition_loop(task, agent, on_event=on_event,
