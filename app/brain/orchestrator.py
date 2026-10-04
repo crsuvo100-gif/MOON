@@ -1158,12 +1158,12 @@ class Orchestrator:
             # it would silently drop the fan-out and answer a 4-step request in
             # a single specialist pass. Refinement still applies to
             # non-composite goals.
-            if getattr(task, "_decomposed", None):
+            if task.data.get("_decomposed"):
                 refined = "coordinator"
             # Registry-driven capability selection (spec 12 / MOON 40-agent spec):
             # if the runtime router did not refine, ask the Agent Registry for a
             # capability match so the structured roster actually drives routing.
-            if (not refined or refined not in self._agents) and not getattr(task, "_decomposed", None):
+            if (not refined or refined not in self._agents) and not task.data.get("_decomposed"):
                 try:
                     cands = get_registry().select(capability=task.prompt)
                     if cands and cands[0].id in self._agents:
