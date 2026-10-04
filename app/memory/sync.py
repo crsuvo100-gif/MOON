@@ -331,9 +331,11 @@ class SyncEngine:
     # -- sync ------------------------------------------------------------
     def sync(self) -> dict[str, Any]:
         """Push pending changes, pull remote ones, resolve conflicts (spec 32)."""
+        self._emit("memory.sync_started")
         pending = self._log.pending()
         if not pending:
             self._last_sync = time.time()
+            self._emit("memory.sync_completed", extra={"reason": "nothing_pending"})
             return {"pushed": 0, "pulled": 0, "conflicts": 0,
                     "reason": "nothing pending", "local_only":
                         isinstance(self._provider, NullCloudProvider)}
@@ -342,6 +344,7 @@ class SyncEngine:
         h = self._provider.health()
         if h.get("status") != "ONLINE":
             self._backoff = min(300.0, (self._backoff or 1.0) * 2)
+            self._emit("memory.sync_failed", extra={"reason": "cloud_unavailable"})
             return {"pushed": 0, "pulled": 0, "conflicts": 0,
                     "queued": len(pending), "cloud": h.get("status"),
                     "reason": h.get("detail", "cloud unavailable"),
@@ -359,6 +362,7 @@ class SyncEngine:
         except Exception as exc:  # noqa: BLE001
             logger.warning("sync push failed: %s", exc)
             self._log.mark([e.operation_id for e in pending], "failed")
+            self._emit("memory.sync_failed", extra={"error": str(exc)})
             return {"pushed": 0, "pulled": 0, "conflicts": 0,
                     "failed": len(pending), "error": str(exc)}
 
@@ -382,15 +386,31 @@ class SyncEngine:
                 self._conflicts.append(self._engine.resolve(c))
                 self._store.mark_synced([rr.memory_id], SyncStatus.CONFLICT)
                 logger.warning("sync conflict on %s: %s", rr.memory_id, c.type.value)
+                self._emit("memory.conflict", extra={
+                    "memory_id": rr.memory_id,
+                    "type": c.type.value,
+                    "resolution": c.resolution,
+                })
                 continue
             self._store.upsert(rr)
             pulled += 1
 
         self._last_sync = time.time()
         self._backoff = 0.0
+        self._emit("memory.sync_completed", extra={
+            "pushed": len(applied), "pulled": pulled,
+        })
         return {"pushed": len(applied), "pulled": pulled,
                 "conflicts": len([c for c in self._conflicts]),
                 "cloud": "ONLINE", "local_only": False}
+
+    def _emit(self, event: str, extra: dict | None = None) -> None:
+        """spec 60: memory events on the existing MOON event bus."""
+        try:
+            from app.runtime.event_bus import bus
+            bus().publish(event, detail="sync", payload=extra or {})
+        except Exception:  # noqa: BLE001
+            pass
 
 
 __all__ = [

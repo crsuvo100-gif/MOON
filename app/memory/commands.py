@@ -23,7 +23,7 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         r"(?:that|this|the)?\s*memory\s*(?:about\s+)?[:\-]?\s*(?P<payload>.+?)\s*$")),
     ("remember", re.compile(
         r"(?i)^\s*(?:please\s+)?(?:remember|save|note|store|memorize|keep in mind)\s+"
-        r"(?:this|that)?\s*[:\-]?\s*(?P<payload>.+?)\s*$")),
+        r"(?P<payload>.+?)\s*$")),
     ("show", re.compile(
         r"(?i)^\s*(?:please\s+)?(?:show|what do you remember about|what do you know about|"
         r"recall|list)\s+(?:me\s+)?(?:what\s+you\s+remember\s+about\s+)?"

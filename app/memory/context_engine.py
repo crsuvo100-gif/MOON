@@ -157,7 +157,8 @@ class ContextEngine:
               tool_results: str = "", max_memories: int = 12) -> ContextResult:
         # 1. RELEVANCE FILTER
         items = [ContextItem.from_scored(s) if hasattr(s, "record")
-                 else ContextItem(**s) for s in memories]
+                 else ContextItem(**s) if isinstance(s, dict)
+                 else s for s in memories]
         items = [i for i in items if i.score >= self._min_score]
 
         # 2. DEDUPLICATION

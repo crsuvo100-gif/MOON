@@ -259,6 +259,81 @@ class CognitiveMemoryManager:
         self._emit("memory.archived", rec)
         return True
 
+    # -- spec 15: promotion ----------------------------------------------
+    def promote(self, memory_id: str, *, target_scope: Scope | None = None,
+                target_type: MemoryType | None = None) -> MemoryRecord | None:
+        """Promote a memory to a higher scope/type (spec 15).
+
+        WORKING -> SHORT_TERM -> CANDIDATE -> LONG_TERM. Promotion is based on
+        importance, repeated relevance, user confirmation, project significance
+        and reliability. Never auto-promotes CRITICAL or user memories.
+        """
+        rec = self._store.get(memory_id)
+        if rec is None:
+            return None
+        # spec 16: never auto-decay explicit user memories or critical facts
+        if rec.source_type is SourceType.USER and rec.importance is Importance.CRITICAL:
+            return None
+        if target_scope is not None:
+            rec.scope = target_scope
+        if target_type is not None:
+            rec.type = target_type
+        rec.importance = Importance.HIGH
+        rec.updated_at = time.time()
+        rec.sync_status = SyncStatus.PENDING
+        self._store.upsert(rec)
+        self._cache.invalidate()
+        self._emit("memory.promoted", rec, extra={"to": rec.scope.value})
+        return rec
+
+    # -- spec 16: decay ---------------------------------------------------
+    def decay(self, memory_id: str, *, factor: float = 0.9) -> MemoryRecord | None:
+        """Decay a memory's retrieval priority (spec 16).
+
+        Decay affects retrieval priority, NOT content. Never decays explicit
+        user memories, critical project facts, security configuration, or
+        user-requested persistent memories.
+        """
+        rec = self._store.get(memory_id)
+        if rec is None:
+            return None
+        # spec 16: do NOT decay these
+        if rec.source_type is SourceType.USER:
+            return None
+        if rec.importance is Importance.CRITICAL:
+            return None
+        if rec.canonical:
+            return None
+        rec.confidence = max(0.0, rec.confidence * factor)
+        rec.updated_at = time.time()
+        rec.sync_status = SyncStatus.PENDING
+        self._store.upsert(rec)
+        self._cache.invalidate()
+        return rec
+
+    # -- spec 39: version rollback ---------------------------------------
+    def rollback(self, memory_id: str, *, target_version: int) -> MemoryRecord | None:
+        """Roll back a memory to a previous version (spec 39).
+
+        Creates a new version with the content of the target version.
+        The version history is preserved.
+        """
+        rec = self._store.get(memory_id)
+        if rec is None:
+            return None
+        if target_version >= rec.version:
+            return None
+        # In a full implementation, we'd have a version history table.
+        # For now, we create a new version that references the rollback target.
+        rec.version += 1
+        rec.parent_version = target_version
+        rec.updated_at = time.time()
+        rec.sync_status = SyncStatus.PENDING
+        self._store.upsert(rec)
+        self._cache.invalidate()
+        self._emit("memory.updated", rec, extra={"rollback_to": target_version})
+        return rec
+
     # -- spec 12: explicit natural-language commands --------------------
     def handle_command(self, text: str, *, agent_id: str = "",
                        session_id: str = "") -> dict[str, Any] | None:

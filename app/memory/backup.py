@@ -97,6 +97,7 @@ def create_backup(store: MemoryStore, *, name: str | None = None,
     path = d / f"{stamp}.json"
     export_json(store, path)
     _rotate(d, keep=keep)
+    _emit("memory.backup_created", extra={"path": str(path), "size": path.stat().st_size})
     return path
 
 
@@ -129,7 +130,21 @@ def list_backups() -> list[dict[str, Any]]:
 
 def restore_backup(store: MemoryStore, path: str | Path) -> ImportReport:
     """spec 46: restore a snapshot through the validated import path."""
-    return import_records(store, json.loads(Path(path).read_text(encoding="utf-8")))
+    rep = import_records(store, json.loads(Path(path).read_text(encoding="utf-8")))
+    _emit("memory.restore_completed", extra={
+        "path": str(path), "inserted": rep.inserted,
+        "duplicates": rep.duplicates,
+    })
+    return rep
+
+
+def _emit(event: str, extra: dict | None = None) -> None:
+    """spec 60: memory events on the existing MOON event bus."""
+    try:
+        from app.runtime.event_bus import bus
+        bus().publish(event, detail="backup", payload=extra or {})
+    except Exception:  # noqa: BLE001
+        pass
 
 
 # ---------------------------------------------------------------- spec 49
@@ -145,6 +160,7 @@ def import_records(store: MemoryStore, data: Any) -> ImportReport:
 
     existing = {r.memory_id: r for r in store.query(limit=100000,
                                                     include_archived=True)}
+    existing_by_content = {r.content: r for r in existing.values()}
     for item in data:
         if not isinstance(item, dict) or "content" not in item:
             rep.rejected_schema += 1
@@ -169,6 +185,11 @@ def import_records(store: MemoryStore, data: Any) -> ImportReport:
             if rec.updated_at <= prev.updated_at:
                 rep.duplicates += 1
                 continue
+        # Content-based dedup: same content, different id
+        prev_content = existing_by_content.get(rec.content)
+        if prev_content is not None:
+            rep.duplicates += 1
+            continue
         try:
             store.upsert(rec)
             rep.inserted += 1
