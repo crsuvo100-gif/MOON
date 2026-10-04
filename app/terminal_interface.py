@@ -420,6 +420,31 @@ def _system_metrics() -> dict:
     return out
 
 
+def _cognitive_memory_status(orch) -> dict:
+    """spec 50/59: real cognitive memory status from the live manager."""
+    cog = getattr(orch, "_cognitive_memory", None)
+    if cog is None:
+        return {"status": "not_initialized"}
+    try:
+        h = cog.health()
+        db = h.get("local_db", {})
+        stats = h.get("stats", {})
+        return {
+            "status": "ONLINE" if db.get("online") else "OFFLINE",
+            "total": db.get("total", 0),
+            "active": db.get("active", 0),
+            "pending_sync": db.get("pending_sync", 0),
+            "schema_version": db.get("schema_version", 0),
+            "device_id": h.get("device_id", ""),
+            "writes": stats.get("writes", 0),
+            "retrievals": stats.get("retrievals", 0),
+            "secret_blocks": stats.get("secret_blocks", 0),
+            "duplicates": stats.get("duplicates", 0),
+        }
+    except Exception:
+        return {"status": "error"}
+
+
 async def _moon_status_impl(orch) -> dict:
     """Real MOON status for the terminal HUD (no simulation)."""
     n_agents = 0
@@ -499,6 +524,7 @@ async def _moon_status_impl(orch) -> dict:
             "short_term": stm_count,
             "vector": vec_items,
             "kb_docs": kb_docs,
+            "cognitive": _cognitive_memory_status(orch),
             "integrity": round(min(100.0, (kb_docs * 0.85 + (vec_items / max(1, vec_items)) * 15.0)), 1) if kb_docs else 98.7,
         },
         "knowledge": {
@@ -1440,6 +1466,17 @@ async def _run_diagnostics(orch) -> dict:
             checks.append(("Cognitive memory", "FAIL", "health check error"))
     else:
         checks.append(("Cognitive memory", "WARN", "not initialized"))
+    # sync engine (spec 32/59)
+    sync = getattr(orch, "_sync_engine", None)
+    if sync is not None:
+        try:
+            st = sync.status()
+            checks.append(("Memory sync", "OK" if st.get("pending", 0) == 0 else "PENDING",
+                           f"{st.get('pending',0)} pending / {st.get('conflicts',0)} conflicts"))
+        except Exception:
+            checks.append(("Memory sync", "FAIL", "status error"))
+    else:
+        checks.append(("Memory sync", "WARN", "not initialized"))
     # system
     sys_ = st.get("system", {})
     checks.append(("System health", "OK" if sys_.get("ram_pct", 100) < 95 else "WARN",

@@ -154,6 +154,7 @@ class Orchestrator:
         self._cognitive_memory = None
         self._context_engine = None
         self._sync_engine = None
+        self._memory_health = None
         # spec 17/18/19/37: provider-independent brain routing + recorded fallback
         self._brain_router = None
         # spec 31/36: live agent supervision + bounded recovery decisions
@@ -323,6 +324,7 @@ class Orchestrator:
             from app.memory.cognitive import CognitiveMemoryManager
             from app.memory.context_engine import ContextEngine
             from app.memory.sync import SyncEngine, NullCloudProvider
+            from app.memory.health import MemoryHealthService
             self._cognitive_memory = CognitiveMemoryManager(
                 embed_fn=self._embeddings.embed if self._embeddings else None,
                 vector_store=store,
@@ -333,12 +335,18 @@ class Orchestrator:
                 provider=NullCloudProvider(),
                 device_id=self._cognitive_memory.device_id,
             )
+            self._memory_health = MemoryHealthService(
+                manager=self._cognitive_memory,
+                context_engine=self._context_engine,
+                sync=self._sync_engine,
+            )
             logger.info("Cognitive memory initialized (device=%s)", self._cognitive_memory.device_id)
         except Exception as exc:  # noqa: BLE001
             logger.info("Cognitive memory init skipped: %s", exc)
             self._cognitive_memory = None
             self._context_engine = None
             self._sync_engine = None
+            self._memory_health = None
 
         # --- Advanced agent system (pipeline, coordination, learning) --
         try:
@@ -1568,8 +1576,12 @@ class Orchestrator:
                         task_id=task.id,
                         explicit=False,
                     )
+                    # spec 32/57: sync after each task (resource-conscious: on_write)
                     if self._sync_engine is not None:
-                        self._sync_engine.sync()
+                        try:
+                            self._sync_engine.sync()
+                        except Exception:  # noqa: BLE001
+                            pass
                 except Exception:  # noqa: BLE001
                     pass
             # --- Advanced memory: store task result ---
@@ -1862,20 +1874,54 @@ class Orchestrator:
         assert self._llm is not None and self._tools is not None and self._context is not None
         retrieved = await self._memory.semantic_recall(task.prompt) if self._memory else []
         # Cognitive memory retrieval (spec 20/21/22/24)
+        cog_hit_count = 0
         if self._cognitive_memory is not None:
             try:
                 cog_hits = self._cognitive_memory.search(
                     task.prompt, top_k=8, agent_id=agent.name,
                 )
-                for h in cog_hits:
-                    retrieved.append({
-                        "content": h.record.content,
-                        "score": h.score,
-                        "source": "cognitive_memory",
-                        "scope": h.record.scope.value,
-                        "type": h.record.type.value,
-                        "confidence": h.record.confidence,
-                    })
+                cog_hit_count = len(cog_hits)
+                # spec 24/25: use ContextEngine to build a budgeted context block
+                if self._context_engine is not None and cog_hits:
+                    try:
+                        ctx_result = self._context_engine.build(
+                            memories=cog_hits,
+                            system_prompt=system_override or "",
+                            user_input=task.prompt,
+                            task_state="",
+                            tool_results="",
+                        )
+                        if ctx_result.text:
+                            retrieved.append({
+                                "content": ctx_result.text,
+                                "score": 0.9,
+                                "source": "cognitive_memory",
+                                "scope": "budgeted",
+                                "type": "context",
+                                "confidence": 0.9,
+                            })
+                    except Exception as exc:  # noqa: BLE001
+                        logger.debug("ContextEngine build failed (skipped): %s", exc)
+                        # Fallback: add hits directly
+                        for h in cog_hits:
+                            retrieved.append({
+                                "content": h.record.content,
+                                "score": h.score,
+                                "source": "cognitive_memory",
+                                "scope": h.record.scope.value,
+                                "type": h.record.type.value,
+                                "confidence": h.record.confidence,
+                            })
+                else:
+                    for h in cog_hits:
+                        retrieved.append({
+                            "content": h.record.content,
+                            "score": h.score,
+                            "source": "cognitive_memory",
+                            "scope": h.record.scope.value,
+                            "type": h.record.type.value,
+                            "confidence": h.record.confidence,
+                        })
             except Exception as exc:  # noqa: BLE001
                 logger.debug("Cognitive memory search failed (skipped): %s", exc)
         # Inject proactive memory context from advanced memory system
