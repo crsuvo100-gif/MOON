@@ -21,6 +21,13 @@ Environment=PYTHONPATH=
 # Auto-restart on crash / exit so the terminal always comes back
 Restart=always
 RestartSec=3
+# Spec 32/51: memory-tight hosts must not make MOON the kernel's preferred
+# OOM victim (it was killed mid-task at oom_score_adj=200 on a 3.7GB box),
+# and MOON must stay bounded so it degrades instead of destabilising the host.
+OOMScoreAdjust=-500
+MemoryHigh=1500M
+MemoryMax=2200M
+OOMPolicy=continue
 StandardOutput=journal
 StandardError=journal
 
