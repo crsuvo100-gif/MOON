@@ -232,6 +232,18 @@ class Supervisor:
         self._log("agent.cancelled", agent=w.agent, task_id=task_id)
         return True
 
+    def abandon(self, task_id: str) -> None:
+        """Drop a watch whose caller is gone (client disconnected/timed out).
+
+        Without this the watch lingers forever: /api/supervision keeps showing
+        it as 'running' and (worse) 'stuck', and its task keeps occupying a
+        concurrency slot after the HTTP client has already given up.
+        """
+        w = self._watches.pop(task_id, None)
+        if w is not None:
+            self._log("agent.abandoned", agent=w.agent, task_id=task_id,
+                      detail=f"client gone after {time.time() - w.started_at:.0f}s")
+
     # -- detection --------------------------------------------------------
     def stuck(self) -> list[AgentWatch]:
         return [w for w in self._watches.values()

@@ -1250,6 +1250,27 @@ class Orchestrator:
             _n_sub = 1
         _task_timeout = _base * (1 if _n_sub <= 1 else min(_n_sub, 4))
         logger.info("task %s budget: %.0fs (%d subtask unit(s))", task.id, _task_timeout, _n_sub)
+
+        # Live progress: poll the task's own status so the supervisor watch
+        # reflects real activity instead of staying at "starting" for the whole
+        # run (which made idle-time reporting meaningless).
+        async def _progress_poller(tid: str, tsk) -> None:
+            while True:
+                await asyncio.sleep(5.0)
+                if self._supervisor is None:
+                    return
+                note = "running"
+                try:
+                    for it in ("iteration", "tool_calls", "stage"):
+                        v = tsk.data.get(it)
+                        if v is not None:
+                            note = f"{it}={v}"
+                            break
+                except Exception:  # noqa: BLE001
+                    pass
+                self._supervisor.beat(tid, note=note)
+
+        _poller = asyncio.create_task(_progress_poller(task.id, task))
         try:
             final_text, tokens = await asyncio.wait_for(
                 self._run_cognition_loop(task, agent, on_event=on_event,
@@ -1258,6 +1279,15 @@ class Orchestrator:
             )
             if self._supervisor is not None:
                 self._supervisor.beat(task.id, note="cognition loop complete")
+        except asyncio.CancelledError:
+            # Client disconnected / request aborted: release the slot instead of
+            # leaving an orphaned watch occupying a concurrency unit.
+            if self._supervisor is not None:
+                try:
+                    self._supervisor.abandon(task.id)
+                except Exception:  # noqa: BLE001
+                    pass
+            raise
         except asyncio.TimeoutError:
             # 1. detect  2. stop/cancel if safe  3. decide  4. update plan
             logger.warning("task %s exceeded task_timeout (%.0fs) -- supervising",
@@ -1289,7 +1319,10 @@ class Orchestrator:
                     ).to_dict()
                 except Exception:  # noqa: BLE001
                     pass
+            _poller.cancel()
             return task
+        finally:
+            _poller.cancel()
         try:
             # --- spec 27/41: verification events (additive; degrades cleanly) ---
             try:
