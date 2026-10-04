@@ -1043,16 +1043,23 @@ class Orchestrator:
                 sub_task = Task.create(sub, agent_name=agent_name)
                 sub_task.mark_running()
                 self._history.clear()
-                # Spec 29: a SUBTASK takes the simplest sufficient mode -- a
-                # single grounded pass, not the full cognition loop. Running the
-                # whole loop per subtask (reflection + self-consistency sampling
-                # + repeated tool rounds) multiplied LLM calls by the subtask
-                # count and made a 4-step goal exceed every wall-clock budget on
-                # a low-resource host. One pass per subtask keeps the fan-out
-                # inside the timeout while still using each agent's own brain.
+                # Spec 29/8/14: a SUBTASK still needs TOOLS -- "inspect the
+                # project", "run tests" and "verify the result" are impossible
+                # without them, and answering from the model alone produces the
+                # "I cannot access the project" failure. But it must stay
+                # BOUNDED: one tool round (not the full multi-round loop with
+                # reflection + self-consistency, which multiplied LLM calls by
+                # the subtask count and blew every wall-clock budget here).
+                txt = ""
                 try:
                     txt, _ = await self._fast_answer(
                         sub_task, self._agents.get(agent_name, self._agents["planning"]))
+                    # spec 6/17: if the subtask named a tool (or a path), run it
+                    # so the answer is grounded in a REAL result.
+                    invoked = await self._try_explicit_tool(sub_task, txt,
+                                                            self._agents.get(agent_name, self._agents["planning"]))
+                    if invoked is not None:
+                        txt, _ = invoked
                 except Exception as exc:  # noqa: BLE001
                     logger.info("subtask fast pass failed (%s); using full loop", exc)
                     txt, _ = await self._run_cognition_loop(
@@ -2219,6 +2226,7 @@ class Orchestrator:
             "git_tool": ["git_tool", "git "],
         }
         chosen = None
+        _intent_args: dict | None = None
         # 1) Direct mention of any registered tool name in the prompt.
         for tname in tool_names:
             if tname.lower() in prompt:
@@ -2236,6 +2244,31 @@ class Orchestrator:
         # 3) Keyword match against the registry's real tool descriptions so the
         #    brain can deterministically run ANY of the 43 tools when the small
         #    local model narrates instead of emitting OpenAI-style tool_calls.
+        if chosen is None:
+            # 2b) INTENT mapping for verbs that name no tool but clearly require
+            #     one. "inspect the project", "run the tests" and "verify the
+            #     result" are the spec-56 workflow, and without this the subtask
+            #     answers from the model alone ("I cannot access the project").
+            _intent = (
+                (("inspect", "examine", "survey", "audit the project",
+                  "understand the project", "look at the project",
+                  "project structure"), "file_manager",
+                 {"action": "list", "path": "."}),
+                (("run the tests", "run tests", "test suite", "pytest",
+                  "regression test"), "python_executor",
+                 {"code": "import subprocess,sys;sys.exit(subprocess.call(['python','-m','pytest','-q','--no-header','-x'],cwd='.'))"}),
+                (("verify the result", "verify the fix", "confirm the fix",
+                  "check the result"), "git", {"action": "status"}),
+                (("git status", "repository status", "repo status",
+                  "current branch"), "git", {"action": "status"}),
+            )
+            for _phrases, _tname, _targs in _intent:
+                if _tname in tool_names and any(ph in prompt for ph in _phrases):
+                    chosen = _tname
+                    _intent_args = dict(_targs)
+                    break
+        else:
+            _intent_args = None
         if chosen is None:
             import re as _re
             # tokenise the prompt into words (drop very short/trivial tokens)
@@ -2260,9 +2293,14 @@ class Orchestrator:
         if chosen is None:
             return None
         # Build minimal args from the prompt (best-effort, safe).
+        # An intent-mapped call already carries its args.
         args: dict = {}
+        if _intent_args:
+            args = _intent_args
         try:
-            if chosen == "python_executor":
+            if args:
+                pass
+            elif chosen == "python_executor":
                 import re
                 # Only auto-run when the user explicitly provides a code snippet
                 # (clear intent to execute). Do NOT guess arithmetic from prose —
