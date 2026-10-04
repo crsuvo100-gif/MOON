@@ -1043,8 +1043,20 @@ class Orchestrator:
                 sub_task = Task.create(sub, agent_name=agent_name)
                 sub_task.mark_running()
                 self._history.clear()
-                txt, _ = await self._run_cognition_loop(
-                    sub_task, self._agents.get(agent_name, self._agents["planning"]))
+                # Spec 29: a SUBTASK takes the simplest sufficient mode -- a
+                # single grounded pass, not the full cognition loop. Running the
+                # whole loop per subtask (reflection + self-consistency sampling
+                # + repeated tool rounds) multiplied LLM calls by the subtask
+                # count and made a 4-step goal exceed every wall-clock budget on
+                # a low-resource host. One pass per subtask keeps the fan-out
+                # inside the timeout while still using each agent's own brain.
+                try:
+                    txt, _ = await self._fast_answer(
+                        sub_task, self._agents.get(agent_name, self._agents["planning"]))
+                except Exception as exc:  # noqa: BLE001
+                    logger.info("subtask fast pass failed (%s); using full loop", exc)
+                    txt, _ = await self._run_cognition_loop(
+                        sub_task, self._agents.get(agent_name, self._agents["planning"]))
                 return f"- {sub}\n  {txt}"
 
         logger.info("parallel fan-out: %d subtasks, concurrency limit %d",
