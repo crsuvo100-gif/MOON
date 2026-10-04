@@ -64,6 +64,20 @@ app.add_middleware(
 # Serve the interactive HUD (single-file HTML, no server-side routes beyond static serve).
 _HUD_PATH = Path(__file__).resolve().parent.parent / "moon_ui" / "hud.html"
 
+# --- Cognitive memory API (spec 29/30) -------------------------------------
+# Mounted on the EXISTING app rather than starting a second server (spec 1).
+# The router is self-contained and degrades cleanly if the memory subsystem is
+# unavailable, so it can never prevent MOON from starting (spec 55/58).
+try:
+    from app.memory.api import router as _memory_router
+
+    app.include_router(_memory_router)
+except Exception as _mem_exc:  # noqa: BLE001
+    import logging as _logging
+
+    _logging.getLogger(__name__).warning(
+        "memory API not mounted (memory subsystem unavailable): %s", _mem_exc)
+
 @app.get("/ui", response_class=HTMLResponse)
 async def ui_hud():
     """MOON Neural Core interactive HUD — single-page app, live health + WS feed + API explorer."""
