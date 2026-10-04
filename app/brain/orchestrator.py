@@ -32,6 +32,7 @@ from app.brain.validator import Validator
 from app.config.logging import get_logger
 from app.context.retriever import ContextRetriever
 from app.memory.conversation_history import ConversationHistory
+from app.memory.record import MemoryType, Scope, SourceType
 from app.memory.semantic_search import SemanticSearch
 from app.memory.enhanced_long_term import EnhancedLongTermMemory
 from app.memory.enhanced_short_term import EnhancedShortTermMemory
@@ -149,6 +150,10 @@ class Orchestrator:
         self._skill_orchestrator = None
         self._context_orchestrator = None
         self._professional_orchestrator = None
+        # Cognitive memory infrastructure (spec 28/61/62)
+        self._cognitive_memory = None
+        self._context_engine = None
+        self._sync_engine = None
         # spec 17/18/19/37: provider-independent brain routing + recorded fallback
         self._brain_router = None
         # spec 31/36: live agent supervision + bounded recovery decisions
@@ -313,7 +318,29 @@ class Orchestrator:
             logger.info("Advanced memory system init skipped: %s", exc)
             self._advanced_memory = None
 
-        # --- Advanced agent system (pipeline, coordination, learning) ---
+        # --- Cognitive memory infrastructure (spec 28/61/62) ---
+        try:
+            from app.memory.cognitive import CognitiveMemoryManager
+            from app.memory.context_engine import ContextEngine
+            from app.memory.sync import SyncEngine, NullCloudProvider
+            self._cognitive_memory = CognitiveMemoryManager(
+                embed_fn=self._embeddings.embed if self._embeddings else None,
+                vector_store=store,
+            )
+            self._context_engine = ContextEngine()
+            self._sync_engine = SyncEngine(
+                store=self._cognitive_memory._store,
+                provider=NullCloudProvider(),
+                device_id=self._cognitive_memory.device_id,
+            )
+            logger.info("Cognitive memory initialized (device=%s)", self._cognitive_memory.device_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.info("Cognitive memory init skipped: %s", exc)
+            self._cognitive_memory = None
+            self._context_engine = None
+            self._sync_engine = None
+
+        # --- Advanced agent system (pipeline, coordination, learning) --
         try:
             from app.agents.advanced.orchestrator import AdvancedAgentOrchestrator
             self._advanced_agents = AdvancedAgentOrchestrator()
@@ -612,6 +639,12 @@ class Orchestrator:
                     pass
         if getattr(self, "_agent_models", None) is not None:
             await self._agent_models.teardown()
+        # --- Cognitive memory shutdown (spec 56) ---
+        if self._cognitive_memory is not None:
+            try:
+                self._cognitive_memory.close()
+            except Exception:  # noqa: BLE001
+                pass
         # --- Advanced memory shutdown ---
         if getattr(self, "_advanced_memory", None) is not None:
             try:
@@ -1052,14 +1085,19 @@ class Orchestrator:
                 # the subtask count and blew every wall-clock budget here).
                 txt = ""
                 try:
-                    txt, _ = await self._fast_answer(
-                        sub_task, self._agents.get(agent_name, self._agents["planning"]))
-                    # spec 6/17: if the subtask named a tool (or a path), run it
-                    # so the answer is grounded in a REAL result.
-                    invoked = await self._try_explicit_tool(sub_task, txt,
-                                                            self._agents.get(agent_name, self._agents["planning"]))
+                    # spec 6/17: if the subtask clearly needs a tool, run it
+                    # FIRST and skip the wasteful _fast_answer. On a 3.6GB/4CPU
+                    # host with qwen3:0.6b, every LLM call costs 30-60s, and
+                    # doing both doubled the wall clock past the 900s curl
+                    # timeout. The tool result IS the answer.
+                    invoked = await self._try_explicit_tool(
+                        sub_task, "",
+                        self._agents.get(agent_name, self._agents["planning"]))
                     if invoked is not None:
                         txt, _ = invoked
+                    else:
+                        txt, _ = await self._fast_answer(
+                            sub_task, self._agents.get(agent_name, self._agents["planning"]))
                 except Exception as exc:  # noqa: BLE001
                     logger.info("subtask fast pass failed (%s); using full loop", exc)
                     txt, _ = await self._run_cognition_loop(
@@ -1518,6 +1556,22 @@ class Orchestrator:
                 logger.info("result aggregation skipped: %s", exc)
             task.complete(clean, data={"tokens_used": tokens, "issues": validation.issues, "agent": agent.name}, tokens_used=tokens)
             await self._memory.remember(clean, long_term=False)
+            # --- Cognitive memory: store task result (spec 61/62) ---
+            if self._cognitive_memory is not None:
+                try:
+                    self._cognitive_memory.store(
+                        f"Task: {task.prompt[:200]}\nResult: {clean[:500]}",
+                        source_type=SourceType.AGENT,
+                        scope=Scope.TASK,
+                        type_=MemoryType.EPISODIC,
+                        agent_id=agent.name,
+                        task_id=task.id,
+                        explicit=False,
+                    )
+                    if self._sync_engine is not None:
+                        self._sync_engine.sync()
+                except Exception:  # noqa: BLE001
+                    pass
             # --- Advanced memory: store task result ---
             if self._advanced_memory is not None:
                 try:
@@ -1807,6 +1861,23 @@ class Orchestrator:
     ) -> tuple[str, int]:
         assert self._llm is not None and self._tools is not None and self._context is not None
         retrieved = await self._memory.semantic_recall(task.prompt) if self._memory else []
+        # Cognitive memory retrieval (spec 20/21/22/24)
+        if self._cognitive_memory is not None:
+            try:
+                cog_hits = self._cognitive_memory.search(
+                    task.prompt, top_k=8, agent_id=agent.name,
+                )
+                for h in cog_hits:
+                    retrieved.append({
+                        "content": h.record.content,
+                        "score": h.score,
+                        "source": "cognitive_memory",
+                        "scope": h.record.scope.value,
+                        "type": h.record.type.value,
+                        "confidence": h.record.confidence,
+                    })
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("Cognitive memory search failed (skipped): %s", exc)
         # Inject proactive memory context from advanced memory system
         if proactive_context:
             for ctx in proactive_context:

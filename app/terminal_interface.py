@@ -1428,6 +1428,18 @@ async def _run_diagnostics(orch) -> dict:
     checks.append(("Episodic memory", "OK", f"{mem.get('episodic',0)} episodes"))
     checks.append(("Knowledge base", "OK" if mem.get("kb_docs", 0) > 0 else "WARN",
                    f"{mem.get('kb_docs',0)} docs / {mem.get('vector',0)} vectors"))
+    # cognitive memory (spec 50/59)
+    cog = getattr(orch, "_cognitive_memory", None)
+    if cog is not None:
+        try:
+            ch = cog.health()
+            db = ch.get("local_db", {})
+            checks.append(("Cognitive memory", "OK" if db.get("online") else "FAIL",
+                           f"{db.get('total',0)} records / {ch.get('device_id','?')}"))
+        except Exception:
+            checks.append(("Cognitive memory", "FAIL", "health check error"))
+    else:
+        checks.append(("Cognitive memory", "WARN", "not initialized"))
     # system
     sys_ = st.get("system", {})
     checks.append(("System health", "OK" if sys_.get("ram_pct", 100) < 95 else "WARN",
