@@ -284,7 +284,7 @@ except Exception as e:
 # --- 22: terminal integration --------------------------------------------
 try:
     import app.terminal_interface as T
-    routes = [r.path for r in T.app.routes]
+    routes = [r.path for r in T.app.routes if hasattr(r, 'path')]
     need = ["/api/health", "/api/events", "/api/moon-agent"]
     ok = all(any(n == p for p in routes) for n in need)
     rec("22. Terminal integration works", ok,
