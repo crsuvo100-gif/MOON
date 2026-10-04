@@ -143,6 +143,7 @@ class Orchestrator:
         self._agent_model_overrides: dict[str, str | None] = {}
         self._consolidator = None
         self._advanced_memory = None
+        self._advanced_memory_maintenance_task = None
         self._advanced_agents = None
         self._advanced_brain = None
         self._cognitive_loop = None
@@ -304,7 +305,10 @@ class Orchestrator:
         )
         await self._memory_maintenance.start()
 
-        # --- Advanced memory system (unified search, consolidation, proactive) --
+        # --- Advanced memory periodic maintenance ---
+        self._advanced_memory_maintenance_task = None
+
+        # --- Advanced memory system (unified search, consolidation, proactive) ---
         try:
             from app.memory.advanced.orchestrator import AdvancedMemoryOrchestrator
             self._advanced_memory = AdvancedMemoryOrchestrator(
@@ -314,6 +318,10 @@ class Orchestrator:
             await self._advanced_memory.setup()
             # Wire advanced orchestrator into MemoryManager
             self._memory._advanced = self._advanced_memory
+            # Start periodic maintenance for advanced memory
+            self._advanced_memory_maintenance_task = asyncio.create_task(
+                self._advanced_memory_maintenance_loop()
+            )
             logger.info("Advanced memory system initialized")
         except Exception as exc:  # noqa: BLE001
             logger.info("Advanced memory system init skipped: %s", exc)
@@ -637,6 +645,21 @@ class Orchestrator:
 
         self._agent_order = list(self._agents.keys())
 
+    async def _advanced_memory_maintenance_loop(self) -> None:
+        """Periodic maintenance for advanced memory (consolidation + compaction)."""
+        while True:
+            try:
+                await asyncio.sleep(300)  # 5 minutes
+                if self._advanced_memory is not None:
+                    try:
+                        await self._advanced_memory.maintenance()
+                    except Exception:  # noqa: BLE001
+                        pass
+            except asyncio.CancelledError:
+                break
+            except Exception:  # noqa: BLE001
+                pass
+
     async def teardown(self) -> None:
         for attr in ("_llm", "_llm_strong"):
             svc = getattr(self, attr, None)
@@ -651,6 +674,19 @@ class Orchestrator:
         if self._cognitive_memory is not None:
             try:
                 self._cognitive_memory.close()
+            except Exception:  # noqa: BLE001
+                pass
+        # --- Memory maintenance shutdown ---
+        if getattr(self, "_memory_maintenance", None) is not None:
+            try:
+                await self._memory_maintenance.stop()
+            except Exception:  # noqa: BLE001
+                pass
+        # --- Advanced memory maintenance task shutdown ---
+        if getattr(self, "_advanced_memory_maintenance_task", None) is not None:
+            try:
+                self._advanced_memory_maintenance_task.cancel()
+                await self._advanced_memory_maintenance_task
             except Exception:  # noqa: BLE001
                 pass
         # --- Advanced memory shutdown ---
@@ -1933,6 +1969,34 @@ class Orchestrator:
                         "score": getattr(ctx, 'relevance', 0.5),
                         "source": getattr(ctx, 'source', 'proactive'),
                     })
+        # Inject session continuity context (cross-session memory)
+        if self._advanced_memory is not None:
+            try:
+                continuity_ctx = self._advanced_memory.get_continuity_context()
+                for ctx in continuity_ctx:
+                    content = ctx.get('content', '') if isinstance(ctx, dict) else getattr(ctx, 'content', '')
+                    if content:
+                        retrieved.append({
+                            "content": f"[continuity] {content}",
+                            "score": ctx.get('relevance', 0.6) if isinstance(ctx, dict) else getattr(ctx, 'relevance', 0.6),
+                            "source": ctx.get('source', 'continuity') if isinstance(ctx, dict) else getattr(ctx, 'source', 'continuity'),
+                        })
+            except Exception:  # noqa: BLE001
+                pass
+        # Advanced memory unified search (spec 20/21/22)
+        if self._advanced_memory is not None:
+            try:
+                adv_results = await self._advanced_memory.search(task.prompt, top_k=5)
+                for r in adv_results:
+                    content = r.content if hasattr(r, 'content') else str(r)
+                    if content:
+                        retrieved.append({
+                            "content": f"[advanced] {content}",
+                            "score": r.score if hasattr(r, 'score') else 0.5,
+                            "source": r.source if hasattr(r, 'source') else 'advanced_memory',
+                        })
+            except Exception:  # noqa: BLE001
+                pass
         if self._memory is not None:
             try:
                 for ep in self._memory.episodic.recall(task.prompt, k=3):

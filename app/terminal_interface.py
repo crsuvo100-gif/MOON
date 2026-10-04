@@ -445,6 +445,27 @@ def _cognitive_memory_status(orch) -> dict:
         return {"status": "error"}
 
 
+def _advanced_memory_status(orch) -> dict:
+    """Extract advanced memory stats for HUD display."""
+    adv = getattr(orch, "_advanced_memory", None)
+    if adv is None:
+        return {"status": "not_initialized"}
+    try:
+        s = adv.stats()
+        return {
+            "status": "ONLINE" if s.get("setup_complete") else "OFFLINE",
+            "session_id": s.get("session_id", "?"),
+            "features": s.get("features", {}),
+            "consolidation": s.get("consolidation", {}),
+            "proactive": s.get("proactive", {}),
+            "continuity": s.get("continuity", {}),
+            "compaction": s.get("compaction", {}),
+            "analytics": s.get("analytics", {}),
+        }
+    except Exception:
+        return {"status": "error"}
+
+
 async def _moon_status_impl(orch) -> dict:
     """Real MOON status for the terminal HUD (no simulation)."""
     n_agents = 0
@@ -525,6 +546,7 @@ async def _moon_status_impl(orch) -> dict:
             "vector": vec_items,
             "kb_docs": kb_docs,
             "cognitive": _cognitive_memory_status(orch),
+            "advanced": _advanced_memory_status(orch),
             "integrity": round(min(100.0, (kb_docs * 0.85 + (vec_items / max(1, vec_items)) * 15.0)), 1) if kb_docs else 98.7,
         },
         "knowledge": {
@@ -1466,6 +1488,17 @@ async def _run_diagnostics(orch) -> dict:
             checks.append(("Cognitive memory", "FAIL", "health check error"))
     else:
         checks.append(("Cognitive memory", "WARN", "not initialized"))
+    # advanced memory (unified search, consolidation, proactive, continuity)
+    adv = getattr(orch, "_advanced_memory", None)
+    if adv is not None:
+        try:
+            s = adv.stats()
+            checks.append(("Advanced memory", "OK" if s.get("setup_complete") else "FAIL",
+                           f"session={s.get('session_id','?')[:12]}"))
+        except Exception:
+            checks.append(("Advanced memory", "FAIL", "stats error"))
+    else:
+        checks.append(("Advanced memory", "WARN", "not initialized"))
     # sync engine (spec 32/59)
     sync = getattr(orch, "_sync_engine", None)
     if sync is not None:
