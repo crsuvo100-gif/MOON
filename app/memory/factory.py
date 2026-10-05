@@ -38,7 +38,7 @@ def memory_store_factory() -> LocalMemoryStore | CloudMemoryStore:
 
     backend = os.getenv(_BACKEND_ENV_VAR, _DEFAULT_BACKEND).lower()
     if backend == "cloud":
-        _instance = CloudMemoryStore()
+        _instance = CloudMemoryStore()  # uses MOON_DATABASE_URL
     else:
         # Fallback to local SQLite regardless of typo or unknown value.
         _instance = LocalMemoryStore()
