@@ -49,13 +49,17 @@ class AgentTester:
     def _direct_test(artifact: BuildArtifact) -> TestResult:
         import os, sys
         from pathlib import Path as _P
-        repo = _P(__file__).resolve().parents[2]
-        py = repo / ".venv" / "bin" / "python"
+        test_dir = Path(artifact.test_path).parent
+        py = test_dir / ".venv" / "bin" / "python"
         if not py.exists():
-            py = _P(sys.executable)
+            py = Path(sys.executable)
+        # Ensure the project root is on PYTHONPATH so imports like `app.*` work.
+        project_root = str(Path.cwd())
+        py_path = os.environ.get("PYTHONPATH", "")
+        combined = f"{project_root}:{test_dir}" if not py_path else f"{project_root}:{test_dir}:{py_path}"
         r = subprocess.run([str(py), "-m", "pytest", str(artifact.test_path), "-q", "--no-header"],
-                           capture_output=True, text=True, timeout=120, cwd=str(repo),
-                           env={**os.environ, "PYTHONPATH": str(repo)})
+                           capture_output=True, text=True, timeout=120, cwd=str(test_dir),
+                           env={**os.environ, "PYTHONPATH": combined})
         return TestResult(passed=(r.returncode == 0), rc=r.returncode, output=r.stdout + r.stderr)
 
 

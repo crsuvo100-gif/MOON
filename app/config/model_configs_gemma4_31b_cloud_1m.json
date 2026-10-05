@@ -1,0 +1,13 @@
+{
+  "models": {
+    "gemma4:31b-cloud": {
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "supports_tools": true,
+      "supports_vision": false,
+      "supports_system_messages": true,
+      "temperature_range": [0.0, 2.0],
+      "description": "Gemma 4 31B Cloud model with 1M token context window (upgraded from 262.1K)"
+    }
+  }
+}

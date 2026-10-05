@@ -31,7 +31,9 @@ from app.memory.record import (
 )
 from app.memory.retrieval import HybridRetriever, RetrievalCache, rewrite_query
 from app.memory.security import detect_secret
-from app.memory.store import LocalMemoryStore, MemoryStore, default_db_path
+from app.memory.store import MemoryStore, default_db_path
+from .factory import memory_store_factory
+from .store import LocalMemoryStore
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +45,7 @@ class CognitiveMemoryManager:
                  device_id: str = "", project_id: str = "MOON",
                  embed_fn: Any = None, vector_store: Any = None,
                  agent_id: str = "") -> None:
-        self._store: MemoryStore = store or LocalMemoryStore()
+        self._store: MemoryStore = store or memory_store_factory()
         self._pipeline = CandidatePipeline()
         self._policy = MemoryPolicyEngine()
         self._retriever = HybridRetriever(embed_fn=embed_fn, vector_store=vector_store)

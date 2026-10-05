@@ -38,16 +38,15 @@ class CapabilityAnalyzer:
         cands = self._reg.select(capability=" ".join(kws)) if kws else []
         if cands:
             match = cands[0].id
-        # also direct substring name match
+        # also direct substring name match with case‑insensitive ID check
         if not match:
             for m in self._reg.all():
-                if m.status == "active" and (m.id in norm or m.name.lower() in norm):
+                if m.status == "active" and (m.id.lower() in norm or m.name.lower() in norm):
                     match = m.id
                     break
         decision = "REUSE" if match else "CREATE"
         return CapabilityNeed(raw=raw, normalized=norm, keywords=kws,
                               existing_match=match, decision=decision)
-
     def report(self, need: CapabilityNeed) -> dict[str, Any]:
         return {
             "raw": need.raw, "keywords": need.keywords,

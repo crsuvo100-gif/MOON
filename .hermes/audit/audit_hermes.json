@@ -1,0 +1,22 @@
+{
+  "module": "hermes_tools",
+  "file": "/home/meow/.hermes/cache/scratch/hermes_kernel_12gfig67/hermes_tools.py",
+  "attributes": [
+    "json",
+    "json_parse",
+    "os",
+    "patch",
+    "read_file",
+    "retry",
+    "search_files",
+    "shell_quote",
+    "shlex",
+    "socket",
+    "terminal",
+    "threading",
+    "time",
+    "web_extract",
+    "web_search",
+    "write_file"
+  ]
+}

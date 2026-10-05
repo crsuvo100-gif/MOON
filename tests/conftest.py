@@ -1,5 +1,7 @@
 """Pytest configuration for MOON.
 
+# Added top‑level fixtures for temporary repo copy and session guard.
+
 Provides a `live` marker + session guard: tests that require a running model
 backend (Ollama / live Orchestrator) are automatically SKIPPED when the backend
 is unreachable, so CI on GitHub (no Ollama, no GPU) stays green and honest --
@@ -14,6 +16,7 @@ from __future__ import annotations
 import os
 import sys
 import urllib.request
+import subprocess
 
 import pytest
 
@@ -68,3 +71,28 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "live" in item.keywords:
             item.add_marker(skip)
+
+
+# === Additional fixtures for temporary directories and sandboxed env ===
+@pytest.fixture(scope="session")
+def temp_dir(tmp_path_factory):
+    """Provide a temporary directory for the entire test session.
+    The directory is created once and cleaned up by pytest automatically.
+    """
+    return tmp_path_factory.mktemp("moon_temp")
+
+
+@pytest.fixture(autouse=True)
+def sandbox_env(monkeypatch, temp_dir):
+    """Sandbox environment variables for each test.
+    Prevents leakage of host env vars and ensures a clean PATH.
+    """
+    # Clear potentially dangerous vars.
+    for var in ["PYTHONPATH", "PATH", "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH"]:
+        monkeypatch.delenv(var, raising=False)
+    # Provide a minimal safe PATH.
+    monkeypatch.setenv("PATH", "/usr/bin:/bin")
+    # Ensure a temp directory for any file writes.
+    monkeypatch.setenv("MOON_TEMP", str(temp_dir))
+    yield
+

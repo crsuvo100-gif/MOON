@@ -1,0 +1,15 @@
+{
+  "scan": "Scanning project at /home/meow/Projects/MOON",
+  "first_run": {
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "/home/meow/Projects/MOON/.venv/bin/python: No module named pytest\n"
+  },
+  "installed": true,
+  "retry_run": {
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "/home/meow/Projects/MOON/.venv/bin/python: No module named pytest\n"
+  },
+  "final_returncode": 1
+}

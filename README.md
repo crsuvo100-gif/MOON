@@ -28,6 +28,27 @@ true speech dictation. Without vosk it runs in typed mode but still replies in
 MOON's female voice. The voice module is `app/voice.py`.
 
 ## Quick start
+
+### Starting the terminal UI
+
+The default entry point for the interactive terminal UI is:
+
+```bash
+python -m moon terminal
+```
+
+**Alternative entry point** (direct module invocation):
+
+```bash
+python -m moon_terminal
+```
+
+Both commands launch the same Textual TUI.
+
+
+Running `python -m moon` without arguments also launches the terminal, as it is the default sub‑command. Use this command to open the Textual TUI, issue commands, and interact with MOON’s agents.
+
+
 ```bash
 python -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env

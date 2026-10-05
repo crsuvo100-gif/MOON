@@ -1,0 +1,32 @@
+# Simple risk policy – map regex patterns to risk levels.
+# The file lives at app/terminal/risk_policy.yaml and is loaded by RiskEngine.
+
+high_risk:
+  - "rm -rf"
+  - "sudo"
+  - "chmod"
+  - "chown"
+  - "dd if="
+  - "mkfs"
+  - ":(){ :|:& };"
+
+medium_risk:
+  - "kill"
+  - "apt-get install"
+  - "pip install"
+  - "git push"
+  - "docker run"
+
+low_risk:
+  - "ls"
+  - "pwd"
+  - "git status"
+  - "cat"
+  - "echo"
+  - "python --version"
+
+auto_allow:
+  - "ls"
+  - "pwd"
+  - "git status"
+  - "python --version"

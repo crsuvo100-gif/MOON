@@ -1,36 +1,35 @@
-"""Shell command execution tool (hosted, guarded)."""
+"""Shell command execution tool (hosted, guarded).
+
+Provides a guard‑ed terminal execution that respects MOON's risk, permission, backend, and verification pipelines.
+"""
 
 from __future__ import annotations
 
 import asyncio
-import logging
-from typing import Any
+from typing import Any, Dict
 
 from app.tools.base import BaseTool
-
-logger = logging.getLogger(__name__)
-
-_DANGEROUS = ("rm -rf", "shutdown", "reboot", "dd if=")
-
+from app.terminal.execution_engine import ExecutionEngine
+from app.terminal.models import ExecutionRequest, ExecutionResult
 
 class TerminalTool(BaseTool):
+    """Agent‑visible terminal tool.
+
+    Accepts a ``request`` argument (dict or ExecutionRequest) and runs it via
+    MOON's ``ExecutionEngine``. Returns the ``ExecutionResult`` as a plain dict.
+    """
+
     name = "terminal"
-    description = "Run a shell command on the host."
+    description = "Execute a command with full terminal model (risk, backend, verification)."
 
-    def is_dangerous(self) -> bool:
-        return True
-
-    async def execute(self, command: str = "", **kwargs: Any) -> str:
-        if not command:
-            return "[no command]"
-        low = command.lower()
-        if any(d in low for d in _DANGEROUS):
-            return "[refused: potentially dangerous command]"
-        try:
-            proc = await asyncio.create_subprocess_shell(
-                command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-            )
-            out, err = await asyncio.wait_for(proc.communicate(), timeout=30)
-            return (out or b"").decode(errors="replace")[:2000] + (err or b"").decode(errors="replace")[:500]
-        except Exception as exc:  # noqa: BLE001
-            return f"[terminal error: {exc}]"
+    async def execute(self, **kwargs: Any) -> Dict[str, Any]:
+        request_obj = kwargs.get("request")
+        if request_obj is None:
+            return {"error": "Missing 'request' argument"}
+        if isinstance(request_obj, ExecutionRequest):
+            exec_req = request_obj
+        else:
+            exec_req = ExecutionRequest.parse_obj(request_obj)
+        engine = ExecutionEngine()
+        result: ExecutionResult = engine.execute(exec_req)  # type: ignore[arg-type]
+        return result.dict()
