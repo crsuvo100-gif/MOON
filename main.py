@@ -451,6 +451,7 @@ def main() -> int:
     #   moon / moon terminal / moon run  ->  Hermes-style TUI (moonscope)
     #   moon cli  ->  readline REPL (fallback, Hermes-feature-rich)
     #   moon terminal-moon  ->  standalone MOON Terminal (terminal_moon/ sub-project)
+    sub.add_parser("terminal", help="Interactive MOON Terminal REPL (brain-connected)")
     sub.add_parser("telegram", help="Launch MOON's Telegram bot listener (polling)")
     sub.add_parser("doctor", help="Health check: Python/deps/config/DB/agents/tools/model/git")
     sub.add_parser("status", help="Check the running MOON backend health endpoint")
