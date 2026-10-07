@@ -59,14 +59,14 @@ class PermissionEngine:
     """
 
     _DEFAULT_POLICY = """
-    - pattern: "*"
-      action: allow
     - pattern: "*rm *"
       action: ask
     - pattern: "*dd *"
       action: ask
     - pattern: "*mkfs *"
       action: deny
+    - pattern: "*"
+      action: allow
     """
 
     def __init__(self, policy_path: Path | None = None):

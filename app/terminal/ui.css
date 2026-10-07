@@ -1,0 +1,170 @@
+/* MOON Terminal UI — professional dark theme */
+
+Screen {
+    background: #0a0a0f;
+}
+
+#main-container {
+    layout: vertical;
+    height: 1fr;
+}
+
+#header-bar {
+    height: 3;
+    background: #12121a;
+    color: #00ff88;
+    padding: 0 2;
+    border-bottom: solid #1a1a2e;
+}
+
+#header-title {
+    color: #00ff88;
+    text-style: bold;
+}
+
+#header-status {
+    color: #8888aa;
+}
+
+#session-bar {
+    height: 2;
+    background: #0d0d14;
+    color: #6666aa;
+    padding: 0 2;
+    border-bottom: solid #1a1a2e;
+}
+
+#output-container {
+    height: 1fr;
+    background: #0a0a0f;
+    border: solid #1a1a2e;
+    margin: 0 1;
+    padding: 0 1;
+}
+
+#output-scroll {
+    height: 1fr;
+}
+
+#output-text {
+    color: #ccccdd;
+    background: #0a0a0f;
+}
+
+#output-text .stdout {
+    color: #ccccdd;
+}
+
+#output-text .stderr {
+    color: #ff6666;
+}
+
+#output-text .command {
+    color: #00ff88;
+    text-style: bold;
+}
+
+#output-text .status {
+    color: #ffaa00;
+}
+
+#output-text .error {
+    color: #ff4444;
+    text-style: bold;
+}
+
+#output-text .success {
+    color: #00ff88;
+}
+
+#output-text .system {
+    color: #6666aa;
+}
+
+#input-container {
+    height: 3;
+    background: #12121a;
+    padding: 0 2;
+    border-top: solid #1a1a2e;
+}
+
+#command-input {
+    background: #0a0a0f;
+    color: #ccccdd;
+    border: solid #333355;
+}
+
+#command-input:focus {
+    border: solid #00ff88;
+}
+
+#status-bar {
+    height: 2;
+    background: #12121a;
+    color: #6666aa;
+    padding: 0 2;
+    border-top: solid #1a1a2e;
+}
+
+#process-panel {
+    width: 30;
+    height: 1fr;
+    background: #0d0d14;
+    border-left: solid #1a1a2e;
+    padding: 0 1;
+    display: none;
+}
+
+#process-panel.visible {
+    display: block;
+}
+
+#session-panel {
+    width: 30;
+    height: 1fr;
+    background: #0d0d14;
+    border-right: solid #1a1a2e;
+    padding: 0 1;
+    display: none;
+}
+
+#session-panel.visible {
+    display: block;
+}
+
+#permission-dialog {
+    align: center middle;
+    background: #0a0a0f;
+    border: solid #ffaa00;
+    padding: 2 4;
+    width: 60;
+    height: auto;
+}
+
+#permission-dialog .title {
+    color: #ffaa00;
+    text-style: bold;
+}
+
+#permission-dialog .command {
+    color: #ccccdd;
+    text-style: bold;
+}
+
+#permission-dialog .risk {
+    color: #ff4444;
+}
+
+#permission-dialog .button {
+    margin: 1 2;
+}
+
+#permission-dialog .allow {
+    background: #00aa44;
+    color: #ffffff;
+}
+
+#permission-dialog .deny {
+    background: #aa0000;
+    color: #ffffff;
+}

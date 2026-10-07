@@ -99,3 +99,7 @@ class SessionManager:
             self._save()
             return
         raise KeyError(f"Session {session_id} not found")
+
+
+# Module-level singleton
+session_manager = SessionManager()
