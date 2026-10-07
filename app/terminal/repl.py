@@ -275,9 +275,9 @@ class MoonTerminalREPL:
 
         print()
         self._running = True
-        self._repl_loop()
+        await self._repl_loop()
 
-    def _repl_loop(self) -> None:
+    async def _repl_loop(self) -> None:
         """Main readline loop."""
         # Set up readline history
         history_file = Path.home() / ".moon_terminal_history"
@@ -315,7 +315,7 @@ class MoonTerminalREPL:
                     _execute_shell(cmd, inline=True)
             else:
                 # Natural language → brain
-                self._handle_brain_input(user_input)
+                await self._handle_brain_input(user_input)
 
         # Save readline history
         try:
@@ -327,7 +327,7 @@ class MoonTerminalREPL:
         if self.orchestrator is not None:
             print(f"\n{_DIM}  Shutting down brain...{_RESET}")
             try:
-                asyncio.run(self.orchestrator.teardown())
+                await self.orchestrator.teardown()
             except Exception:
                 pass
         print(f"{_DIM}  Goodbye.{_RESET}\n")
@@ -363,7 +363,7 @@ class MoonTerminalREPL:
         else:
             print(f"{_YELLOW}  Unknown command: {command}. Type /help for help.{_RESET}")
 
-    def _handle_brain_input(self, prompt: str) -> None:
+    async def _handle_brain_input(self, prompt: str) -> None:
         """Send natural language to the brain."""
         if self.orchestrator is None:
             print(f"{_RED}  Brain not available. Use !<cmd> for shell or /help for commands.{_RESET}")
@@ -372,7 +372,7 @@ class MoonTerminalREPL:
         self._busy = True
         print(f"{_DIM}  Thinking...{_RESET}")
         try:
-            response = asyncio.run(_run_brain(self.orchestrator, prompt))
+            response = await _run_brain(self.orchestrator, prompt)
             print(f"\n{_BOLD}{_RED}  MOON:{_RESET} {response}\n")
         except Exception as exc:
             print(f"{_RED}  Brain error: {exc}{_RESET}\n")
