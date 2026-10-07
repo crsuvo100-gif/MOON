@@ -439,7 +439,7 @@ def _cmd_update() -> int:
     return _cmd_doctor()
 
 
-def main() -> None:
+def main() -> int:
     ap = argparse.ArgumentParser(prog="moon", description="Standalone AI Agent")
     sub = ap.add_subparsers(dest="cmd")
     run_p = sub.add_parser("run", help="Run a single task via LLM, or launch moonscope TUI if no task given")
@@ -470,12 +470,13 @@ def main() -> None:
             asyncio.run(_run(task, args.agent))
         else:
             print("No task given. Use: moon run \"<task>\" or moon <subcommand>")
-            return
+            return 1
     elif args.cmd == "models":
         asyncio.run(_prefetch_models())
     elif args.cmd == "terminal":
-        print("Terminal UI removed. Use: moon run \"<task>\" or moon api", file=sys.stderr)
-        return 1
+        from app.terminal.repl import main as _repl_main
+        _repl_main()
+        return 0
     elif args.cmd == "cli":
         print("CLI removed. Use: moon run \"<task>\" or moon api", file=sys.stderr)
         return 1
@@ -509,9 +510,11 @@ def main() -> None:
         raise SystemExit(_tg_main())
     elif args.cmd == "version":
         _cmd_version()
+        return 0
     else:
         # No subcommand -> show help
         ap.print_help()
+        return 0
 
 
 if __name__ == "__main__":
