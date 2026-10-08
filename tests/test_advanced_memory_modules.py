@@ -1,6 +1,7 @@
 """Tests for advanced memory modules — reasoning, conflict resolution,
 importance scoring, temporal reasoning, lifecycle, summarization,
-clustering, and recommendations."""
+clustering, recommendations, forgetting curves, association engine,
+query planning, memory export, validation, and deduplication."""
 
 from __future__ import annotations
 
@@ -43,6 +44,37 @@ from app.memory.advanced.clustering import (
 from app.memory.advanced.recommendation import (
     MemoryRecommender,
     MemoryRecommendation,
+)
+from app.memory.advanced.forgetting_curve import (
+    ForgettingCurveManager,
+    ForgettingCurve,
+    ReviewSchedule,
+)
+from app.memory.advanced.association_engine import (
+    AssociationEngine,
+    Association,
+    AssociationPath,
+)
+from app.memory.advanced.query_planner import (
+    QueryPlanner,
+    QueryPlan,
+    SubQuery,
+    PlannedResult,
+)
+from app.memory.advanced.memory_exporter import (
+    MemoryExporter,
+    ExportResult,
+)
+from app.memory.advanced.memory_validator import (
+    MemoryValidator,
+    ValidationIssue,
+    ValidationReport,
+)
+from app.memory.advanced.deduplication import (
+    MemoryDeduplicator,
+    DuplicateGroup,
+    DeduplicationReport,
+    MergeResult,
 )
 
 
@@ -610,3 +642,423 @@ class TestMemoryRecommender:
         recommender.recommend("test context")
         stats = recommender.stats()
         assert stats["recommendation_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Forgetting Curve Tests
+# ---------------------------------------------------------------------------
+
+
+class TestForgettingCurve:
+    def test_creation(self):
+        curve = ForgettingCurve(memory_id="mem_1")
+        assert curve.memory_id == "mem_1"
+        assert curve.stability > 0
+        assert curve.review_count == 0
+
+    def test_retention_decays_over_time(self):
+        now = time.time()
+        curve = ForgettingCurve(memory_id="mem_1", stability=100.0, last_access=now - 200.0)
+        r = curve.retention(at_time=now)
+        assert 0.0 < r < 1.0
+
+    def test_retention_fresh_memory(self):
+        now = time.time()
+        curve = ForgettingCurve(memory_id="mem_1", stability=100.0, last_access=now)
+        r = curve.retention(at_time=now)
+        assert r == pytest.approx(1.0, abs=0.01)
+
+    def test_review_increases_stability(self):
+        curve = ForgettingCurve(memory_id="mem_1", stability=100.0)
+        old_stability = curve.stability
+        curve.review()
+        assert curve.stability > old_stability
+        assert curve.review_count == 1
+
+    def test_is_at_risk(self):
+        now = time.time()
+        curve = ForgettingCurve(memory_id="mem_1", stability=1.0, last_access=now - 10000.0)
+        assert curve.is_at_risk(threshold=0.5)
+
+    def test_time_to_threshold(self):
+        curve = ForgettingCurve(memory_id="mem_1", stability=100.0)
+        t = curve.time_to_threshold(threshold=0.5)
+        assert t > 0
+
+    def test_to_dict(self):
+        curve = ForgettingCurve(memory_id="mem_1")
+        d = curve.to_dict()
+        assert d["memory_id"] == "mem_1"
+        assert "current_retention" in d
+        assert "at_risk" in d
+
+
+class TestForgettingCurveManager:
+    def test_creation(self):
+        mgr = ForgettingCurveManager()
+        assert mgr._curves == {}
+
+    def test_register_memory(self):
+        mgr = ForgettingCurveManager()
+        curve = mgr.register_memory("mem_1")
+        assert curve.memory_id == "mem_1"
+        assert "mem_1" in mgr._curves
+
+    def test_get_retention(self):
+        mgr = ForgettingCurveManager()
+        mgr.register_memory("mem_1")
+        r = mgr.get_retention("mem_1")
+        assert 0.0 <= r <= 1.0
+
+    def test_get_at_risk_empty(self):
+        mgr = ForgettingCurveManager()
+        assert mgr.get_at_risk_memories() == []
+
+    def test_get_review_schedule(self):
+        mgr = ForgettingCurveManager()
+        mgr.register_memory("mem_1")
+        schedule = mgr.get_review_schedule("mem_1")
+        assert schedule is not None
+        assert schedule.memory_id == "mem_1"
+        assert len(schedule.intervals) > 0
+
+    def test_get_due_reviews_empty(self):
+        mgr = ForgettingCurveManager()
+        assert mgr.get_due_reviews() == []
+
+    def test_adjust_importance(self):
+        mgr = ForgettingCurveManager()
+        mgr.register_memory("mem_1")
+        adjusted = mgr.adjust_importance("mem_1", 0.5)
+        assert 0.0 <= adjusted <= 1.0
+
+    def test_stats(self):
+        mgr = ForgettingCurveManager()
+        mgr.register_memory("mem_1")
+        stats = mgr.stats()
+        assert stats["total_memories"] == 1
+        assert "at_risk" in stats
+        assert "avg_retention" in stats
+
+
+# ---------------------------------------------------------------------------
+# Association Engine Tests
+# ---------------------------------------------------------------------------
+
+
+class TestAssociationEngine:
+    def test_creation(self):
+        engine = AssociationEngine()
+        assert engine._associations == {}
+        assert not engine._built
+
+    def test_compute_association_identical(self):
+        engine = AssociationEngine()
+        strength, assoc_type, shared = engine._compute_association(
+            "hello world", ["tag1"], time.time(),
+            "hello world", ["tag1"], time.time(),
+        )
+        assert strength > 0.5
+        assert len(shared) > 0
+
+    def test_compute_association_different(self):
+        engine = AssociationEngine()
+        strength, assoc_type, shared = engine._compute_association(
+            "apple banana", ["fruit"], time.time(),
+            "car engine", ["vehicle"], time.time(),
+        )
+        assert strength < 0.5
+
+    def test_get_related_empty(self):
+        import asyncio
+        engine = AssociationEngine()
+        related = asyncio.run(engine.get_related("nonexistent"))
+        assert related == []
+
+    def test_find_paths_empty(self):
+        import asyncio
+        engine = AssociationEngine()
+        paths = asyncio.run(engine.find_paths("a", "b"))
+        assert paths == []
+
+    def test_suggest_new_associations_empty(self):
+        import asyncio
+        engine = AssociationEngine()
+        suggestions = asyncio.run(engine.suggest_new_associations())
+        assert suggestions == []
+
+    def test_stats(self):
+        engine = AssociationEngine()
+        stats = engine.stats()
+        assert stats["total_associations"] == 0
+        assert "by_type" in stats
+
+
+# ---------------------------------------------------------------------------
+# Query Planner Tests
+# ---------------------------------------------------------------------------
+
+
+class TestQueryPlanner:
+    def test_creation(self):
+        planner = QueryPlanner()
+        assert planner._plan_count == 0
+
+    def test_plan_simple_query(self):
+        planner = QueryPlanner()
+        plan = planner.plan("What is API authentication?")
+        assert plan.original_query == "What is API authentication?"
+        assert len(plan.sub_queries) >= 1
+        assert plan.execution_strategy in ("parallel", "sequential", "mixed")
+
+    def test_plan_complex_query(self):
+        planner = QueryPlanner()
+        plan = planner.plan("What did we learn about API auth and how does it relate to security?")
+        assert len(plan.sub_queries) >= 1
+
+    def test_decompose_single(self):
+        planner = QueryPlanner()
+        parts = planner._decompose_query("simple query")
+        assert len(parts) == 1
+
+    def test_infer_sources_default(self):
+        planner = QueryPlanner()
+        sources = planner._infer_sources("random text")
+        assert isinstance(sources, list)
+        assert len(sources) > 0
+
+    def test_infer_sources_ltm(self):
+        planner = QueryPlanner()
+        sources = planner._infer_sources("what did we learn about security")
+        assert "ltm" in sources
+
+    def test_infer_sources_episodic(self):
+        planner = QueryPlanner()
+        sources = planner._infer_sources("what did we do yesterday")
+        assert "episodic" in sources
+
+    def test_extract_keywords(self):
+        planner = QueryPlanner()
+        keywords = planner._extract_keywords("API authentication with JWT tokens")
+        assert "api" in keywords
+        assert "authentication" in keywords
+        assert "jwt" in keywords
+        assert "tokens" in keywords
+
+    def test_extract_time_range_last_week(self):
+        planner = QueryPlanner()
+        tr = planner._extract_time_range("what happened last week")
+        assert tr is not None
+        assert tr[1] > tr[0]
+
+    def test_extract_time_range_none(self):
+        planner = QueryPlanner()
+        tr = planner._extract_time_range("what is authentication")
+        assert tr is None
+
+    def test_determine_strategy_single(self):
+        planner = QueryPlanner()
+        sq = SubQuery(query_text="test", target_sources=["ltm"])
+        strategy = planner._determine_strategy([sq])
+        assert strategy == "sequential"
+
+    def test_stats(self):
+        planner = QueryPlanner()
+        planner.plan("test query")
+        stats = planner.stats()
+        assert stats["plan_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Memory Exporter Tests
+# ---------------------------------------------------------------------------
+
+
+class TestMemoryExporter:
+    def test_creation(self):
+        exporter = MemoryExporter()
+        assert exporter._mm is None
+
+    def test_to_json_no_manager(self):
+        import asyncio
+        exporter = MemoryExporter()
+        result = asyncio.run(exporter.to_json())
+        assert result.format == "json"
+        assert result.memory_count == 0
+
+    def test_to_markdown_no_manager(self):
+        import asyncio
+        exporter = MemoryExporter()
+        result = asyncio.run(exporter.to_markdown())
+        assert result.format == "markdown"
+        assert result.memory_count == 0
+
+    def test_to_csv_no_manager(self):
+        import asyncio
+        exporter = MemoryExporter()
+        result = asyncio.run(exporter.to_csv())
+        assert result.format == "csv"
+        assert result.memory_count == 0
+
+    def test_to_text_no_manager(self):
+        import asyncio
+        exporter = MemoryExporter()
+        result = asyncio.run(exporter.to_text())
+        assert result.format == "text"
+        assert result.memory_count == 0
+
+    def test_export_to_file_invalid_format(self, tmp_path):
+        import asyncio
+        exporter = MemoryExporter()
+        with pytest.raises(ValueError, match="Unsupported format"):
+            asyncio.run(exporter.export_to_file(str(tmp_path / "test.xyz"), format="xyz"))
+
+    def test_stats(self):
+        exporter = MemoryExporter()
+        stats = exporter.stats()
+        assert "json" in stats["supported_formats"]
+        assert "markdown" in stats["supported_formats"]
+        assert "csv" in stats["supported_formats"]
+        assert "text" in stats["supported_formats"]
+
+
+# ---------------------------------------------------------------------------
+# Memory Validator Tests
+# ---------------------------------------------------------------------------
+
+
+class TestMemoryValidator:
+    def test_creation(self):
+        validator = MemoryValidator()
+        assert validator._mm is None
+
+    def test_validate_all_no_manager(self):
+        import asyncio
+        validator = MemoryValidator()
+        report = asyncio.run(validator.validate_all())
+        assert report.total_memories == 0
+        assert report.health_score == 1.0
+
+    def test_check_contradictions(self):
+        validator = MemoryValidator()
+        memories = [
+            {"id": "1", "content": "the sky is blue", "tags": [], "created_at": time.time()},
+            {"id": "2", "content": "the sky is not blue", "tags": [], "created_at": time.time()},
+        ]
+        issues = validator._check_contradictions(memories)
+        assert len(issues) > 0
+        assert issues[0].issue_type == "contradiction"
+
+    def test_check_low_quality_short(self):
+        validator = MemoryValidator(min_content_length=10)
+        memories = [
+            {"id": "1", "content": "hi", "tags": [], "created_at": time.time()},
+        ]
+        issues = validator._check_low_quality(memories)
+        assert any(i.issue_type == "low_quality" for i in issues)
+
+    def test_check_low_quality_vague(self):
+        validator = MemoryValidator()
+        memories = [
+            {"id": "1", "content": "something stuff maybe perhaps", "tags": [], "created_at": time.time()},
+        ]
+        issues = validator._check_low_quality(memories)
+        assert any(i.issue_type == "low_quality" for i in issues)
+
+    def test_check_temporal_consistency(self):
+        validator = MemoryValidator()
+        future = time.time() + 999999
+        memories = [
+            {"id": "1", "content": "test", "tags": [], "created_at": future},
+        ]
+        issues = validator._check_temporal_consistency(memories)
+        assert len(issues) > 0
+        assert issues[0].issue_type == "temporal"
+
+    def test_check_completeness_no_tags(self):
+        validator = MemoryValidator()
+        memories = [
+            {"id": "1", "content": "test memory content", "tags": [], "created_at": time.time()},
+        ]
+        issues = validator._check_completeness(memories)
+        assert any(i.issue_type == "incomplete" for i in issues)
+
+    def test_check_duplicates(self):
+        validator = MemoryValidator()
+        memories = [
+            {"id": "1", "content": "the quick brown fox jumps", "tags": [], "created_at": time.time()},
+            {"id": "2", "content": "the quick brown fox jumps", "tags": [], "created_at": time.time()},
+        ]
+        issues = validator._check_duplicates(memories)
+        assert len(issues) > 0
+        assert issues[0].issue_type == "duplicate"
+
+    def test_health_score_perfect(self):
+        report = ValidationReport(total_memories=10, issues=[])
+        assert report.health_score == 1.0
+
+    def test_health_score_with_issues(self):
+        issues = [
+            ValidationIssue("contradiction", "high", "1", "test"),
+            ValidationIssue("low_quality", "medium", "2", "test"),
+        ]
+        report = ValidationReport(total_memories=10, issues=issues)
+        assert report.health_score < 1.0
+
+    def test_stats(self):
+        validator = MemoryValidator()
+        stats = validator.stats()
+        assert "min_content_length" in stats
+        assert "max_duplicate_similarity" in stats
+
+
+# ---------------------------------------------------------------------------
+# Deduplication Tests
+# ---------------------------------------------------------------------------
+
+
+class TestMemoryDeduplicator:
+    def test_creation(self):
+        dedup = MemoryDeduplicator()
+        assert dedup._mm is None
+
+    def test_find_duplicates_no_manager(self):
+        import asyncio
+        dedup = MemoryDeduplicator()
+        report = asyncio.run(dedup.find_duplicates())
+        assert report.total_memories == 0
+        assert report.total_duplicates == 0
+
+    def test_compute_similarity_identical(self):
+        dedup = MemoryDeduplicator()
+        sim = dedup._compute_similarity("hello world", "hello world")
+        assert sim == 1.0
+
+    def test_compute_similarity_different(self):
+        dedup = MemoryDeduplicator()
+        sim = dedup._compute_similarity("apple banana", "car engine")
+        assert sim == 0.0
+
+    def test_compute_similarity_partial(self):
+        dedup = MemoryDeduplicator()
+        sim = dedup._compute_similarity("the quick brown fox", "the quick red fox")
+        assert 0.0 < sim < 1.0
+
+    def test_merge_duplicates_empty(self):
+        import asyncio
+        dedup = MemoryDeduplicator()
+        results = asyncio.run(dedup.merge_duplicates([]))
+        assert results == []
+
+    def test_duplicate_rate_zero(self):
+        report = DeduplicationReport(total_memories=10, total_duplicates=0)
+        assert report.duplicate_rate == 0.0
+
+    def test_duplicate_rate_nonzero(self):
+        report = DeduplicationReport(total_memories=10, total_duplicates=5)
+        assert report.duplicate_rate == 0.5
+
+    def test_stats(self):
+        dedup = MemoryDeduplicator()
+        stats = dedup.stats()
+        assert "near_duplicate_threshold" in stats
