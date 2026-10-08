@@ -17,6 +17,15 @@ from app.agents.advanced.tool_optimizer import ToolOptimizer, ToolUsage
 from app.agents.advanced.state_manager import AgentStateManager, AgentState as PersistedState
 from app.agents.advanced.orchestrator import AdvancedAgentOrchestrator
 from app.agents.advanced.workflow import ProfessionalAgentWorkflow, WorkflowResult
+from app.agents.advanced.debate import AgentDebate, DebateFormat, DebatePhase
+from app.agents.advanced.evolution import EvolutionEngine, EvolutionStrategy, FitnessMetric
+from app.agents.advanced.negotiation import AgentNegotiation, NegotiationProtocol, NegotiationPhase
+from app.agents.advanced.causal_reasoning import CausalReasoner, CausalRelationType, InterventionType
+from app.agents.advanced.creative_thinking import CreativeThinker, CreativeMethod
+from app.agents.advanced.decision_making import DecisionMaker, DecisionMethod, RiskLevel
+from app.agents.advanced.context_reasoning import ContextReasoner, ContextType, ContextPriority, SituationType
+from app.agents.advanced.memory_reasoning import MemoryReasoner, MemoryType, RetrievalStrategy
+from app.agents.advanced.skill_reasoning import SkillReasoner, SkillCategory, SkillLevel, SkillStatus
 
 __all__ = [
     "AgentPipeline",
@@ -49,4 +58,32 @@ __all__ = [
     "AdvancedAgentOrchestrator",
     "ProfessionalAgentWorkflow",
     "WorkflowResult",
+    "AgentDebate",
+    "DebateFormat",
+    "DebatePhase",
+    "EvolutionEngine",
+    "EvolutionStrategy",
+    "FitnessMetric",
+    "AgentNegotiation",
+    "NegotiationProtocol",
+    "NegotiationPhase",
+    "CausalReasoner",
+    "CausalRelationType",
+    "InterventionType",
+    "CreativeThinker",
+    "CreativeMethod",
+    "DecisionMaker",
+    "DecisionMethod",
+    "RiskLevel",
+    "ContextReasoner",
+    "ContextType",
+    "ContextPriority",
+    "SituationType",
+    "MemoryReasoner",
+    "MemoryType",
+    "RetrievalStrategy",
+    "SkillReasoner",
+    "SkillCategory",
+    "SkillLevel",
+    "SkillStatus",
 ]
