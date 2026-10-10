@@ -3,13 +3,13 @@
   "first_run": {
     "returncode": 1,
     "stdout": "",
-    "stderr": "/home/meow/Projects/MOON/.venv/bin/python: No module named pytest\n"
+    "stderr": "/home/meow/.hermes/tools/python-3.14.7+20260901-linux-x64/bin/python3: No module named pytest\n"
   },
   "installed": true,
   "retry_run": {
     "returncode": 1,
     "stdout": "",
-    "stderr": "/home/meow/Projects/MOON/.venv/bin/python: No module named pytest\n"
+    "stderr": "/home/meow/.hermes/tools/python-3.14.7+20260901-linux-x64/bin/python3: No module named pytest\n"
   },
   "final_returncode": 1
 }
