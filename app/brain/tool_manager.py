@@ -26,6 +26,13 @@ class ToolResult:
             "error": self.error,
         }
 
+    # The runtime (ToolManager -> orchestrator._tools) calls the tool by name
+    # and the cognition loop expects a string back. Return a plain str so both
+    # the verified contract (assert 'linux' in (res or '')) and the cognition
+    # loop stay valid. json.dumps may wrap the output if a consumer parses it.
+    def __str__(self) -> str:
+        return str(self.output if self.success else self.error or "")
+
 
 class ToolManager:
     def __init__(self, registry, *, enabled_tools: set[str] | None = None, allow_dangerous: bool = False) -> None:

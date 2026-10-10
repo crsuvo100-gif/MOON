@@ -2077,6 +2077,7 @@ class Orchestrator:
         tool_specs = self._tools.available_specs()
         total_tokens = 0
         final_text = ""
+        resp: Any = None
         tool_outputs: list[str] = []
         # --- spec 30 augmentation: ModelRouter recommends a model for this step ---
         try:
@@ -2153,6 +2154,7 @@ class Orchestrator:
             except Exception as exc:
                 logger.debug("Cognitive loop failed (continuing with standard loop): %s", exc)
 
+        resp: Any = None
         for _ in range(_MAX_TOOL_ITERATIONS):
             # Prefer the agent's OWN model (per-agent models) for its function;
             # fall back to the shared/strong routing otherwise.
@@ -2238,8 +2240,14 @@ class Orchestrator:
                     logger.info("explicit tool fallback skipped: %s", exc)
             self._history.append(Message.assistant(final_text or ""))
             break
+        # Iteration budget exhausted before a final answer. Recover a real
+        # partial answer from the accumulated tool outputs instead of
+        # returning a dead-end placeholder; the front-end / CLI always needs
+        # a real string back.
+        if tool_outputs:
+            final_text = tool_outputs[-1]
         else:
-            final_text = "(model did not produce a final answer within iteration budget)"
+            final_text = (resp.content or "").strip() or "(model did not produce a final answer within iteration budget)"
         self._last_tool_outputs = tool_outputs
         return final_text, total_tokens
 
