@@ -170,6 +170,7 @@ class MCPConnector:
         self._session: Any = None
         self._read: Any = None
         self._write: Any = None
+        self._connect_lock = asyncio.Lock()
 
     # ------------------------------------------------------------------ impl
     async def connect(self) -> CallResult:
@@ -178,6 +179,9 @@ class MCPConnector:
         if transport not in self._SUPPORTED_TRANSPORTS:
             return CallResult(ok=False, status=0,
                               error=f"unsupported MCP transport: {transport!r}")
+        if self._session is not None:
+            return CallResult(ok=True, status=200,
+                              data={"transport": self._transport, "mcp": "already connected"})
         try:
             if transport == "stdio":
                 from mcp.client.stdio import StdioServerParameters, stdio_client
@@ -187,11 +191,18 @@ class MCPConnector:
                     env=self._env,
                     cwd=self._cwd,
                 )
-                async with stdio_client(server) as (read, write):
-                    self._read, self._write = read, write
-                    from mcp.client.session import ClientSession
-                    self._session = ClientSession(read, write)
-                    await self._session.initialize()
+                read, write = None, None
+                try:
+                    async with stdio_client(server) as (r, w):
+                        read, write = r, w
+                        from mcp.client.session import ClientSession
+                        self._session = ClientSession(read, write)
+                        await self._session.initialize()
+                except Exception:
+                    self._session = None
+                    self._read = None
+                    self._write = None
+                    raise
             elif transport == "sse":
                 from mcp.client.sse import sse_client
                 async with sse_client(self._url) as (read, write):
@@ -209,12 +220,13 @@ class MCPConnector:
         except Exception as exc:  # noqa: BLE001
             # Ensure partial state is cleaned so the next call re-connects.
             self._close_cleans(1)
-            return CallResult(ok=False, status=0, error=f"MCP {transport} connect failed: {exc}")
+            err = exc
+            if hasattr(exc, "args") and exc.args:
+                err = exc.args[0]
+            return CallResult(ok=False, status=0,
+                              error=f"MCP {transport} connect failed: {err}")
         return CallResult(ok=True, status=200,
                           data={"transport": self._transport, "mcp": "connected"})
-
-    async def close(self) -> None:
-        self._close_cleans(0)
 
     async def __aenter__(self) -> "MCPConnector":
         await self.connect()
