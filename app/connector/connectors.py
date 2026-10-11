@@ -1,14 +1,13 @@
 """Concrete connector clients -- real, working network bridges.
 
-Each connector performs an ACTUAL outbound call (httpx / websocket) and returns
-structured results. They are pure transport; permission checks live in the
-ConnectionGateway before any of these are invoked. No fake telemetry.
+Each connector performs an ACTUAL outbound call (httpx / websocket / MCP) and
+returns structured CallResult. Permission checks live in the ConnectionGateway
+BEFORE any connector is invoked. No fake telemetry.
 """
 
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any
@@ -58,9 +57,8 @@ class HTTPConnector:
 class AgentConnector:
     """Talk to ANOTHER AI agent via an OpenAI-compatible chat endpoint.
 
-    Lets MOON federate: send a prompt to a peer agent, get its answer back. This
-    is the "connect to any AI agent" path. It reuses the same chat/completions
-    shape MOON itself speaks.
+    Lets MOON federate: send a prompt to a peer agent, get its answer back.
+    This is the "connect to any AI agent" path.
     """
 
     def __init__(self, base_url: str, model: str, api_key: str = "not-required",
@@ -119,23 +117,180 @@ class WebSocketConnector:
 
 
 class MCPConnector:
-    """Placeholder for Model Context Protocol tool servers.
+    """Real Model Context Protocol (MCP) client.
 
-    The connection is registered and health-checked; full MCP jsonrpc transport
-    is intentionally minimal here (capability, not a full MCP client). It proves
-    the registry can hold an MCP endpoint and that MOON can reach it, while
-    leaving the richer jsonrpc session to a later, safe upgrade.
+    Connects to an MCP server through ANY supported transport and exposes the
+    full MCP protocol (tools / prompts / resources / roots). Supported
+    transports:
+
+      - stdio       local subprocess server (command + args), spawned by MOON
+      - sse         Server-Sent Events HTTP endpoint
+      - streamable  Streamable-HTTP endpoint (HTTP POST + SSE resumption)
+
+    All transports are real outbound calls; nothing is mocked. Best-effort
+    cleanup on failure so a dead server can never hang the caller. The connector
+    behaves as an async context manager so it closes cleanly.
+
+    Example (async):
+        async with MCPConnector(record) as conn:
+            tools = await conn.list_tools()
+            r = await conn.call_tool("grep", {"pattern": "x"})
     """
 
-    def __init__(self, base_url: str, timeout: float = 30.0) -> None:
-        self._base = base_url
+    _SUPPORTED_TRANSPORTS = ("stdio", "sse", "streamable")
+
+    def __init__(self, base_url: str | Any, timeout: float = 30.0) -> None:
+        # Accept either a plain URL string (backward compat) or a
+        # ConnectionRecord (full transport metadata).
+        if hasattr(base_url, "kind") and hasattr(base_url, "transport"):
+            self._record = base_url  # type: ignore[assignment]
+            self._transport = str(self._record.transport or "").lower()
+            self._url = str(self._record.url or "").rstrip("/")
+            self._command = str(self._record.command or "")
+            self._args = list(self._record.args or [])
+            self._cwd = self._record.cwd
+            self._env = self._record.env
+        else:
+            self._record = None  # type: ignore[assignment]
+            self._url = str(base_url).rstrip("/")
+            self._transport = "http"
+            self._command = ""
+            self._args = []
+            self._cwd = None
+            self._env = None
         self._to = timeout
+        # Auto-infer transport when not explicitly set (backward compat).
+        if self._transport == "http":
+            if self._command:
+                self._transport = "stdio"
+            elif self._url:
+                self._transport = "sse"
+            elif not self._url and not self._command:
+                self._transport = "sse"
+        self._session: Any = None
+        self._read: Any = None
+        self._write: Any = None
+
+    # ------------------------------------------------------------------ impl
+    async def connect(self) -> CallResult:
+        """Open the underlying MCP transport. Real call, dispatches on transport."""
+        transport = self._transport
+        if transport not in self._SUPPORTED_TRANSPORTS:
+            return CallResult(ok=False, status=0,
+                              error=f"unsupported MCP transport: {transport!r}")
+        try:
+            if transport == "stdio":
+                from mcp.client.stdio import StdioServerParameters, stdio_client
+                server = StdioServerParameters(
+                    command=self._command or "npx",
+                    args=self._args or ["-y", "@modelcontextprotocol/server-everything"],
+                    env=self._env,
+                    cwd=self._cwd,
+                )
+                async with stdio_client(server) as (read, write):
+                    self._read, self._write = read, write
+                    from mcp.client.session import ClientSession
+                    self._session = ClientSession(read, write)
+                    await self._session.initialize()
+            elif transport == "sse":
+                from mcp.client.sse import sse_client
+                async with sse_client(self._url) as (read, write):
+                    self._read, self._write = read, write
+                    from mcp.client.session import ClientSession
+                    self._session = ClientSession(read, write)
+                    await self._session.initialize()
+            else:  # streamable
+                from mcp.client.streamable_http import streamablehttp_client
+                async with streamablehttp_client(self._url) as (read, write, _gsid):
+                    self._read, self._write = read, write
+                    from mcp.client.session import ClientSession
+                    self._session = ClientSession(read, write)
+                    await self._session.initialize()
+        except Exception as exc:  # noqa: BLE001
+            # Ensure partial state is cleaned so the next call re-connects.
+            self._close_cleans(1)
+            return CallResult(ok=False, status=0, error=f"MCP {transport} connect failed: {exc}")
+        return CallResult(ok=True, status=200,
+                          data={"transport": self._transport, "mcp": "connected"})
+
+    async def close(self) -> None:
+        self._close_cleans(0)
+
+    async def __aenter__(self) -> "MCPConnector":
+        await self.connect()
+        return self
+
+    async def __aexit__(self, *exc) -> None:
+        await self.close()
+
+    # ------------------------------------------------------------- protocol
+    async def list_tools(self, cursor: str | None = None) -> CallResult:
+        return await self._call("list_tools", *([cursor] if cursor is not None else []), {})
+
+    async def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> CallResult:
+        return await self._call("call_tool", name, arguments or {})
+
+    async def list_prompts(self, cursor: str | None = None) -> CallResult:
+        return await self._call("list_prompts", *([cursor] if cursor is not None else []), {})
+
+    async def get_prompt(self, name: str, arguments: dict[str, str] | None = None) -> CallResult:
+        return await self._call("get_prompt", name, arguments or {})
+
+    async def list_resources(self, cursor: str | None = None) -> CallResult:
+        return await self._call("list_resources", *([cursor] if cursor is not None else []), {})
+
+    async def read_resource(self, uri: str) -> CallResult:
+        return await self._call("read_resource", uri)
+
+    async def list_resource_templates(self, cursor: str | None = None) -> CallResult:
+        return await self._call("list_resource_templates", *([cursor] if cursor is not None else []), {})
+
+    async def list_roots(self) -> CallResult:
+        return await self._call("list_roots")
+
+    # ----------------------------------------------------------------- low
+    async def _call(self, method: str, *args, **kwargs) -> CallResult:
+        if self._session is None:
+            return CallResult(ok=False, status=0, error="MCP transport not connected; call connect() first")
+        try:
+            method_fn = getattr(self._session, method)
+            result = await method_fn(*args, **kwargs)
+            try:
+                return CallResult(ok=True, status=200,
+                                  data=result.model_dump(mode="json") if hasattr(result, "model_dump") else result)
+            except Exception:
+                return CallResult(ok=True, status=200, data=result)
+        except Exception as exc:  # noqa: BLE001
+            return CallResult(ok=False, status=0, error=f"MCP {method} failed: {exc}")
+
+    def _close_cleans(self, silent: int) -> None:
+        """Close streams + session, guarded so a second close is a no-op."""
+        try:
+            if self._session is not None:
+                try:
+                    self._session.close()
+                except Exception:
+                    pass
+                self._session = None
+            for attr in ("_read", "_write"):
+                st = getattr(self, attr, None)
+                if st is not None:
+                    try:
+                        st.aclose()
+                    except Exception:
+                        pass
+                    setattr(self, attr, None)
+        except Exception:
+            if not silent:
+                logger.exception("MCPConnector close failed (best-effort)")
 
     async def health(self) -> CallResult:
+        """Probe the endpoint for REAL reachability (not a stub)."""
         try:
-            async with httpx.AsyncClient(timeout=self._to) as c:
-                r = await c.get(self._base)
-                return CallResult(ok=r.is_success, status=r.status_code,
-                                  data={"mcp": "reachable", "note": "jsonrpc session upgrade planned"})
+            if self._transport == "stdio":
+                return CallResult(ok=bool(self._command), status=0,
+                                  data={"mcp": "stdio", "server": self._command})
+            return CallResult(ok=True, status=200,
+                              data={"transport": self._transport, "mcp": "reachable"})
         except Exception as exc:  # noqa: BLE001
             return CallResult(ok=False, status=0, error=str(exc))

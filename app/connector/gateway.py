@@ -28,7 +28,12 @@ class ConnectionRecord:
     name: str
     kind: str                       # service | agent | mcp | webhook | websocket
     url: str
-    model: str = ""
+    model: str = ""                 # only for agent kind
+    transport: str = "http"         # stdio | sse | streamable
+    command: str = ""               # only for transport == stdio
+    args: tuple[str, ...] = field(default_factory=tuple)
+    cwd: str | None = None
+    env: dict[str, str] | None = None
     scope: str = "network.egress"
     permissions: tuple[str, ...] = field(default_factory=tuple)
     credential_ref: str = ""        # logical name; value NEVER stored on disk
@@ -126,7 +131,7 @@ class ConnectionGateway:
         if rec.kind == "websocket":
             return WebSocketConnector(rec.url)
         if rec.kind == "mcp":
-            return MCPConnector(rec.url)
+            return MCPConnector(rec)
         return HTTPConnector(rec.url, timeout=30.0)
 
     # -- federation ---------------------------------------------------------

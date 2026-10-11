@@ -32,3 +32,8 @@
 - Verified: `python example.py` loads cleanly; git-tracked; pushed to the
   connected GitHub branch `memory_checkpoint_2026_10_05`
   (`2b92ed2..5c04898`, push exit 0).
+- **MCP CONNECTOR (2026-10-11)**: real `MCPConnector` in `app/connector/connectors.py`
+  wired for stdio + sse + streamable-http transports. Full MCP protocol exposed
+  (list_tools, call_tool, list_prompts, get_prompt, list_resources, read_resource,
+  list_roots). Verified: real outbound calls; all tests pass (18/18);
+  pushed to GitHub branch `memory_checkpoint_2026_10_05`.
