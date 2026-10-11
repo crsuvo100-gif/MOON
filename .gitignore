@@ -49,3 +49,4 @@ plugins/generated/
 .moon_sessions.json
 .moon_terminal_history.json
 moon/
+.ori/
