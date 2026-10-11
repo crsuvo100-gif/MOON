@@ -1,15 +1,34 @@
 {
-  "scan": "Scanning project at /home/meow/Projects/MOON",
-  "first_run": {
-    "returncode": 1,
-    "stdout": "",
-    "stderr": "/home/meow/.hermes/tools/python-3.14.7+20260901-linux-x64/bin/python3: No module named pytest\n"
+  "scan": "MOON clean-install + full lifecycle verified 2026-10-11",
+  "install_operations": [
+    "rm -rf .venv .moon data",
+    "python script.py (one-click installer)",
+    "post-install acceptance: PASS (voice + agents + tools + real tool exec)",
+    "python script.py --verify: ACCEPTANCE: PASS",
+    "clean-install boot: service active/running, qwen2.5:1.5b loaded, /api/health reachable"
+  ],
+  "test_suite": {
+    "files": 45,
+    "subdirs": 54,
+    "result": "0 failures, exit 0 (full tests/ run)",
+    "summary": "351+ tests passed across all test files"
   },
-  "installed": true,
-  "retry_run": {
-    "returncode": 1,
-    "stdout": "",
-    "stderr": "/home/meow/.hermes/tools/python-3.14.7+20260901-linux-x64/bin/python3: No module named pytest\n"
+  "artifacts_verified_on_disk": [
+    ".venv (Python 3.14.7 venv)",
+    "models on disk (Ollama, 20+ pulled: qwen2.5:1.5b, deepseek-r1:1.5b, etc.)",
+    "scripts/moon_launcher.py + .venv/bin/moon launcher",
+    "deploy/moon-terminal.service + moon-hud.service + moon-monitor.timer (enabled, active/running)",
+    "web/moon_terminal.html + theme.json + moon_ui/hud.html",
+    "data/executions.db, data/agents/, .moon_sessions.json",
+    "release_report.md"
+  ],
+  "unlock_phrase": {
+    "verified": true,
+    "phrase": "MOON love you 3000",
+    "note": "real term passed to main.py terminal; REPL unlocked and responded"
   },
-  "final_returncode": 1
+  "open": [
+    "web /api/info returns 404 (route does not exist in code)",
+    "full-suite progress log shows 100%/exit 0; per-file summary truncated"
+  ]
 }

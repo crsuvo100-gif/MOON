@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOON — NEURAL CORE</title>
+<link rel="stylesheet" href="/theme.json">
+<style>
+:root{
+  --bg:#07090f; --panel:#0c101a; --fg:#e6e9f0; --muted:#8a93a6;
+  --accent:#00e5ff; --accent2:#7c5cff; --danger:#ff5c6c; --ok:#57f5a5;
+  --pulse:#ffb454; --border:#1a2233;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--fg); font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  overflow:hidden; height:100vh; display:flex; flex-direction:column;
+}
+/* scanline overlay */
+#scanline{position:fixed;inset:0;z-index:900;pointer-events:none;
+  background:repeating-linear-gradient(0deg, transparent, transparent 4px, rgba(0,0,0,.06) 4px, rgba(0,0,0,.06) 5px);}
+#glow{position:fixed;inset:0;z-index:800;pointer-events:none;
+  background:radial-gradient(circle at center, rgba(0,229,255,.06), transparent 70%);}
+#hdr{height:74px; display:flex; align-items:center; padding:0 18px;
+  border-bottom:1px solid var(--border); background:rgba(7,9,15,.6); position:relative; z-index:10;}
+.brand{display:flex; align-items:center; gap:12px; font-weight:700; letter-spacing:.5px}
+.brand .logo{width:34px;height:34px;border:1.5px solid var(--accent2); border-radius:6px;
+  position:relative; background:#0a1020; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; color:var(--accent2); text-indent:1px}
+.brand .title{font-size:17px; color:var(--fg); letter-spacing:.5px}
+.chips{display:flex; gap:8px; margin-left:auto; flex-wrap:wrap}
+.chip{font-size:11px; padding:3px 9px; border-radius:4px; border:1px solid var(--border); color:var(--muted); background:#090e18}
+.chip.ok{color:var(--ok); border-color:rgba(87,245,165,.35)}
+.chip.warn{color:var(--pulse); border-color:rgba(255,180,84,.4)}
+.chip.err{color:var(--danger); border-color:rgba(255,92,108,.35)}
+#main{flex:1; overflow:hidden; display:flex; gap:10px; padding:10px; position:relative; z-index:10}
+.panel{flex:1; min-width:0; background:var(--panel); border:1px solid var(--border); border-radius:8px; display:flex; flex-direction:column; overflow:hidden}
+.panel h2{font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--border); font-weight:600}
+.panel .body{flex:1; overflow:auto; padding:10px 12px; font-size:12px; line-height:1.5}
+.panel .pill{display:inline-block; padding:1px 7px; border-radius:9px; font-size:10px; font-weight:700; background:#141b2e; color:var(--muted); border:1px solid var(--border); margin-right:4px}
+.panel .pill.ok{background:rgba(87,245,165,.12); color:var(--ok); border-color:rgba(87,245,165,.3)}
+.panel .pill.err{background:rgba(255,92,108,.12); color:var(--danger); border-color:rgba(255,92,108,.3)}
+.orb{width:100%; aspect-ratio:1; max-width:340px; margin:0 auto; position:relative;
+  border-radius:50%; background:radial-gradient(circle at 32% 28%, #14203a, #07090f 70%);
+  border:1px solid var(--border); box-shadow:0 0 40px rgba(0,229,255,.08), inset 0 0 60px rgba(0,0,0,.4);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden}
+.orb .ring{position:absolute; inset:-6px; border:1px solid var(--accent2); border-radius:50%; animation:spin 20s linear infinite; opacity:.5}
+.orb .ring2{position:absolute; inset:-14px; border:1px dashed var(--accent2); border-radius:50%; animation:spin 34s linear infinite reverse; opacity:.3}
+.orb .core{width:86px;height:86px;border-radius:50%; background:radial-gradient(circle at 35% 30%, #1f6feb, #002050 70%);
+  box-shadow:0 0 30px rgba(0,229,255,.5), inset 0 0 18px rgba(255,255,255,.15)}
+.orb .core .eye{width:22px;height:22px;border-radius:50%; background:#0c1220; border:2px solid var(--accent2);
+  position:relative; margin-top:10px; box-shadow:0 0 12px rgba(0,229,255,.4)}
+.orb .core .eye:nth-child(2){margin-left:12px}
+.orb .core .eye::after{content:"";position:absolute;inset:2px;background:#0c1220;border-radius:50%}
+.orb .status{font-size:11px; color:var(--muted); margin-top:8px; text-align:center}
+@keyframes spin{to{transform:rotate(360deg)}}
+#atts{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; padding:10px 12px; font-size:11px; color:var(--muted)}
+#chat{max-height:120px; overflow:auto; font-size:11px; color:var(--muted); padding:6px 0}
+#chat .line{margin-bottom:3px}
+#chat .line b{color:var(--f9faf5)}
+#chat .line i{color:#5a6478}
+#cmd{display:flex; gap:6px; padding:8px 12px; border-top:1px solid var(--border)}
+#cmd input{flex:1; background:#090e18; border:1px solid var(--border); color:var(--fg); padding:6px 10px; border-radius:5px; font-family:inherit; font-size:12px; outline:none}
+#cmd input:focus{border-color:var(--accent2)}
+#cmd button{background:var(--accent2); color:#fff; border:none; padding:6px 12px; border-radius:5px; cursor:pointer; font-weight:700}
+#cmd button:hover{background:#6a4aff}
+#darken{position:fixed; inset:0; z-index:950; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; flex-direction:column; gap:12px; cursor:pointer}
+#darken .box{background:#0c101a; border:1px solid var(--border); border-radius:8px; padding:18px 20px; max-width:340px; width:90%}
+#darken .box h3{color:var(--accent2); font-size:15px; margin-bottom:6px}
+#darken .box p{color:var(--muted); font-size:12px}
+#alt{color:#7c5cff}
+#ledger{display:none; position:fixed; right:12px; top:100px; width:340px; z-index:2000; background:#0c101a; border:1px solid var(--border); border-radius:8px; overflow:hidden}
+#ledger h2{font-size:11px; text-transform:uppercase; color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--border)}
+#ledger .row{display:flex; justify-content:space-between; font-size:11px; padding:4px 10px; border-bottom:1px solid var(--border); color:var(--f9faf5)}
+#ledger .row:last-child{border-bottom:none}
+#fit{width:20px;height:20px;border-radius:4px;background:#14203a;border:1px solid var(--border);cursor:pointer;color:var(--muted);position:absolute;top:8px;right:8px;z-index:11;display:flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+<div id="scanline"></div>
+<div id="glow"></div>
+<div id="hdr">
+  <div class="brand">
+    <div class="logo">MOON</div>
+    <span class="title">NEURAL CORE — HUD</span>
+  </div>
+  <div class="chips" id="chips">
+    <span class="chip" id="chip-agent">agents: 41</span>
+    <span class="chip" id="chip-tool">tools: 40</span>
+    <span class="chip ok" id="chip-llm">llm: ready</span>
+    <span class="chip ok" id="chip-mem">memory: online</span>
+  </div>
+</div>
+<div id="main">
+  <div class="panel" style="flex:1.4">
+    <h2>CORE ORB <span id="core-status" class="pill ok">online</span></h2>
+    <div class="body">
+      <div class="orb">
+        <div class="ring"></div><div class="ring ring2"></div>
+        <div class="core">
+          <div class="eye"></div><div class="eye"></div>
+        </div>
+        <div class="status" id="orb-status">NEURAL CORE · ACTIVE</div>
+      </div>
+      <div id="atts"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>SESSIONS <span class="pill" id="sess-count">0</span></h2>
+    <div class="body" id="sessions"></div>
+  </div>
+  <div class="panel">
+    <h2>LEAD AGENT <span class="pill" id="lead-agent">auto</span></h2>
+    <div class="body">
+      <div id="agents"></div>
+    </div>
+  </div>
+  <div class="panel" style="flex:1">
+    <h2>TASK LOG <span class="pill" id="task-count">0</span></h2>
+    <div class="body" id="tasks"></div>
+  </div>
+  <div class="panel" style="flex:1.2">
+    <h2>TASK CHAT <span class="pill" id="chat-count">0</span></h2>
+    <div class="body" id="chat"></div>
+    <div id="cmd">
+      <input id="cmd-input" placeholder="command: status | memory | voice | agents | tools | run">
+      <button id="cmd-submit">SEND</button>
+    </div>
+  </div>
+</div>
+<div id="darken">
+  <div class="box">
+    <h3 id="unlock-title">UNLOCK</h3>
+    <p id="unlock-body">Say "MOON love you 3000" to unlock terminal operations.</p>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button id="alright">ALRIGHT</button>
+    </div>
+  </div>
+</div>
+<div id="ledger"></div>
+<script>
+const fmt=(d=new Date())=>d.toLocaleTimeString('en',{hour12:false});
+async function api(p, opts={}){
+  const r=await fetch(p, {...opts, headers:{...(opts.headers||{}), 'Accept':'application/json'}});
+  if(r.status===404) return {ok:false,err:'not_found'};
+  return r.json().catch(()=>({raw:r.status}));
+}
+let lead=null;
+async function refresh(){
+  try{
+    const d=await api('/api/v1/info');
+    if(d.schema_version && d.schema_version!=='n/a') document.title='MOON — '+d.schema_version;
+  }catch(e){}
+  try{
+    const [agents,stats]=await Promise.all([api('/api/agents'),api('/api/health')]);
+    document.getElementById('chip-agent').textContent='agents: '+(agents?.count||0);
+    document.getElementById('chip-tool').textContent='tools: '+(stats?.components?.tools||0);
+    document.getElementById('chip-llm').textContent='llm: '+(stats?.components?.llm||'offline');
+    document.getElementById('chip-mem').textContent='memory: '+(stats?.components?.memory||'offline');
+    document.getElementById('core-status').textContent='online';
+  }catch(e){}
+}
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

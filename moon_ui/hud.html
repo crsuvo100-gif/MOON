@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOON — NEURAL CORE</title>
+<link rel="stylesheet" href="/theme.json">
+<style>
+:root{
+  --bg:#07090f; --panel:#0c101a; --fg:#e6e9f0; --muted:#8a93a6;
+  --accent:#00e5ff; --accent2:#7c5cff; --danger:#ff5c6c; --ok:#57f5a5;
+  --pulse:#ffb454; --border:#1a2233;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--fg); font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  overflow:hidden; height:100vh; display:flex; flex-direction:column;
+}
+#scanline{position:fixed;inset:0;z-index:900;pointer-events:none;
+  background:repeating-linear-gradient(0deg, transparent, transparent 4px, rgba(0,0,0,.06) 4px, rgba(0,0,0,.06) 5px);}
+#glow{position:fixed;inset:0;z-index:800;pointer-events:none;
+  background:radial-gradient(circle at center, rgba(0,229,255,.06), transparent 70%);}
+#hdr{height:74px; display:flex; align-items:center; padding:0 16px;
+  border-bottom:1px solid var(--border); background:rgba(7,9,15,.6); position:relative; z-index:10}
+.brand{display:flex; align-items:center; gap:12px; font-weight:700; letter-spacing:.5px}
+.brand .logo{width:34px;height:34px;border:1.5px solid var(--accent2); border-radius:6px;
+  position:relative; background:#0a1020; display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:800; color:var(--accent2); cursor:pointer}
+.brand .title{font-size:17px; color:var(--fg); letter-spacing:.5px; white-space:nowrap}
+.chips{display:flex; gap:8px; margin-left:auto; flex-wrap:wrap}
+.chip{font-size:11px; padding:3px 9px; border-radius:4px; border:1px solid var(--border); color:var(--muted); background:#090e18}
+.chip.ok{color:var(--ok); border-color:rgba(87,245,165,.35)}
+.chip.warn{color:var(--pulse); border-color:rgba(255,180,84,.4)}
+.chip.err{color:var(--danger); border-color:rgba(255,92,108,.35)}
+#main{flex:1; overflow:hidden; display:flex; gap:10px; padding:10px; position:relative; z-index:10}
+.panel{flex:1; min-width:0; background:var(--panel); border:1px solid var(--border); border-radius:8px; display:flex; flex-direction:column; overflow:hidden}
+.panel h2{font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--border); font-weight:600}
+.panel .body{flex:1; overflow:auto; padding:10px 12px; font-size:12px; line-height:1.5; min-height:0}
+.panel .pill{display:inline-block; padding:1px 7px; border-radius:9px; font-size:10px; font-weight:700; background:#141b2e; color:var(--muted); border:1px solid var(--border); margin-right:4px}
+.panel .pill.ok{background:rgba(87,245,165,.12); color:var(--ok); border-color:rgba(87,245,165,.3)}
+.panel .pill.err{background:rgba(255,92,108,.12); color:var(--danger); border-color:rgba(255,92,108,.3)}
+.orb{width:100%; aspect-ratio:1; max-width:300px; margin:0 auto; position:relative;
+  border-radius:50%; background:radial-gradient(circle at 32% 28%, #14203a, #07090f 70%);
+  border:1px solid var(--border); box-shadow:0 0 40px rgba(0,229,255,.08), inset 0 0 60px rgba(0,0,0,.4);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden}
+.orb .ring{position:absolute; inset:-6px; border:1px solid var(--accent2); border-radius:50%; animation:spin 20s linear infinite; opacity:.5}
+.orb .ring2{position:absolute; inset:-14px; border:1px dashed var(--accent2); border-radius:50%; animation:spin 34s linear infinite reverse; opacity:.3}
+.orb .core{width:86px;height:86px;border-radius:50%; background:radial-gradient(circle at 35% 30%, #1f6feb, #002050 70%);
+  box-shadow:0 0 30px rgba(0,229,255,.5), inset 0 0 18px rgba(255,255,255,.15)}
+.orb .core .eye{width:22px;height:22px;border-radius:50%; background:#0c1220; border:2px solid var(--accent2);
+  position:relative; margin-top:10px; box-shadow:0 0 12px rgba(0,229,255,.4)}
+.orb .core .eye:nth-child(2){margin-left:12px}
+.orb .core .eye::after{content:"";position:absolute;inset:2px;background:#0c1220;border-radius:50%}
+.orb .status{font-size:11px; color:var(--muted); margin-top:8px; text-align:center}
+@keyframes spin{to{transform:rotate(360deg)}}
+#atts{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; padding:10px 12px; font-size:11px; color:var(--muted)}
+#chat{max-height:120px; overflow:auto; font-size:11px; color:var(--muted); padding:6px 0}
+#chat .line{margin-bottom:3px}
+#chat .line b{color:var(--f9faf5)}
+#chat .line i{color:#5a6478}
+#cmd{display:flex; gap:6px; padding:8px 12px; border-top:1px solid var(--border)}
+#cmd input{flex:1; background:#090e18; border:1px solid var(--border); color:var(--fg); padding:6px 10px; border-radius:5px; font-family:inherit; font-size:12px; outline:none}
+#cmd input:focus{border-color:var(--accent2)}
+#cmd button{background:var(--accent2); color:#fff; border:none; padding:6px 12px; border-radius:5px; cursor:pointer; font-weight:700}
+#cmd button:hover{background:#6a4aff}
+#lightbox{position:fixed; inset:0; z-index:2100; background:rgba(0,0,0,.92); display:none; align-items:center; justify-content:center; cursor:zoom-out}
+#lightbox img{width:100%; height:100%; object-fit:contain; border-radius:4px; display:block}
+#lightbox .close{position:absolute; top:16px; right:20px; color:#fff; font-size:30px; cursor:pointer; filter:drop-shadow(0 0 6px #00e5ff)}
+#fit{width:20px;height:20px;border-radius:4px;background:#14203a;border:1px solid var(--border);cursor:pointer;color:var(--muted);position:absolute;top:8px;right:8px;z-index:11;display:flex;align-items:center;justify-content:center}
+#mute{width:20px;height:20px;border-radius:4px;background:#14203a;border:1px solid var(--border);cursor:pointer;color:var(--muted);position:absolute;top:8px;left:8px;z-index:11}
+#ledger{display:none; position:fixed; right:12px; top:100px; width:340px; z-index:2000; background:#0c101a; border:1px solid var(--border); border-radius:8px; overflow:hidden}
+#ledger h2{font-size:11px; text-transform:uppercase; color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--border)}
+#ledger .row{display:flex; justify-content:space-between; font-size:11px; padding:4px 10px; border-bottom:1px solid var(--border); color:var(--f9faf5)}
+#ledger .row:last-child{border-bottom:none}
+.status-dot{width:8px;height:8px;border-radius:50%;background:#2a3348;display:inline-block}
+.status-dot.on{background:#57f5a5; box-shadow:0 0 8px #57f5a5}
+.status-dot.mid{background:#ffb454; box-shadow:0 0 8px #ffb454}
+</style>
+</head>
+<body>
+<div id="scanline"></div>
+<div id="glow"></div>
+<div id="hdr">
+  <div class="brand">
+    <div class="logo" title="Toggle HUD sidebar">MOON</div>
+    <span class="title">NEURAL CORE — H U D</span>
+  </div>
+  <div class="chips" id="chips">
+    <span class="chip" id="chip-agent">agents: ?</span>
+    <span class="chip" id="chip-tool">tools: ?</span>
+    <span class="chip ok" id="chip-llm">llm: ready</span>
+    <span class="chip ok" id="chip-mem">memory: online</span>
+  </div>
+</div>
+<div id="main">
+  <div class="panel" style="flex:1.5">
+    <h2>CORE ORB <span class="pill ok" id="core-status">online</span></h2>
+    <div class="body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative">
+      <div class="orb">
+        <div class="ring"></div><div class="ring ring2"></div>
+        <div class="core"><div class="eye"></div><div class="eye"></div></div>
+        <div class="status" id="orb-status">NEURAL CORE · ACTIVE</div>
+      </div>
+      <div id="atts"></div>
+      <div style="position:absolute;left:10px;top:10px">
+        <div id="fit" title="Toggle full-screen HUD">⛶</div>
+        <div id="mute" title="Mute/unmute HUD events">🔊</div>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>TASK LOG <span class="pill" id="task-count">0</span></h2>
+    <div class="body" id="tasks"></div>
+  </div>
+  <div class="panel" style="flex:1">
+    <h2>MEMORY <span class="pill" id="mem-state">syncing</span></h2>
+    <div class="body">
+      <div id="sessions"></div>
+      <div id="mem-detail" style="color:var(--muted);font-size:11px;margin-top:8px"></div>
+    </div>
+  </div>
+  <div class="panel" style="flex:1.2">
+    <h2>TASK CHAT <span class="pill" id="chat-count">0</span></h2>
+    <div class="body" id="chat"></div>
+    <div id="cmd">
+      <input id="cmd-input" placeholder="command: status | memory | voice | run | agents | tools">
+      <button id="cmd-submit">SEND</button>
+    </div>
+  </div>
+  <div class="panel" style="flex:1">
+    <h2>BRAIN <span class="pill" id="brain-state">thinking</span></h2>
+    <div class="body">
+      <div id="brains"></div>
+      <div id="events" style="color:var(--muted);font-size:11px;margin-top:6px"></div>
+    </div>
+  </div>
+</div>
+<div id="lightbox"><img id="lb-img"><div id="lb-close">✕</div></div>
+<div id="darken">
+  <div class="box">
+    <h3 id="unlock-title">UNLOCK</h3>
+    <p id="unlock-body">Say <b>"MOON love you 3000"</b> to unlock terminal operations.</p>
+    <div style="display:flex;gap:8px;margin-top:10px"><button id="alright">ALRIGHT</button></div>
+  </div>
+</div>
+<script>
+const $: (s)=>document.querySelector(s);
+const $$=(s)=>document.querySelectorAll(s);
+const fmt=(d=new Date())=>d.toLocaleTimeString('en',{hour12:false});
+const state={messages:[], announcing:true};
+function chip(name, val){
+  const el=$(`#chip-${name}`);
+  if(el) el.textContent=' '+name+': '+val;
+}
+function pill(cls, txt){const b=document.createElement('span');b.className='pill '+cls;b.textContent=txt;return b;}
+function esc(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function api(p, opts={}){
+  const r=await fetch(p,{...opts, headers:{...(opts.headers||{}), 'Accept':'application/json'}});
+  if(r.status===404) return {ok:false,err:'not_found'};
+  return r.json().catch(()=>({raw:r.status}));
+}
+function empty(el){while(el.firstChild) el.removeChild(el.firstChild);}
+
+/* === CORE ORB (Canvas2D animation) === */
+(function(){
+  const orb=$( '.orb' );
+  if(!orb) return;
+  const canv=orb.querySelector('canvas');
+  if(!canv) return;
+  const ctx=canv.getContext('2d');
+  let W=0,H=0,rad=0,ang=0;
+  function resize(){
+    const r=orb.getBoundingClientRect();
+    W=r.width;H=r.height;
+    canv.width=W*devicePixelRatio; canv.height=H*devicePixelRatio;
+    canv.style.width=W+'px'; canv.style.height=H+'px';
+    ctx.scale(devicePixelRatio,devicePixelRatio);
+    ctx.clearRect(0,0,W,H);
+  }
+  function frame(){
+    rad+=.005; ang=(ang||0)+.009;
+    ctx.clearRect(0,0,W,H);
+    ctx.save(); ctx.globalAlpha=.5;
+    for(let i=0;i<3;i++){
+      const t=i/3+rad;
+      const r2=Math.abs(Math.sin(t*2))*0.16;
+      ctx.beginPath(); ctx.arc(W/2,H/2,(H/2)*(0.6+r2),0,Math.PI*2); ctx.strokeStyle='#7c5cff'; ctx.lineWidth=1; ctx.stroke();
+      const t2=i/3+rad*1.3;
+      const r3=Math.abs(Math.sin(t2*2))*0.08;
+      ctx.beginPath(); ctx.arc(W/2,H/2,(H/2)*(0.78+r3),0,Math.PI*2); ctx.strokeStyle='#00e5ff'; ctx.lineWidth=.5; ctx.stroke();
+    }
+    ctx.restore();
+    ctx.save();
+    const pulse=0.5+0.5*Math.sin(rad*2);
+    ctx.beginPath(); ctx.arc(W/2,H/2,(H/2)*0.32*pulse,0,Math.PI*2);
+    ctx.fillStyle='rgba(31,111,235,'+pulse+')'; ctx.fill();
+    ctx.beginPath(); ctx.arc(W/2,H/2,(H/2)*0.30*pulse,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,32,80,'+pulse*0.8+')'; ctx.fill();
+    ctx.restore();
+  }
+  function loop(){frame(); requestAnimationFrame(loop);}
+  resize();
+  window.addEventListener('resize',resize);
+  loop();
+})();
+
+/* === Refresh / polling === */
+async function refresh(){
+  try{
+    const d=await api('/api/v1/info');
+    if(d.schema_version && d.schema_version!=='n/a') document.title='MOON — '+d.schema_version;
+  }catch(e){}
+  try{
+    const [agents,stats]=await Promise.all([api('/api/agents'),api('/api/health')]);
+    chip('agent', agents?.count||0);
+    chip('tool', stats?.components?.tools||0);
+    chip('llm', stats?.components?.llm||'offline');
+    chip('mem', stats?.components?.memory||'offline');
+    $('#core-status').textContent='online';
+    $('#orb-status').textContent='NEURAL CORE · ACTIVE';
+  }catch(e){}
+}
+setInterval(refresh, 5000);
+
+/* === Task log === */
+async function loadTasks(){
+  const r=await api('/api/tasks');
+  const box=$('#tasks');
+  empty(box);
+  if(!r.ok || !r.tasks) return;
+  box.innerHTML='<div class="pill err">'+ (r.total||0)+' tasks</div>';
+  (r.tasks||[]).slice(0,40).forEach(t=>{
+    const d=document.createElement('div');
+    d.className='line'; d.style.padding='4px 0'; d.style.borderBottom='1px solid #1a2233';
+    d.innerHTML='<b>'+esc(t.name||'task')+'</b> <i>'+esc(t.owner||'auto')+'|'+esc(t.status||'?')+'</i>';
+    box.appendChild(d);
+  });
+}
+setInterval(loadTasks, 6000); loadTasks();
+
+/* === Memory / sessions === */
+async function loadMemory(){
+  const r=await api('/api/memory/health');
+  $('#mem-state').textContent='online';
+  const box=$('#sessions');
+  empty(box);
+  if(!r.ok) return;
+  $('#mem-detail').textContent='components: '+(r.components?Object.keys(r.components).length:0)+' subsystems online';
+  box.innerHTML='<div class="pill">'+ (r.checks||Object.keys(r||{}).length)+' components</div>';
+  const c=r.components||r;
+  for(const [k,v] of Object.entries(c)){
+    const d=document.createElement('div');
+    d.className='line'; d.style.padding='3px 0';
+    const st=v.state||v.status||'?';
+    const cls=st==='OK'||st==='ONLINE'||st==='healthy'?'ok':(st==='WARN'?'warn':'err');
+    d.innerHTML='<span class="status-dot '+cls+'"></span>'+esc(k)+' <i>'+esc(st)+'</i> <i style="color:#5a6478">'+esc(String(v.detail||''))+'</i>';
+    box.appendChild(d);
+  }
+}
+setInterval(loadMemory, 6000); loadMemory();
+
+/* === Brain routing === */
+async function loadBrains(){
+  const r=await api('/api/brains');
+  const box=$('#brains');
+  empty(box);
+  if(!r.ok) return;
+  box.innerHTML='<div class="pill">'+ (r.brains||0)+' routed brains</div>';
+  (r.brains||[]).forEach(b=>{
+    const d=document.createElement('div');
+    d.className='line'; d.style.padding='3px 0';
+    d.innerHTML='<b>'+esc(b.name||'brain')+'</b> <i>'+esc(b.model||'?')+'</i> <span class="pill ok">v'+esc(b.version||'')+'</span>';
+    box.appendChild(d);
+  });
+}
+setInterval(loadBrains, 6000); loadBrains();
+
+/* === Chat / console === */
+async function sendCmd(text){
+  const inp=$('#cmd-input');
+  const line=document.createElement('div');
+  line.className='line'; line.style.borderBottom='1px solid #1a2233';
+  line.innerHTML='<b>$</b> <i>'+esc(inp.value)+'</i>';
+  $('#chat').appendChild(line);
+  const res=await api('/api/cmd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd:inp.value})}).catch(()=>({}));
+  if(res && res.ok && res.result){
+    const r2=document.createElement('div');
+    r2.className='line'; r2.style.padding='4px 0';
+    r2.textContent='  -> '+(res.result||'ok');
+    $('#chat').appendChild(r2);
+  }
+  inp.value='';
+}
+$('#cmd-submit').addEventListener('click',()=>sendCmd());
+$('#cmd-input').addEventListener('keydown',e=>{if(e.key==='Enter')sendCmd();});
+setInterval(()=>{$('#chat-count').textContent=' '+$('#chat').children.length+' msgs';},5000);
+
+/* === Lightbox for images === */
+$('#lb-close').addEventListener('click',()=>{$('#lightbox').style.display='none';});
+$('#lightbox').addEventListener('click',e=>{if(e.target===$('#lightbox'))$('#lightbox').style.display='none';});
+let lbReq=null;
+$('#lb-img').addEventListener('click',()=>{$('#lightbox').style.display=$('#lightbox').style.display==='none'?'flex':'none';});
+
+/* === Unlock overlay === */
+let mouseDown=false;
+var handleWheel=function(){};
+document.addEventListener('mousedown',()=>{mouseDown=true;});
+document.addEventListener('mousemove',e=>{if(mouseDown){e.preventDefault();document.body.scrollLeft-=e.movementX;document.documentElement.scrollLeft-=e.movementX;}});
+document.addEventListener('mouseup',()=>{mouseDown=false;});
+$('#darken').addEventListener('click',()=>{$('#darken').style.display='none';});
+$('#alright').addEventListener('click',()=>{$('#darken').style.display='none';});
+
+document.getElementById('fit').addEventListener('click',()=>{
+  const m=$('#main');
+  m.style.width=m.style.width==='100%'?'':'100%';
+  m.style.height=m.style.height==='100%'?'':'100%';
+  m.style.position=m.style.position==='fixed'?'':'fixed';
+  m.style.top=m.style.top==='0'?'':'0';
+});
+document.getElementById('mute').addEventListener('click',()=>{
+  const m=$('#mute');
+  m.textContent=m.textContent==='🔊'?'🔇':'🔊';
+  state.announcing=!state.announcing;
+});
+
+/* === Event stream (WS) — mirror live brain events into the HUD chat === */
+(function(){
+  try{
+    if(window.WebSocket){
+      const ws=new WebSocket((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/ws');
+      ws.onmessage=function(e){const d=JSON.parse(e.data);const ev=d.event||'';const t=d.timestamp||'';
+        const line=document.createElement('div');
+        line.className='line'; line.style.padding='3px 0';
+        line.innerHTML='<b style="color:'+(d.level==='ERROR'?'var(--danger)':d.level==='WARN'?'var(--pulse)':'var(--muted)')+'">'+esc(ev)+'</b> <i>'+esc(t)+'</i>';
+        if(state.announcing) $('#events').appendChild(line);
+      };
+    }
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
