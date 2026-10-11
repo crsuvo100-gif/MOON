@@ -56,14 +56,17 @@
     "exit_code": 0
   },
   "verification_steps": [
-    "git remote verified: origin -> git@github.com:crsuvo100-gif/MOON.git",
-    "git branch verified: memory_checkpoint_2026_10_05",
-    "git local HEAD == origin/ref: 2b92ed2... (push exit 0, master up-to-date)",
-    "Frchat clone of github memory_checkpoint_2026_10_05: main.py + script.py + web/ + tests/ all present (source saved on GitHub)",
-    "github repo live + readable: API 200, source files committed on cloud branch",
-    "systemd services active/running: moon-terminal, moon-hud, moon-monitor.timer",
-    "health endpoint reachable: http://127.0.0.1:8777/api/health -> DEGRADED, 10/11 OK, qwen2.5:1.5b",
-    "moon shell run command verified real: 'MOON has launched, excited for our journey ahead!' (exit 0)"
+  "git remote verified: origin -> git@github.com:crsuvo100-gif/MOON.git",
+  "git branch verified: memory_checkpoint_2026_10_05",
+  "git local HEAD == origin/ref: 2b92ed2... (push exit 0, master up-to-date)",
+  "Fresh clone of github memory_checkpoint_2026_10_05: main.py + script.py + web/ + tests/ all present (source saved on GitHub)",
+  "github repo live + readable: API 200, source files committed on cloud branch",
+  "systemd services active/running: moon-terminal, moon-hud, moon-monitor.timer",
+  "health endpoint reachable: http://127.0.0.1:8777/api/health -> DEGRADED, 10/11 OK, qwen2.5:1.5b",
+  "moon shell run command verified real: 'MOON has launched, excited for our journey ahead!' (exit 0)",
+  "SETTINGS: example.py written; loads OK with 73 API-config keys + 93 connected-app build keys",
+  "NO real secrets in example.py (every password/token = [REDACTED])",
+  "example.py pushed to github branch 2b92ed2..5c04898 (push exit 0)"
   ],
   "status": "COMPLETE",
   "confirmation": "YES"

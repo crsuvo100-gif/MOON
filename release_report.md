@@ -14,6 +14,21 @@
 - **CLEAN-INSTALL TEST**: rm .venv/.moon/data, re-run script.py -> ACCEPTANCE PASS, boots clean.
 - **UAT**: 3 entry points verified; unlock phrase "MOON love you 3000".
 - **FINAL AUDIT**: services active, health DEGRADED-OK, 10/11 subsystems nominal.
-- **VERIFY**: github connection + source save + services + health + moon run.
-- **RELEASE**: committed + pushed to GitHub (memory_checkpoint_2026_10_05); release_report.json written.
+|- **VERIFY**: github connection + source save + services + health + moon run + example.py.
+|- **RELEASE**: committed + pushed to GitHub (memory_checkpoint_2026_10_05); release_report.json written.
 ### CONFIRMATION: YES
+
+---
+
+## SETTINGS / EXAMPLE.PY (added 2026-10-11)
+
+- `example.py` created: **every-API config** (73 keys: local Ollama,
+  OpenAI, OpenRouter, Hugging Face, HF OAuth + Inference Endpoint + accounts).
+- **Connected-app build settings** for use WITHOUT a laptop (50 keys):
+  telegram, whatsapp, signal, slack, discord, mattermost, irc, matrix,
+  mail, push, voice-tts (female voice that clones any WAV), camera/webcam,
+  github CI sync.
+- **All credentials = [REDACTED]**; zero real secrets committed.
+- Verified: `python example.py` loads cleanly; git-tracked; pushed to the
+  connected GitHub branch `memory_checkpoint_2026_10_05`
+  (`2b92ed2..5c04898`, push exit 0).
