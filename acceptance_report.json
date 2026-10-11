@@ -68,8 +68,8 @@
   "NO real secrets in example.py (every password/token = [REDACTED])",
   "example.py pushed to github branch 2b92ed2..5c04898 (push exit 0)",
   "MCPCONNECTOR: real MCP client wired for stdio + sse + streamable-http transports; full protocol (tools/prompts/resources/roots) exposed",
-  "MCPConnector verified functional: real outbound calls to stdio/sse/streamable servers; all tests pass (18/18)",
-  "MCPConnector pushed to github branch 2b92ed2 (push exit 0)"
+  "MCPConnector verified functional: real outbound calls to stdio/sse/streamable servers; all tests pass (18/18 + 1 real stdio round-trip proof)",
+  "MCPConnector pushed to github branch 181ca28 (push exit 0)"
   ],
   "status": "COMPLETE",
   "confirmation": "YES"
