@@ -1,43 +1,70 @@
 {
-  "scan": "MOON GitHub repo + source files + verify all work completed",
-  "date": "2026-10-11",
-  "github_repo": {
-    "full_name": "crsuvo100-gif/MOON",
+  "scan": "MOON GitHub connection + source save + full verification (2026-10-11)",
+  "github": {
+    "repo_full_name": "crsuvo100-gif/MOON",
     "html_url": "https://github.com/crsuvo100-gif/MOON",
+    "clone_url": "https://github.com/crsuvo100-gif/MOON.git",
     "ssh_url": "git@github.com:crsuvo100-gif/MOON.git",
     "default_branch": "main",
     "private": false,
+    "visibility": "public",
     "has_projects": true,
     "has_issues": true,
-    "has_wiki": false,
-    "has_pages": false,
-    "status": "READY"
-  },
-  "git_state": {
+    "origin_remote": "git@github.com:crsuvo100-gif/MOON.git (fetch/push)",
     "branch": "memory_checkpoint_2026_10_05",
-    "local_head": "13d875979702a9d588f29a4ac4490db631ad36cb",
-    "remote_ref": "13d875979702a9d588f29a4ac4490db631ad36cb",
-    "match": true,
-    "committed_source_files": true,
-    "remote_tracking": "origin/memory_checkpoint_2026_10_05"
+    "local_head_sha": "2b92ed26e2fa59d737fc35b0b31d8726d6ef8a6f",
+    "remote_ref_sha": "2b92ed26e2fa59d737fc35b0b31d8726d6ef8a6f",
+    "push_status": "success (up to date / master up-to-date)",
+    "cloned_from_github": true,
+    "branch_source_files_present": true
   },
-  "source_files_present_on_disk": {
+  "source_files_saved_on_disk": {
     "main.py": true,
     "script.py": true,
+    "README.md": true,
+    ".gitignore": true,
     "app_py_files": 325,
+    "web_MOON_master_prompt": true,
+    "web/moon_terminal.html": true,
+    "moon_ui/hud.html": true,
+    "theme.json": true,
     "tests": 45,
-    "web_ui": ["web/moon_terminal.html", "moon_ui/hud.html", "theme.json"],
-    "docs": ["README.md", "ARCHITECTURE.md", "DEPLOY.md", "CONFIGURATION.md", "INSTALLATION.md", "TERMINAL.md"]
+    "data/executions.db": true,
+    "data/agents/": true
   },
-  "verify_steps": [
-    "git remote -> origin = git@github.com:crsuvo100-gif/MOON.git  [CONFIRMED]",
-    "local HEAD == origin/memory_checkpoint_2026_10_05  [CONFIRMED]",
-    "source files committed on GitHub  [CONFIRMED via API]",
-    "github repo live + settings confirmed  [CONFIRMED]",
-    "MOON running on 8777: /api/health reachable (model qwen2.5:1.5b, locked False)",
-    "moon run works: real model query -> 'MOON has launched, excited for our journey ahead!'",
-    "systemd service active (moon-terminal.service) + launcher 'moon' works (moon-ai-agent 0.1.0)"
+  "git_state": {
+    "working_tree_clean_except": [
+      ".ori/ (runtime state, gitignored)"
+    ],
+    "committed_source_files": true,
+    "branch_tracks_origin": true,
+    "master_tracks_origin": true
+  },
+  "services_verified_on_systemd": {
+    "moon-terminal.service": "active/running",
+    "moon-hud.service": "active/running",
+    "moon-monitor.timer": "active/timer",
+    "health_endpoint": "http://127.0.0.1:8777/api/health",
+    "health_status": "DEGRADED",
+    "health_summary": "10/11 subsystems nominal",
+    "model": "qwen2.5:1.5b",
+    "locked": false
+  },
+  "moons_shell_run_command_verified": {
+    "command": "moon run \"Say 'MOON has launched' and confirm 3 subs. Keep it to one line.\"",
+    "result": "MOON has launched, excited for our journey ahead!",
+    "exit_code": 0
+  },
+  "verification_steps": [
+    "git remote verified: origin -> git@github.com:crsuvo100-gif/MOON.git",
+    "git branch verified: memory_checkpoint_2026_10_05",
+    "git local HEAD == origin/ref: 2b92ed2... (push exit 0, master up-to-date)",
+    "Frchat clone of github memory_checkpoint_2026_10_05: main.py + script.py + web/ + tests/ all present (source saved on GitHub)",
+    "github repo live + readable: API 200, source files committed on cloud branch",
+    "systemd services active/running: moon-terminal, moon-hud, moon-monitor.timer",
+    "health endpoint reachable: http://127.0.0.1:8777/api/health -> DEGRADED, 10/11 OK, qwen2.5:1.5b",
+    "moon shell run command verified real: 'MOON has launched, excited for our journey ahead!' (exit 0)"
   ],
   "status": "COMPLETE",
-  "confirmation": "YES — GitHub repo connected, source saved, all work verified complete"
+  "confirmation": "YES"
 }
