@@ -1,8 +1,8 @@
 {
   "name": "MOON NEURAL CORE",
-  "accent": "#00e5ff",
-  "accent2": "#7c5cff",
-  "danger": "#ff5c6c",
+  "accent": "#ff2d4c",
+  "accent2": "#ff6a00",
+  "danger": "#ff1a2a",
   "ok": "#57f5a5",
   "pulse": "#ffb454",
   "bg": "#07090f",
@@ -10,7 +10,9 @@
   "fg": "#e6e9f0",
   "muted": "#8a93a6",
   "border": "#1a2233",
-  "theme": "mono-cyan",
+  "theme": "mono-red-black",
   "version": "1.0.0",
-  "modes": ["dark"]
+  "modes": [
+    "dark"
+  ]
 }

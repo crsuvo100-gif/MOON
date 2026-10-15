@@ -254,6 +254,8 @@ class MoonTerminalREPL:
         self.orchestrator = None
         self._running = False
         self._busy = False
+        self._unlocked = False
+        self._unlock_ts = 0.0
 
     async def start(self) -> None:
         """Initialize the brain and start the REPL."""
@@ -342,6 +344,13 @@ class MoonTerminalREPL:
             self._running = False
         elif command == "/help":
             _print_help()
+        elif command == "/unlock":
+            if arg.strip().upper() == "MOON LOVE YOU 3000":
+                self._unlocked = True
+                self._unlock_ts = time.time()
+                print(f"{_GREEN}  [UNLOCKED] MOON love you 3000 — interface online.{_RESET}")
+            else:
+                print(f"{_RED}  Wrong phrase.  Type /help for help.{_RESET}")
         elif command == "/status":
             _print_status(self.orchestrator)
         elif command == "/sessions":
