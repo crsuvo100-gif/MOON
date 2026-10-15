@@ -1,242 +1,81 @@
-/* MOON Terminal UI - professional dark theme, desktop-style terminal emulator window */
-*
-{
-}
-
-Screen
-{
+/* ── root ── */
+Screen {
     background: #0a0a12;
     color: #e0e0e0;
+    min-width: 110;
+    min-height: 38;
+    padding: 10;
 }
 
-/* ---- Title bar ---- */
-#title-bar
-{
-    layout: horizontal;
-    width: 100%;
-    height: 2;
+/* ── terminal window ── */
+.term-window {
     background: #14141f;
-    border-bottom: solid #1a1a2e;
-    padding: 0 4;
+    border: solid #00ff88;
+    padding: 8 10;
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
 }
 
-#title-icon
-{
-    color: #888899;
-    padding: 0 4;
-    text-align: center;
-    width: 4;
-}
-
-#title-prompt
-{
-    color: #e0e0e0;
+/* ── section header ── */
+.section-header {
+    color: #ffffff;
     text-style: bold;
-    padding: 0 4;
+    margin-bottom: 1;
 }
 
-#title-controls
-{
-    layout: horizontal;
-    width: 1fr;
-    padding-right: 4;
+/* ── command line / prompt ── */
+.command {
+    color: #00ff88;
+    text-style: bold;
 }
 
-#title-minimize, #title-maximize, #title-close
-{
-    padding: 0 3;
-    color: #888899;
-    text-align: center;
-    width: 2;
-    height: 1;
+.prompt {
+    color: #00ff88;
+    text-style: bold;
 }
 
-#title-close
-{
-    color: #ff6666;
-}
-
-/* ---- Menu bar ---- */
-#menu-bar
-{
-    layout: horizontal;
-    width: 100%;
-    height: 2;
-    background: #14141f;
-    border-bottom: solid #1a1a2e;
-    padding: 0 4;
-}
-
-#menu-session, #menu-actions, #menu-edit, #menu-view, #menu-help
-{
+/* ── output text ── */
+.output {
     color: #e0e0e0;
-    padding: 0 2;
-    text-align: center;
-    height: 1;
 }
 
-/* ---- Terminal content ---- */
-#terminal-content
-{
-    layout: vertical;
+/* ── designated output (warnings, yellow) ── */
+.output-warn {
+    color: #ffd84d;
+}
+
+/* ── status line ── */
+.status {
+    color: #9090a8;
+}
+
+/* ── error / blocked ── */
+.error {
+    color: #ff4455;
+}
+
+/* ── exit status (bottom-left, red) ── */
+.exit-status {
+    color: #ff4455;
+    text-style: bold;
+    align: right bottom;
+}
+
+/* ── Hermes bold header ── */
+.hermes-header {
+    color: #00ff88;
+    text-style: bold;
+}
+
+/* ── scrollable content ── */
+ScrollView {
     width: 100%;
-    height: 1fr;
-    background: #0a0a12;
-    border: solid #1a1a2e;
-}
-
-#scrollbar
-{
-    width: 3;
-    background: #0a0a12;
-    border-right: solid #1a1a2e;
-    layout: vertical;
-}
-
-#scrollbar-track
-{
-    color: #555566;
-    text-align: center;
     height: 100%;
 }
 
-#output-container
-{
-    layout: vertical;
-    background: #0a0a12;
-    overflow: auto;
-}
-
-#output-text
-{
-    padding: 2;
-    color: #e0e0e0;
-    text-style: bold;
-    height: 1fr;
-}
-
-/* Output line CSS classes */
-.status { color: #e0e0e0; }
-.command { color: #ffaa00; text-style: bold; }
-.warning { color: #ff4444; }
-.explanation { color: #aaaaaa; }
-.error { color: #ff4444; text-style: bold; }
-.success { color: #00ff88; }
-.hermes-header { color: #ffaa00; text-style: bold; }
-.hermes { color: #e0e0e0; }
-.ai-status { color: #4488ff; }
-.icon { color: #666677; }
-
-/* ---- Input area ---- */
-#input-container
-{
-    layout: horizontal;
+/* ── inner scroll viewport ── */
+.log-content {
     width: 100%;
-    height: 3;
-    background: #0a0a12;
-    padding: 0 4;
-    border-top: solid #1a1a2e;
-}
-
-#input-prompt
-{
-    color: #888899;
-    padding-right: 4;
-}
-
-#command-input
-{
-    background: transparent;
-    color: #e0e0e0;
-    border: none;
-    outline: none;
-    width: 100%;
-}
-
-/* ---- Status bar ---- */
-#status-bar
-{
-    height: 2;
-    background: #14141f;
-    color: #666677;
-    padding: 0 4;
-    border-top: solid #1a1a2e;
-}
-
-/* ---- Panels ---- */
-#process-panel
-{
-    width: 30;
-    height: 1fr;
-    background: #0d0d14;
-    border-left: solid #1a1a2e;
-    padding: 0 1;
-    display: none;
-}
-
-#process-panel.visible
-{
-    display: block;
-}
-
-#session-panel
-{
-    width: 30;
-    height: 1fr;
-    background: #0d0d14;
-    border-right: solid #1a1a2e;
-    padding: 0 1;
-    display: none;
-}
-
-#session-panel.visible
-{
-    display: block;
-}
-
-/* ---- Permission dialog ---- */
-#permission-dialog
-{
-    align: center middle;
-    background: #0a0a12;
-    border: solid #ffaa00;
-    padding: 2 4;
-    width: 60;
-    height: auto;
-}
-
-#permission-dialog .title
-{
-    color: #ffaa00;
-    text-style: bold;
-}
-
-#permission-dialog .command
-{
-    color: #e0e0e0;
-    text-style: bold;
-}
-
-#permission-dialog .risk
-{
-    color: #ff4444;
-}
-
-#permission-dialog .button
-{
-    margin: 1 2;
-    background: #14141f;
-    color: #e0e0e0;
-}
-
-#permission-dialog .allow
-{
-    background: #00aa44;
-    color: #ffffff;
-}
-
-#permission-dialog .deny
-{
-    background: #aa0000;
-    color: #ffffff;
+    min-height: 1;
 }
