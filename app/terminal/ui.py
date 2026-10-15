@@ -1,7 +1,8 @@
 """Professional MOON Terminal UI.
 
 A full-featured terminal interface with:
-- Terminal frame (header, session bar, output, input, status bar)
+- Desktop-style terminal emulator window (title bar, menu bar, scrollbar)
+- Terminal frame with all components
 - State display (idle, executing, permission, verifying, recovering, success, error)
 - Live output streaming
 - Command input with history
@@ -16,7 +17,6 @@ Usage:
 
 from __future__ import annotations
 
-import asyncio
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -29,23 +29,38 @@ from textual.widgets import (
     Header,
     Input,
     Label,
-    ListItem,
-    ListView,
     Static,
-    Tab,
-    TabbedContent,
-    Tabs,
 )
 from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.binding import Binding
 from textual import events
 
-from .event_bus import Event, subscribe, publish, get_bus
+from .event_bus import get_bus
 from .state_machine import ExecutionState
 from .terminal_interface import terminal_interface
 from .models import ExecutionResult
 
+
+# ── Icons ─────────────────────────────────────────────────────────────────
+
+ICON_TERMINAL = "⊞"     # blue terminal/monitor icon for AI assistant status
+ICON_FOLDER = "⊟"       # yellow folder icon for command output
+ICON_WARNING = "▲"      # yellow triangle warning icon for system warnings
+
+# ── Colors ────────────────────────────────────────────────────────────────
+
+BG_DARK = "#0a0a12"          # near-black terminal background
+BG_BAR = "#14141f"           # title/menu bar background
+TEXT_LIGHT = "#e0e0e0"       # high-contrast light text
+TEXT_DIM = "#888899"         # dim text
+CYAN = "#00ff88"             # context compaction
+YELLOW = "#ffaa00"           # Hermes headers
+RED = "#ff4444"              # warnings
+BLUE = "#4488ff"             # AI status / terminal icon
+WHITE = "#ffffff"            # white text
+GRAY = "#666677"             # muted text
+BLUE_CLOSE = "#2266ff"       # blue close button
 
 # ── State display text ──
 
@@ -96,23 +111,35 @@ class StatusBar(Static):
 
 
 class OutputDisplay(Static):
-    """Main output display area."""
+    """Main output display area with monospaced terminal text."""
 
     def __init__(self, **kwargs):
         super().__init__("", **kwargs)
         self._lines: List[str] = []
         self._max_lines = 1000
 
-    def add_line(self, text: str, css_class: str = ""):
-        """Add a line to the output."""
+    def add_line(self, text: str, css_class: str = "", icon: str = ""):
+        """Add a line to the output.
+
+        Args:
+            text: The text to display.
+            css_class: CSS class to apply (status, command, warning, explanation,
+                error, success, hermes-header, hermes, ai-status).
+            icon: Optional icon to prefix the line. One of: terminal, folder, warning.
+        """
         if css_class:
-            self._lines.append(f"[{css_class}]{text}[/{css_class}]")
+            icon_html = self._ICONS.get(icon, "")
+            if icon:
+                self._lines.append(f"[{css_class}]{icon_html}{text}[/css_class]")
+            else:
+                self._lines.append(f"[{css_class}]{text}[/{css_class}]")
         else:
             self._lines.append(text)
+
         # Trim to max lines
         if len(self._lines) > self._max_lines:
             self._lines = self._lines[-self._max_lines:]
-        self.update("\n".join(self._lines))
+        self.update("".join(self._lines))
 
     def add_text(self, text: str):
         """Add raw text (may contain newlines)."""
@@ -127,6 +154,12 @@ class OutputDisplay(Static):
     def scroll_to_bottom(self):
         """Scroll to bottom of output."""
         pass  # Textual handles this automatically
+
+    _ICONS = {
+        "terminal": "⊞ ",
+        "folder": "⊟ ",
+        "warning": "▲ ",
+    }
 
 
 class ProcessPanel(Static):
@@ -213,7 +246,7 @@ class PermissionDialog(Container):
 
 
 class TerminalFrame(Container):
-    """Main terminal frame with all components."""
+    """Main terminal frame with desktop-style window chrome."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -228,31 +261,37 @@ class TerminalFrame(Container):
         self._permission_pending = False
 
     def compose(self) -> ComposeResult:
-        # Header bar
-        with Horizontal(id="header-bar"):
-            yield Label(" MOON TERMINAL ", id="header-title")
-            yield Label("● CONNECTED", id="header-status")
+        # Title bar
+        with Container(id="title-bar"):
+            yield Static("☰", id="title-icon")
+            yield Static("meow@Meow:~", id="title-prompt")
+            with Container(id="title-controls"):
+                yield Static("─", id="title-minimize")
+                yield Static("□", id="title-maximize")
+                yield Static("✕", id="title-close")
 
-        # Session bar
-        with Horizontal(id="session-bar"):
-            yield Label("Local • SH • /home/meow/Projects/MOON", id="session-info")
+        # Menu bar
+        with Container(id="menu-bar"):
+            yield Static("Session", id="menu-session")
+            yield Static("Actions", id="menu-actions")
+            yield Static("Edit", id="menu-edit")
+            yield Static("View", id="menu-view")
+            yield Static("Help", id="menu-help")
 
-        # Main content area
-        with Horizontal(id="main-content"):
-            # Session panel (left)
-            yield SessionPanel(id="session-panel")
+        # Terminal content
+        with Container(id="terminal-content"):
+            # Thin gray vertical scrollbar along the far left edge
+            with Container(id="scrollbar"):
+                yield Static("▁", id="scrollbar-track")
 
-            # Output area (center)
-            with Vertical(id="output-container"):
+            # Output area
+            with Container(id="output-container"):
                 yield OutputDisplay(id="output-text")
 
-            # Process panel (right)
-            yield ProcessPanel(id="process-panel")
-
-        # Input area
-        with Horizontal(id="input-container"):
-            yield Label(" $ ", id="input-prompt")
-            yield Input(placeholder="Enter command...", id="command-input")
+            # Command input
+            with Container(id="input-container"):
+                yield Static("meow@Meow:~ $", id="input-prompt")
+                yield Input(placeholder="Type a command...", id="command-input")
 
         # Status bar
         yield StatusBar(id="status-bar")

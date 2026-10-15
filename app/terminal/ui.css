@@ -1,116 +1,174 @@
-/* MOON Terminal UI — professional dark theme */
+/* MOON Terminal UI — professional dark theme, desktop-style terminal emulator window */
+
+* {
+    font-family: "Ubuntu Mono", "Fira Code", "Consolas", "Menlo", "DejaVu Sans Mono", monospace;
+    white-space: pre;
+}
 
 Screen {
-    background: #0a0a0f;
+    background: #0a0a12;
+    color: #e0e0e0;
 }
 
-#main-container {
-    layout: vertical;
-    height: 1fr;
-}
+/* ── Title bar ── */
 
-#header-bar {
-    height: 3;
-    background: #12121a;
-    color: #00ff88;
-    padding: 0 2;
-    border-bottom: solid #1a1a2e;
-}
-
-#header-title {
-    color: #00ff88;
-    text-style: bold;
-}
-
-#header-status {
-    color: #8888aa;
-}
-
-#session-bar {
+#title-bar {
+    layout: horizontal;
+    width: 100%;
     height: 2;
-    background: #0d0d14;
-    color: #6666aa;
-    padding: 0 2;
-    border-bottom: solid #1a1a2e;
+    background: #14141f;
+    border-bottom: 1px solid #1a1a2e;
+    padding: 0 4;
 }
 
-#output-container {
-    height: 1fr;
-    background: #0a0a0f;
-    border: solid #1a1a2e;
-    margin: 0 1;
-    padding: 0 1;
+#title-icon {
+    content: "☰";
+    color: #888899;
+    padding: 0 4;
+    text-align: center;
+    width: 4;
 }
 
-#output-scroll {
-    height: 1fr;
+#title-prompt {
+    content: "meow@Meow:~";
+    color: #e0e0e0;
+    font-weight: bold;
+    padding: 0 4;
 }
 
-#output-text {
-    color: #ccccdd;
-    background: #0a0a0f;
+#title-controls {
+    layout: horizontal;
+    width: 1fr;
+    padding-right: 4;
 }
 
-#output-text .stdout {
-    color: #ccccdd;
+#title-minimize, #title-maximize, #title-close {
+    padding: 0 3;
+    color: #888899;
+    text-align: center;
+    width: 2;
+    height: 1;
 }
 
-#output-text .stderr {
+#title-close {
     color: #ff6666;
 }
 
-#output-text .command {
-    color: #00ff88;
-    text-style: bold;
+/* ── Menu bar ── */
+
+#menu-bar {
+    layout: horizontal;
+    width: 100%;
+    height: 2;
+    background: #14141f;
+    border-bottom: 1px solid #1a1a2e;
+    padding: 0 4;
 }
 
-#output-text .status {
-    color: #ffaa00;
+#menu-session, #menu-actions, #menu-edit, #menu-view, #menu-help {
+    color: #e0e0e0;
+    padding: 0 2;
+    text-align: center;
+    height: 1;
 }
 
-#output-text .error {
-    color: #ff4444;
-    text-style: bold;
+/* ── Terminal content ── */
+
+#terminal-content {
+    layout: vertical;
+    width: 100%;
+    height: 1fr;
+    background: #0a0a12;
+    border: 1px solid #1a1a2e;
 }
 
-#output-text .success {
-    color: #00ff88;
+#scrollbar {
+    width: 3;
+    background: #0a0a12;
+    border-right: 1px solid #1a1a2e;
+    layout: vertical;
 }
 
-#output-text .system {
-    color: #6666aa;
+#scrollbar-track {
+    color: #555566;
+    content: "▁";
+    text-align: center;
+    height: 100%;
 }
+
+#output-container {
+    flex: 1;
+    layout: vertical;
+    background: #0a0a12;
+    overflow: auto;
+}
+
+#output-text {
+    padding: 2;
+    color: #e0e0e0;
+    font-family: monospace;
+    font-size: 1em;
+    white-space: pre;
+    word-wrap: normal;
+    overflow: auto;
+    height: 1fr;
+}
+
+/* Output line CSS classes */
+
+.status { color: #e0e0e0; }
+.command { color: #ffaa00; text-style: bold; }
+.warning { color: #ff4444; }
+.explanation { color: #aaaaaa; }
+.error { color: #ff4444; text-style: bold; }
+.success { color: #00ff88; }
+.hermes-header { color: #ffaa00; text-style: bold; }
+.hermes { color: #e0e0e0; }
+.ai-status { color: #4488ff; }
+.icon { color: #666677; }
+
+/* ── Input area ── */
 
 #input-container {
+    layout: horizontal;
+    width: 100%;
     height: 3;
-    background: #12121a;
-    padding: 0 2;
-    border-top: solid #1a1a2e;
+    background: #0a0a12;
+    padding: 0 4;
+    border-top: 1px solid #1a1a2e;
+}
+
+#input-prompt {
+    color: #888899;
+    content: "meow@Meow:~ $";
+    padding-right: 4;
 }
 
 #command-input {
-    background: #0a0a0f;
-    color: #ccccdd;
-    border: solid #333355;
+    background: transparent;
+    color: #e0e0e0;
+    border: none;
+    outline: none;
+    width: 100%;
 }
 
-#command-input:focus {
-    border: solid #00ff88;
-}
+/* ── Status bar ── */
 
 #status-bar {
     height: 2;
-    background: #12121a;
-    color: #6666aa;
-    padding: 0 2;
-    border-top: solid #1a1a2e;
+    background: #14141f;
+    color: #666677;
+    padding: 0 4;
+    border-top: 1px solid #1a1a2e;
 }
+
+/* ── Panels ── */
 
 #process-panel {
     width: 30;
     height: 1fr;
     background: #0d0d14;
-    border-left: solid #1a1a2e;
+    border-left: 1px solid #1a1a2e;
     padding: 0 1;
     display: none;
 }
@@ -123,7 +181,7 @@ Screen {
     width: 30;
     height: 1fr;
     background: #0d0d14;
-    border-right: solid #1a1a2e;
+    border-right: 1px solid #1a1a2e;
     padding: 0 1;
     display: none;
 }
@@ -132,9 +190,11 @@ Screen {
     display: block;
 }
 
+/* ── Permission dialog ── */
+
 #permission-dialog {
     align: center middle;
-    background: #0a0a0f;
+    background: #0a0a12;
     border: solid #ffaa00;
     padding: 2 4;
     width: 60;
@@ -147,7 +207,7 @@ Screen {
 }
 
 #permission-dialog .command {
-    color: #ccccdd;
+    color: #e0e0e0;
     text-style: bold;
 }
 
@@ -157,6 +217,8 @@ Screen {
 
 #permission-dialog .button {
     margin: 1 2;
+    background: #14141f;
+    color: #e0e0e0;
 }
 
 #permission-dialog .allow {
