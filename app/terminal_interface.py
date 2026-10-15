@@ -1510,10 +1510,10 @@ async def _run_diagnostics(orch) -> dict:
             checks.append(("Memory sync", "FAIL", "status error"))
     else:
         checks.append(("Memory sync", "WARN", "not initialized"))
-    # system
-    sys_ = st.get("system", {})
-    checks.append(("System health", "OK" if sys_.get("ram_pct", 100) < 95 else "WARN",
-                   f"CPU {sys_.get('cpu',0)}% / RAM {sys_.get('ram_pct',0)}%"))
+    # system (real host metrics via _system_metrics(); same source as HUD/status)
+    _sys = _system_metrics()
+    checks.append(("System health", "OK" if _sys.get("ram_pct", 100) < 95 else "WARN",
+                   f"CPU {_sys.get('cpu',0)}% / RAM {_sys.get('ram_pct',0)}%"))
     checks.append(("Lock state", "OK",
                    "unlocked" if not orch._lock.locked else "locked (by design; awaiting operator phrase)"))
     return {"checks": checks, "summary": f"{sum(1 for c in checks if c[1]=='OK')}/{len(checks)} subsystems nominal"}
