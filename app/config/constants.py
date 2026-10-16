@@ -16,6 +16,9 @@ class MemoryScope(str, Enum):
 # The phrase that unlocks MOON's Security Lock Mode.
 UNLOCK_PHRASE = "MOON love you 3000"
 
+# Semantic version (PEP 440). Accessible as app.config.constants.VERSION.
+VERSION = "0.1.0"
+
 DEFAULT_AGENTS = [
     "coding", "research", "browser", "writing", "vision",
     "planning", "memory", "review", "debug", "coordinator", "manager",
