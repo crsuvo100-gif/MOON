@@ -59,6 +59,22 @@ class TokenBucket:
                 retry_after=wait, remaining=self._tokens)
 
 
+class LearnBudget:
+    """Bounded self-learning quota (spec 32/51 self-heal guard).
+
+    Models ``enable_auto_learning`` x ``self_learning_budget`` as a token
+    bucket so a runaway caller cannot burn capacity without limit. The bucket
+    refills slowly (0.1/s) so beneficial learning stays smooth and bounded
+    per-process (the settings field controls the per-process cap).
+    """
+
+    def __init__(self, *, rate: float = 0.1, capacity: float = 100.0) -> None:
+        self.bucket = TokenBucket(rate=rate, capacity=capacity)
+
+    def consume(self, n: float = 1.0) -> RateLimitDecision:
+        return self.bucket.take(n)
+
+
 @dataclass
 class _Bucket:
     bucket: TokenBucket
@@ -70,6 +86,8 @@ class _Bucket:
 class RateLimiter:
     """Named token buckets for tools / agents / global task submission."""
 
+    learn_budget: float = 100.0  # per-process self-learning quota (spec 32/51)
+
     def __init__(self, *, tool_rate: float = 5.0, tool_burst: float = 20.0,
                  agent_rate: float = 2.0, agent_burst: float = 10.0,
                  task_rate: float = 1.0, task_burst: float = 5.0) -> None:
@@ -80,6 +98,7 @@ class RateLimiter:
         }
         self._buckets: dict[str, _Bucket] = {}
         self._lock = threading.Lock()
+        self.learn_bucket = LearnBudget(rate=0.1, capacity=self.learn_budget)
 
     def _get(self, name: str) -> TokenBucket:
         with self._lock:
@@ -101,6 +120,10 @@ class RateLimiter:
                 else:
                     rec.denied += 1
         return d
+
+    def consume_learn(self, n: float = 1.0) -> RateLimitDecision:
+        """Consume a self-learning token, gating auto-learning on the budget."""
+        return self.learn_bucket.consume(n)
 
     def snapshot(self) -> dict[str, Any]:
         with self._lock:

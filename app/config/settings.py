@@ -236,8 +236,9 @@ class Settings(BaseSettings):
     task_queue_backend: Literal["memory", "redis"] = "memory"
 
     api_cors_origins: str = Field(
-        default="*",
-        description="Comma-separated list of allowed CORS origins. Use '*' for all.",
+        default="http://127.0.0.1:8777",
+        description="Comma-separated list of allowed CORS origins. Dev default is 127.0.0.1:8777 "
+                    "(set to '*' to restore the all-origins default in local dev).",
     )
 
     enable_browser_automation: bool = True
@@ -256,6 +257,9 @@ class Settings(BaseSettings):
         description="Two-phase agent self-refine (extra LLM pass per task). Disable on CPU-only / low-RAM hosts to halve per-task latency; enable on capable hardware for higher accuracy.",
     )
     enable_auto_learning: bool = True
+    # Self-learning: learn capability-generation heuristics from verified results.
+    # Rate-bounded (self_learning_budget) so a rogue/task cannot starve the caller.
+    self_learning_budget: float = 100.0
 
     # --- Advanced workflow / speed / accuracy ------------------------------
     # Fast-path: for simple chat / single factual questions, skip the heavy

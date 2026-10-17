@@ -27,6 +27,7 @@ async def _handle(msg):
     return resp
 
 async def main():
+    sys.stdin.reconfigure(line_buffering=True)
     for line in sys.stdin:
         line = line.strip()
         if not line:

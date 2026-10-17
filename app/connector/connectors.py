@@ -191,15 +191,27 @@ class MCPConnector:
                     env=self._env,
                     cwd=self._cwd,
                 )
-                read, write = None, None
+                stdio = stdio_client(server)
+                read, write = await stdio.__aenter__()
+                self._stdio = stdio  # keep the context manager alive for the
+                self._read, self._write = read, write  # connector's lifetime
+                from mcp.client.session import ClientSession
+                self._session = ClientSession(read, write)
                 try:
-                    async with stdio_client(server) as (r, w):
-                        read, write = r, w
-                        from mcp.client.session import ClientSession
-                        self._session = ClientSession(read, write)
-                        await self._session.initialize()
+                    await self._session.__aenter__()
                 except Exception:
+                    await self._close_cleans(1)
+                    self._stdio = None
                     self._session = None
+                    self._read = None
+                    self._write = None
+                    raise
+                try:
+                    await self._session.initialize()
+                except Exception:
+                    self._session.close()
+                    self._session = None
+                    self._stdio = None
                     self._read = None
                     self._write = None
                     raise
@@ -219,7 +231,7 @@ class MCPConnector:
                     await self._session.initialize()
         except Exception as exc:  # noqa: BLE001
             # Ensure partial state is cleaned so the next call re-connects.
-            self._close_cleans(1)
+            await self._close_cleans(1)
             err = exc
             if hasattr(exc, "args") and exc.args:
                 err = exc.args[0]
@@ -235,27 +247,30 @@ class MCPConnector:
     async def __aexit__(self, *exc) -> None:
         await self.close()
 
+    async def close(self) -> None:
+        await self._close_cleans(0)
+
     # ------------------------------------------------------------- protocol
     async def list_tools(self, cursor: str | None = None) -> CallResult:
-        return await self._call("list_tools", *([cursor] if cursor is not None else []), {})
+        return await self._call("list_tools", *([cursor] if cursor is not None else []))
 
     async def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> CallResult:
         return await self._call("call_tool", name, arguments or {})
 
     async def list_prompts(self, cursor: str | None = None) -> CallResult:
-        return await self._call("list_prompts", *([cursor] if cursor is not None else []), {})
+        return await self._call("list_prompts", *([cursor] if cursor is not None else []))
 
     async def get_prompt(self, name: str, arguments: dict[str, str] | None = None) -> CallResult:
         return await self._call("get_prompt", name, arguments or {})
 
     async def list_resources(self, cursor: str | None = None) -> CallResult:
-        return await self._call("list_resources", *([cursor] if cursor is not None else []), {})
+        return await self._call("list_resources", *([cursor] if cursor is not None else []))
 
     async def read_resource(self, uri: str) -> CallResult:
         return await self._call("read_resource", uri)
 
     async def list_resource_templates(self, cursor: str | None = None) -> CallResult:
-        return await self._call("list_resource_templates", *([cursor] if cursor is not None else []), {})
+        return await self._call("list_resource_templates", *([cursor] if cursor is not None else []))
 
     async def list_roots(self) -> CallResult:
         return await self._call("list_roots")
@@ -275,9 +290,17 @@ class MCPConnector:
         except Exception as exc:  # noqa: BLE001
             return CallResult(ok=False, status=0, error=f"MCP {method} failed: {exc}")
 
-    def _close_cleans(self, silent: int) -> None:
+    async def _close_cleans(self, silent: int) -> None:
         """Close streams + session, guarded so a second close is a no-op."""
         try:
+            # Close the stdio context manager first (tears down its task
+            # group and closes the underlying streams).
+            if getattr(self, "_stdio", None) is not None:
+                try:
+                    await self._stdio.__aexit__(None, None, None)
+                except Exception:
+                    pass
+                self._stdio = None
             if self._session is not None:
                 try:
                     self._session.close()
