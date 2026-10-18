@@ -6,10 +6,24 @@ import pytest
 
 @pytest.fixture
 def repo_copy(tmp_path):
-    """Copy the entire repository into a temporary directory for isolation."""
+    """Copy the entire repository into a temporary directory for isolation.
+
+    The copy is selective (settings exclude tool caches, version control and
+    virtualenv directories) so the fixture stays fast on large monorepos.
+    """
     src = Path(__file__).resolve().parents[2]  # project root
     dst = tmp_path / "MOON"
-    shutil.copytree(src, dst, dirs_exist_ok=True)
+    shutil.copytree(
+        src,
+        dst,
+        ignore=shutil.ignore_patterns(
+            "__pycache__", "*.pyc", ".git", ".gitnexus", ".hermes", "node_modules",
+            ".pre_commit_checkpoint", ".venv", "build", "dist", "MOON_HOME",
+            "*.egg-info", "backups", "data", "deploy", "skills", "regexr", "voices",
+            "moon_ui", "web", ".claude", ".claude-plugin", ".github", ".vscode",
+            ".pytest_cache", "CYCLONE_TERMINAL_AI_V10", ".moon", ".moon_logs",
+        ),
+    )
     return dst
 
 def test_acceptance_flow(repo_copy):

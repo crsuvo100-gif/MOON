@@ -52,9 +52,14 @@
 - HUD owned by moon-hud.service; moon-monitor.timer only health-checks
 
 
----
+### Fixed
+- Packaging: console script `main:main` requires the project root on sys.path; added `[tool.setuptools] py-modules = ["main"]` so the editable install resolves it.
+- Packaging: hard-required `torch`/`torchaudio`/`scipy`/`asyncpg`/`kokoro-onnx`/`langdetect` in requirements.txt broke clean installs and are optional features; moved them to requirements-optional.txt (graceful degraded mode).
+- Dependency sync: pyproject.toml runtime extras aligned with requirements.txt.
+- Installer: acceptance test fixture copied the full repo (127k files / ->120s); switched to a selective copy ignoring caches, venvs and version control.
+- Memory: app/memory/cloud_store.py imported asyncpg at module top, which blocked `app.memory` import when asyncpg is absent; now lazy-guarded.
 
-## [1.0.0] — Initial Release
+---
 
 - Core agent engine with 13 personas
 - 13 intent routing rules

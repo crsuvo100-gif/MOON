@@ -3,6 +3,12 @@
 # separately and does NOT fail if any are unavailable for your Python/platform).
 # MOON degrades gracefully when these are absent.
 # ---------------------------------------------------------------------------
+# Runtime extras — optional; MOON degrades gracefully when absent.
+#   asyncpg   -> PostgreSQL cloud memory store (lazy import)
+#   scipy     -> audio DSP utilities
+#   kokoro-onnx -> offline female female voice engine (lazy import)
+#   langdetect -> multilingual TTS language auto-detect (lazy import)
+#   torch/torchaudio -> F5-TTS voice cloning (optional, Python 3.11+)
 # Embeddings / vector store (optional; pure-python fallback included)
 # chromadb>=0.5
 # sentence-transformers>=2.6
@@ -36,6 +42,14 @@ f5-tts>=1.1
 openai>=2.53
 vosk>=0.3
 pyaudio>=0.2
+
+# Runtime extras moved from requirements.txt (optional; degraded gracefully):
+asyncpg>=0.29
+scipy>=1.11
+kokoro-onnx>=0.2.1
+langdetect>=1.0.0
+torch
+torchaudio
 
 # Quality extras
 pytest-cov>=5.0

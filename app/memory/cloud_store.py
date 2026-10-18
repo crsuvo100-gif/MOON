@@ -20,7 +20,14 @@ import threading
 import time
 from typing import Any
 
-import asyncpg
+# Optional driver: required only when MOON_MEMORY_BACKEND=cloud.
+# Import lazily so importing the memory package never hard-fails on a missing
+# optional dependency (a clean install without PostgreSQL must still be able
+# to import app.memory).
+try:
+    import asyncpg  # noqa: F401
+except ImportError:  # pragma: no cover
+    asyncpg = None
 
 from .record import MemoryRecord, MemoryType, Scope, SyncStatus
 from .store import MemoryStore

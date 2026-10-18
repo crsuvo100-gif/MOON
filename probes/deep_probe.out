@@ -1,0 +1,418 @@
+2026-10-18 20:51:24,671 | INFO  | app.brain.orchestrator | Per-agent model pre-pull: 4 ready (qwen2.5-coder:1.5b, qwen2.5:1.5b, deepseek-r1:1.5b, qwen2.5:3b)
+2026-10-18 20:51:25,268 | INFO  | app.brain.orchestrator | Strong model enabled: qwen2.5:1.5b @ http://127.0.0.1:11434/v1
+2026-10-18 20:51:25,293 | WARNING | app.brain.memory_manager | Could not load episodes (Expecting value: line 1 column 1 (char 0)); starting fresh
+2026-10-18 20:51:25,320 | INFO  | app.memory.enhanced_long_term | Enhanced LTM loaded 14 entries from app/logs/long_term.jsonl
+2026-10-18 20:51:25,321 | INFO  | app.services.embedding_service | EmbeddingService using deterministic offline fallback (dim=384)
+2026-10-18 20:51:25,326 | INFO  | app.memory.memory_graph | Memory graph loaded 0 nodes, 0 edges
+2026-10-18 20:51:25,327 | INFO  | app.memory.memory_maintenance | Memory maintenance started
+2026-10-18 20:51:26,348 | INFO  | app.memory.advanced.orchestrator | AdvancedMemoryOrchestrator: setting up...
+2026-10-18 20:51:26,368 | INFO  | app.memory.advanced.session_continuity | Session continuity: started session_1792353086 (10 previous sessions loaded)
+2026-10-18 20:51:26,369 | INFO  | app.memory.advanced.orchestrator | AdvancedMemoryOrchestrator: setup complete
+2026-10-18 20:51:26,375 | INFO  | app.brain.orchestrator | Advanced memory system initialized
+2026-10-18 20:51:27,616 | INFO  | app.brain.orchestrator | Cognitive memory initialized (device=93a3c313f61e4490)
+2026-10-18 20:51:27,626 | INFO  | app.agents.advanced.orchestrator | Advanced agent system initialized
+2026-10-18 20:51:27,627 | INFO  | app.brain.orchestrator | Advanced agent system initialized
+2026-10-18 20:51:28,304 | INFO  | app.brain.orchestrator | Advanced brain system initialized
+2026-10-18 20:51:28,306 | INFO  | app.brain.orchestrator | Professional cognitive loop initialized
+2026-10-18 20:51:28,317 | INFO  | app.agents.advanced.workflow | Professional agent workflow initialized for orchestrator
+2026-10-18 20:51:28,318 | INFO  | app.brain.orchestrator | Professional agent workflow initialized
+2026-10-18 20:51:29,095 | INFO  | app.brain.orchestrator | Advanced skill system initialized (4 skills)
+2026-10-18 20:51:29,451 | INFO  | app.brain.orchestrator | Advanced context self-function system initialized
+2026-10-18 20:51:30,359 | INFO  | app.agents.professional.communication_bus | Communication bus started
+2026-10-18 20:51:30,361 | INFO  | app.agents.professional.self_healing | Self-healing system started
+2026-10-18 20:51:30,367 | INFO  | app.agents.professional.knowledge_graph | Knowledge graph loaded (2 entities, 0 relationships)
+2026-10-18 20:51:30,377 | INFO  | app.agents.professional.session_continuity | Created session b94d9b74 for user default
+2026-10-18 20:51:30,386 | INFO  | app.agents.professional.professional_orchestrator | Professional Agent Orchestrator initialized
+2026-10-18 20:51:30,387 | INFO  | app.brain.orchestrator | Professional agent system initialized
+2026-10-18 20:51:30,506 | INFO  | app.brain.orchestrator | Brain router initialized: 7 brains across providers ['huggingface', 'ollama', 'openai_compatible', 'remote']
+2026-10-18 20:51:30,726 | INFO  | app.brain.orchestrator | Supervisor + recovery policy initialized
+2026-10-18 20:51:36,406 | INFO  | app.memory.knowledge_base | Indexed doc skill_agent-terminal-tui_SKILL -> 339 chunks (version 1)
+2026-10-18 20:51:41,148 | INFO  | app.memory.knowledge_base | Indexed doc skill_dogfood_SKILL -> 187 chunks (version 1)
+2026-10-18 20:51:43,345 | INFO  | app.memory.knowledge_base | Indexed doc skill_local-llm-robustness_SKILL -> 105 chunks (version 1)
+2026-10-18 20:51:50,374 | INFO  | app.memory.knowledge_base | Indexed doc skill_moon-nexus-bridge-ops_SKILL -> 477 chunks (version 1)
+2026-10-18 20:51:52,322 | INFO  | app.memory.knowledge_base | Indexed doc skill_skills-corpus-integration_SKILL -> 143 chunks (version 1)
+2026-10-18 20:51:54,369 | INFO  | app.memory.knowledge_base | Indexed doc skill_yuanbao_SKILL -> 105 chunks (version 1)
+2026-10-18 20:51:59,331 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_airtable_SKILL -> 317 chunks (version 1)
+2026-10-18 20:51:59,809 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_apple-notes_SKILL -> 29 chunks (version 1)
+2026-10-18 20:52:00,507 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_apple-reminders_SKILL -> 59 chunks (version 1)
+2026-10-18 20:52:02,764 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_architecture-diagram_SKILL -> 167 chunks (version 1)
+2026-10-18 20:52:07,795 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_arxiv_SKILL -> 347 chunks (version 1)
+2026-10-18 20:52:16,709 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_ascii-video_SKILL -> 307 chunks (version 1)
+2026-10-18 20:52:24,673 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_baoyu-infographic_SKILL -> 297 chunks (version 1)
+2026-10-18 20:52:28,525 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_blocked-page-recovery_SKILL -> 133 chunks (version 1)
+2026-10-18 20:52:30,670 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_box_SKILL -> 105 chunks (version 1)
+2026-10-18 20:52:46,193 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_claude-code_SKILL -> 1151 chunks (version 1)
+2026-10-18 20:52:56,835 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_claude-design_SKILL -> 783 chunks (version 1)
+2026-10-18 20:52:58,223 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_codex_SKILL -> 107 chunks (version 1)
+2026-10-18 20:52:59,202 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_competitor-news-monitor_SKILL -> 71 chunks (version 1)
+2026-10-18 20:53:00,364 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_d-id-avatar-embed_SKILL -> 159 chunks (version 1)
+2026-10-18 20:53:01,948 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_design-md_SKILL -> 257 chunks (version 1)
+2026-10-18 20:53:02,258 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_document-to-action-items_SKILL -> 49 chunks (version 1)
+2026-10-18 20:53:04,449 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_docx_SKILL -> 283 chunks (version 1)
+2026-10-18 20:53:04,938 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_email-inbox-triage_SKILL -> 75 chunks (version 1)
+2026-10-18 20:53:05,679 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_findmy_SKILL -> 111 chunks (version 1)
+2026-10-18 20:53:06,003 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_gif-search_SKILL -> 53 chunks (version 1)
+2026-10-18 20:53:07,037 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_github-agent-sync_SKILL -> 69 chunks (version 1)
+2026-10-18 20:53:09,556 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_google-workspace_SKILL -> 433 chunks (version 1)
+2026-10-18 20:53:14,753 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_grounded-citations_SKILL -> 355 chunks (version 1)
+2026-10-18 20:53:18,510 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_headless-render-screenshot_SKILL -> 249 chunks (version 1)
+2026-10-18 20:53:22,979 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_himalaya_SKILL -> 327 chunks (version 1)
+2026-10-18 20:53:24,202 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_hosted-agent-clone_SKILL -> 85 chunks (version 1)
+2026-10-18 20:53:25,031 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_hosted-agent-embed_SKILL -> 51 chunks (version 1)
+2026-10-18 20:53:28,451 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_hosted-agent-embedding_SKILL -> 287 chunks (version 1)
+2026-10-18 20:53:34,422 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_humanizer_SKILL -> 673 chunks (version 1)
+2026-10-18 20:53:35,095 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_imessage_SKILL -> 49 chunks (version 1)
+2026-10-18 20:53:37,345 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_inspecting-hermes-desktop-dom_SKILL -> 185 chunks (version 1)
+2026-10-18 20:53:39,433 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_linux-shared-lib-repair_SKILL -> 107 chunks (version 1)
+2026-10-18 20:53:39,891 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_llm-robustness-eval_SKILL -> 39 chunks (version 1)
+2026-10-18 20:53:55,753 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_llm-wiki_SKILL -> 713 chunks (version 1)
+2026-10-18 20:53:59,544 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_manim-video_SKILL -> 363 chunks (version 1)
+2026-10-18 20:54:00,875 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_maps_SKILL -> 219 chunks (version 1)
+2026-10-18 20:54:01,279 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_meeting-action-items_SKILL -> 55 chunks (version 1)
+2026-10-18 20:54:06,327 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_node-inspect-debugger_SKILL -> 425 chunks (version 1)
+2026-10-18 20:54:14,085 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_notion_SKILL -> 649 chunks (version 1)
+2026-10-18 20:54:14,711 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_obsidian_SKILL -> 31 chunks (version 1)
+2026-10-18 20:54:19,849 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_opencode_SKILL -> 241 chunks (version 1)
+2026-10-18 20:54:33,612 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_p5js_SKILL -> 819 chunks (version 1)
+2026-10-18 20:54:35,948 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_pdf_SKILL -> 169 chunks (version 1)
+2026-10-18 20:54:37,207 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_phone-number-osint_SKILL -> 81 chunks (version 1)
+2026-10-18 20:54:41,821 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_popular-web-designs_SKILL -> 297 chunks (version 1)
+2026-10-18 20:54:46,729 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_powerpoint_SKILL -> 275 chunks (version 1)
+2026-10-18 20:54:47,542 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_product-price-monitor_SKILL -> 49 chunks (version 1)
+2026-10-18 20:54:54,362 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_python-debugpy_SKILL -> 505 chunks (version 1)
+2026-10-18 20:55:00,096 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_requesting-code-review_SKILL -> 353 chunks (version 1)
+2026-10-18 20:55:02,983 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_runnable-project-generator_SKILL -> 225 chunks (version 1)
+2026-10-18 20:55:05,581 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_sdlc-review_SKILL -> 195 chunks (version 1)
+2026-10-18 20:55:10,157 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_simplify-code_SKILL -> 409 chunks (version 1)
+2026-10-18 20:55:10,577 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_songsee_SKILL -> 31 chunks (version 1)
+2026-10-18 20:55:13,572 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_songwriting-and-ai-music_SKILL -> 367 chunks (version 1)
+2026-10-18 20:55:16,969 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_spike_SKILL -> 211 chunks (version 1)
+2026-10-18 20:55:20,300 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_teams-meeting-pipeline_SKILL -> 123 chunks (version 1)
+2026-10-18 20:55:31,506 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_test-driven-development_SKILL -> 395 chunks (version 1)
+2026-10-18 20:55:33,302 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_weekly-review-planning_SKILL -> 47 chunks (version 1)
+2026-10-18 20:55:38,283 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_xlsx_SKILL -> 279 chunks (version 1)
+2026-10-18 20:55:51,832 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_xurl_SKILL -> 549 chunks (version 1)
+2026-10-18 20:55:52,335 | INFO  | app.memory.knowledge_base | Indexed doc skill_.archive_youtube-content_SKILL -> 41 chunks (version 1)
+2026-10-18 20:56:32,631 | INFO  | app.memory.knowledge_base | Indexed doc skill_ai-agent-engineering_local-ai-agent-engineering_SKILL -> 1605 chunks (version 1)
+2026-10-18 20:56:43,013 | INFO  | app.memory.knowledge_base | Indexed doc skill_ai-agent-engineering_moon-agent-extension_SKILL -> 551 chunks (version 1)
+2026-10-18 20:57:21,199 | INFO  | app.memory.knowledge_base | Indexed doc skill_ai-agent-engineering_moon-engineering_SKILL -> 2177 chunks (version 1)
+2026-10-18 20:57:24,811 | INFO  | app.memory.knowledge_base | Indexed doc skill_apple_macos-computer-use_SKILL -> 229 chunks (version 1)
+2026-10-18 20:57:26,864 | INFO  | app.memory.knowledge_base | Indexed doc skill_autonomous-ai-agents_agent-merge-conflict-arbiter_SKILL -> 197 chunks (version 1)
+2026-10-18 20:57:28,126 | INFO  | app.memory.knowledge_base | Indexed doc skill_autonomous-ai-agents_agent-reasoning-workflow_SKILL -> 121 chunks (version 1)
+2026-10-18 20:57:30,672 | INFO  | app.memory.knowledge_base | Indexed doc skill_autonomous-ai-agents_antigravity-cli_SKILL -> 303 chunks (version 1)
+2026-10-18 20:57:31,933 | INFO  | app.memory.knowledge_base | Indexed doc skill_autonomous-ai-agents_blackbox_SKILL -> 151 chunks (version 1)
+2026-10-18 20:57:36,517 | INFO  | app.memory.knowledge_base | Indexed doc skill_autonomous-ai-agents_computer-use_SKILL -> 511 chunks (version 1)
+2026-10-18 20:57:38,603 | INFO  | app.memory.knowledge_base | Indexed doc skill_autonomous-ai-agents_dynamic-workflow_SKILL -> 269 chunks (version 1)
+2026-10-18 20:57:42,765 | INFO  | app.memory.knowledge_base | Indexed doc skill_autonomous-ai-agents_grok_SKILL -> 407 chunks (version 1)
+2026-10-18 20:57:56,878 | INFO  | app.memory.knowledge_base | Indexed doc skill_autonomous-ai-agents_hermes-agent_SKILL -> 1540 chunks (version 1)
+2026-10-18 20:57:58,380 | INFO  | app.memory.knowledge_base | Indexed doc skill_autonomous-ai-agents_hermes-desktop-launch_SKILL -> 187 chunks (version 1)
+2026-10-18 20:58:02,873 | INFO  | app.memory.knowledge_base | Indexed doc skill_autonomous-ai-agents_honcho_SKILL -> 543 chunks (version 1)
+2026-10-18 20:58:05,631 | INFO  | app.memory.knowledge_base | Indexed doc skill_autonomous-ai-agents_merge-reconciler_SKILL -> 195 chunks (version 1)
+2026-10-18 20:58:07,287 | INFO  | app.memory.knowledge_base | Indexed doc skill_autonomous-ai-agents_openhands_SKILL -> 161 chunks (version 1)
+2026-10-18 20:58:09,799 | INFO  | app.memory.knowledge_base | Indexed doc skill_blockchain_evm_SKILL -> 271 chunks (version 1)
+2026-10-18 20:58:11,921 | INFO  | app.memory.knowledge_base | Indexed doc skill_blockchain_hyperliquid_SKILL -> 237 chunks (version 1)
+2026-10-18 20:58:13,633 | INFO  | app.memory.knowledge_base | Indexed doc skill_blockchain_solana_SKILL -> 221 chunks (version 1)
+2026-10-18 20:58:14,415 | INFO  | app.memory.knowledge_base | Indexed doc skill_communication_one-three-one-rule_SKILL -> 89 chunks (version 1)
+2026-10-18 20:58:17,831 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_ai-presenter-video_SKILL -> 267 chunks (version 1)
+2026-10-18 20:58:19,598 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_archify_SKILL -> 95 chunks (version 1)
+2026-10-18 20:58:23,497 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_ascii-art_SKILL -> 387 chunks (version 1)
+2026-10-18 20:58:25,338 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_auteur_SKILL -> 221 chunks (version 1)
+2026-10-18 20:58:27,418 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_baoyu-article-illustrator_SKILL -> 237 chunks (version 1)
+2026-10-18 20:58:30,387 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_baoyu-comic_SKILL -> 323 chunks (version 1)
+2026-10-18 20:58:37,861 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_comfyui_SKILL -> 881 chunks (version 1)
+2026-10-18 20:58:42,254 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_concept-diagrams_SKILL -> 487 chunks (version 1)
+2026-10-18 20:58:44,361 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_creative-ideation_SKILL -> 219 chunks (version 1)
+2026-10-18 20:58:45,757 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_draw-your-font_SKILL -> 181 chunks (version 1)
+2026-10-18 20:58:49,148 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_dream-loop_SKILL -> 405 chunks (version 1)
+2026-10-18 20:58:50,932 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_excalidraw_SKILL -> 235 chunks (version 1)
+2026-10-18 20:58:52,721 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_hyperframes_SKILL -> 249 chunks (version 1)
+2026-10-18 20:58:53,485 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_impeccable_SKILL -> 107 chunks (version 1)
+2026-10-18 20:58:54,769 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_ip-as-logo_SKILL -> 193 chunks (version 1)
+2026-10-18 20:58:56,983 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_kanban-video-orchestrator_SKILL -> 265 chunks (version 1)
+2026-10-18 20:58:59,522 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_meme-generation_SKILL -> 143 chunks (version 1)
+2026-10-18 20:59:03,250 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_mono-color_SKILL -> 171 chunks (version 1)
+2026-10-18 20:59:07,428 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_pixel-art_SKILL -> 279 chunks (version 1)
+2026-10-18 20:59:11,469 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_pretext_SKILL -> 291 chunks (version 1)
+2026-10-18 20:59:17,413 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_simple-english_SKILL -> 471 chunks (version 1)
+2026-10-18 20:59:20,118 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_sketch_SKILL -> 257 chunks (version 1)
+2026-10-18 20:59:20,483 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_social-media-content-calendar_SKILL -> 37 chunks (version 1)
+2026-10-18 20:59:21,620 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_system-atlas_SKILL -> 89 chunks (version 1)
+2026-10-18 20:59:27,511 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_textual-agent-terminal_SKILL -> 547 chunks (version 1)
+2026-10-18 20:59:31,775 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_tldraw-offline_SKILL -> 405 chunks (version 1)
+2026-10-18 20:59:35,835 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_touchdesigner-mcp_SKILL -> 487 chunks (version 1)
+2026-10-18 20:59:39,299 | INFO  | app.memory.knowledge_base | Indexed doc skill_creative_unreal-mcp_SKILL -> 373 chunks (version 1)
+2026-10-18 20:59:41,434 | INFO  | app.memory.knowledge_base | Indexed doc skill_data-science_jupyter-live-kernel_SKILL -> 161 chunks (version 1)
+2026-10-18 20:59:43,671 | INFO  | app.memory.knowledge_base | Indexed doc skill_data-science_jupyter-notebook_SKILL -> 181 chunks (version 1)
+2026-10-18 20:59:45,387 | INFO  | app.memory.knowledge_base | Indexed doc skill_devops_actual-setup_SKILL -> 197 chunks (version 1)
+2026-10-18 20:59:46,211 | INFO  | app.memory.knowledge_base | Indexed doc skill_devops_agent-backup-restoration_SKILL -> 83 chunks (version 1)
+2026-10-18 20:59:49,774 | INFO  | app.memory.knowledge_base | Indexed doc skill_devops_docker-management_SKILL -> 361 chunks (version 1)
+2026-10-18 20:59:51,723 | INFO  | app.memory.knowledge_base | Indexed doc skill_devops_hermes-s6-container-supervision_SKILL -> 195 chunks (version 1)
+2026-10-18 20:59:52,796 | INFO  | app.memory.knowledge_base | Indexed doc skill_devops_inference-sh-cli_SKILL -> 121 chunks (version 1)
+2026-10-18 20:59:54,422 | INFO  | app.memory.knowledge_base | Indexed doc skill_devops_kanban-orchestrator_SKILL -> 219 chunks (version 1)
+2026-10-18 20:59:56,102 | INFO  | app.memory.knowledge_base | Indexed doc skill_devops_kanban-worker_SKILL -> 233 chunks (version 1)
+2026-10-18 20:59:56,356 | INFO  | app.memory.knowledge_base | Indexed doc skill_devops_linux-system-optimization_SKILL -> 33 chunks (version 1)
+2026-10-18 20:59:57,586 | INFO  | app.memory.knowledge_base | Indexed doc skill_devops_local-service-operations_SKILL -> 197 chunks (version 1)
+2026-10-18 20:59:59,140 | INFO  | app.memory.knowledge_base | Indexed doc skill_devops_local-software-uninstall_SKILL -> 205 chunks (version 1)
+2026-10-18 20:59:59,316 | INFO  | app.memory.knowledge_base | Indexed doc skill_devops_mew-runtime_SKILL -> 19 chunks (version 1)
+2026-10-18 21:00:04,268 | INFO  | app.memory.knowledge_base | Indexed doc skill_devops_pinggy-tunnel_SKILL -> 409 chunks (version 1)
+2026-10-18 21:00:05,770 | INFO  | app.memory.knowledge_base | Indexed doc skill_devops_setup-wizard-generator_SKILL -> 115 chunks (version 1)
+2026-10-18 21:00:07,170 | INFO  | app.memory.knowledge_base | Indexed doc skill_devops_watchers_SKILL -> 91 chunks (version 1)
+2026-10-18 21:00:09,490 | INFO  | app.memory.knowledge_base | Indexed doc skill_devops_webhook-subscriptions_SKILL -> 217 chunks (version 1)
+2026-10-18 21:00:09,932 | INFO  | app.memory.knowledge_base | Indexed doc skill_email_agentmail_SKILL -> 59 chunks (version 1)
+2026-10-18 21:00:15,991 | INFO  | app.memory.knowledge_base | Indexed doc skill_finance_3-statement-model_SKILL -> 603 chunks (version 1)
+2026-10-18 21:00:23,111 | INFO  | app.memory.knowledge_base | Indexed doc skill_finance_comps-analysis_SKILL -> 969 chunks (version 1)
+2026-10-18 21:00:41,975 | INFO  | app.memory.knowledge_base | Indexed doc skill_finance_dcf-model_SKILL -> 1877 chunks (version 1)
+2026-10-18 21:00:44,937 | INFO  | app.memory.knowledge_base | Indexed doc skill_finance_excel-author_SKILL -> 313 chunks (version 1)
+2026-10-18 21:00:49,250 | INFO  | app.memory.knowledge_base | Indexed doc skill_finance_lbo-model_SKILL -> 377 chunks (version 1)
+2026-10-18 21:00:50,996 | INFO  | app.memory.knowledge_base | Indexed doc skill_finance_merger-model_SKILL -> 155 chunks (version 1)
+2026-10-18 21:00:53,636 | INFO  | app.memory.knowledge_base | Indexed doc skill_finance_pptx-author_SKILL -> 201 chunks (version 1)
+2026-10-18 21:00:54,955 | INFO  | app.memory.knowledge_base | Indexed doc skill_finance_stocks_SKILL -> 49 chunks (version 1)
+2026-10-18 21:01:00,972 | INFO  | app.memory.knowledge_base | Indexed doc skill_gaming_minecraft-modpack-server_SKILL -> 267 chunks (version 1)
+2026-10-18 21:01:10,846 | INFO  | app.memory.knowledge_base | Indexed doc skill_gaming_pokemon-player_SKILL -> 297 chunks (version 1)
+2026-10-18 21:01:18,308 | INFO  | app.memory.knowledge_base | Indexed doc skill_github_github-auth_SKILL -> 287 chunks (version 1)
+2026-10-18 21:01:27,717 | INFO  | app.memory.knowledge_base | Indexed doc skill_github_github-code-review_SKILL -> 631 chunks (version 1)
+2026-10-18 21:01:28,464 | INFO  | app.memory.knowledge_base | Indexed doc skill_github_github-issue-to-pr_SKILL -> 55 chunks (version 1)
+2026-10-18 21:01:35,745 | INFO  | app.memory.knowledge_base | Indexed doc skill_github_github-issues_SKILL -> 483 chunks (version 1)
+2026-10-18 21:01:42,378 | INFO  | app.memory.knowledge_base | Indexed doc skill_github_github-pr-workflow_SKILL -> 469 chunks (version 1)
+2026-10-18 21:01:54,543 | INFO  | app.memory.knowledge_base | Indexed doc skill_github_github-repo-management_SKILL -> 747 chunks (version 1)
+2026-10-18 21:01:58,853 | INFO  | app.memory.knowledge_base | Indexed doc skill_health_fitness-nutrition_SKILL -> 345 chunks (version 1)
+2026-10-18 21:02:08,558 | INFO  | app.memory.knowledge_base | Indexed doc skill_health_neuroskill-bci_SKILL -> 643 chunks (version 1)
+2026-10-18 21:02:13,133 | INFO  | app.memory.knowledge_base | Indexed doc skill_mcp_fastmcp_SKILL -> 311 chunks (version 1)
+2026-10-18 21:02:21,807 | INFO  | app.memory.knowledge_base | Indexed doc skill_mcp_mcp-oauth-remote-gateway_SKILL -> 497 chunks (version 1)
+2026-10-18 21:02:23,287 | INFO  | app.memory.knowledge_base | Indexed doc skill_mcp_mcporter_SKILL -> 91 chunks (version 1)
+2026-10-18 21:02:29,062 | INFO  | app.memory.knowledge_base | Indexed doc skill_mcp_native-mcp_SKILL -> 451 chunks (version 1)
+2026-10-18 21:02:31,558 | INFO  | app.memory.knowledge_base | Indexed doc skill_media_heartmula_SKILL -> 199 chunks (version 1)
+2026-10-18 21:02:33,322 | INFO  | app.memory.knowledge_base | Indexed doc skill_media_spotify_SKILL -> 133 chunks (version 1)
+2026-10-18 21:02:39,908 | INFO  | app.memory.knowledge_base | Indexed doc skill_migration_openclaw-migration_SKILL -> 391 chunks (version 1)
+2026-10-18 21:02:48,201 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_accelerate_SKILL -> 435 chunks (version 1)
+2026-10-18 21:02:55,687 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_chroma_SKILL -> 533 chunks (version 1)
+2026-10-18 21:02:59,262 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_clip_SKILL -> 297 chunks (version 1)
+2026-10-18 21:03:02,517 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_faiss_SKILL -> 221 chunks (version 1)
+2026-10-18 21:03:10,251 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_flash-attention_SKILL -> 467 chunks (version 1)
+2026-10-18 21:03:17,768 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_guidance_SKILL -> 745 chunks (version 1)
+2026-10-18 21:03:18,494 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_huggingface-hub_SKILL -> 67 chunks (version 1)
+2026-10-18 21:03:24,788 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_huggingface-tokenizers_SKILL -> 691 chunks (version 1)
+2026-10-18 21:03:50,352 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_instructor_SKILL -> 1079 chunks (version 1)
+2026-10-18 21:04:04,031 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_lambda-labs_SKILL -> 733 chunks (version 1)
+2026-10-18 21:04:12,033 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_llava_SKILL -> 373 chunks (version 1)
+2026-10-18 21:04:18,518 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_modal_SKILL -> 469 chunks (version 1)
+2026-10-18 21:04:27,639 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_nemo-curator_SKILL -> 517 chunks (version 1)
+2026-10-18 21:04:38,514 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_peft_SKILL -> 573 chunks (version 1)
+2026-10-18 21:04:47,332 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_pinecone_SKILL -> 497 chunks (version 1)
+2026-10-18 21:04:47,923 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_pytorch-fsdp_SKILL -> 43 chunks (version 1)
+2026-10-18 21:04:56,076 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_pytorch-lightning_SKILL -> 455 chunks (version 1)
+2026-10-18 21:05:09,288 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_qdrant_SKILL -> 749 chunks (version 1)
+2026-10-18 21:05:20,906 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_saelens_SKILL -> 617 chunks (version 1)
+2026-10-18 21:05:25,653 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_simpo_SKILL -> 241 chunks (version 1)
+2026-10-18 21:05:39,914 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_slime_SKILL -> 635 chunks (version 1)
+2026-10-18 21:05:55,971 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_stable-diffusion_SKILL -> 723 chunks (version 1)
+2026-10-18 21:06:01,818 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_tensorrt-llm_SKILL -> 211 chunks (version 1)
+2026-10-18 21:06:12,875 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_torchtitan_SKILL -> 505 chunks (version 1)
+2026-10-18 21:06:22,495 | INFO  | app.memory.knowledge_base | Indexed doc skill_mlops_whisper_SKILL -> 361 chunks (version 1)
+2026-10-18 21:06:26,323 | INFO  | app.memory.knowledge_base | Indexed doc skill_payments_mpp-agent_SKILL -> 121 chunks (version 1)
+2026-10-18 21:06:32,510 | INFO  | app.memory.knowledge_base | Indexed doc skill_payments_stripe-link-cli_SKILL -> 189 chunks (version 1)
+2026-10-18 21:06:36,086 | INFO  | app.memory.knowledge_base | Indexed doc skill_payments_stripe-projects_SKILL -> 107 chunks (version 1)
+2026-10-18 21:06:37,581 | INFO  | app.memory.knowledge_base | Indexed doc skill_productivity_canvas_SKILL -> 51 chunks (version 1)
+2026-10-18 21:06:39,745 | INFO  | app.memory.knowledge_base | Indexed doc skill_productivity_decision-questionnaire_SKILL -> 103 chunks (version 1)
+2026-10-18 21:06:43,436 | INFO  | app.memory.knowledge_base | Indexed doc skill_productivity_here-now_SKILL -> 221 chunks (version 1)
+2026-10-18 21:06:56,597 | INFO  | app.memory.knowledge_base | Indexed doc skill_productivity_linear_SKILL -> 545 chunks (version 1)
+2026-10-18 21:06:58,705 | INFO  | app.memory.knowledge_base | Indexed doc skill_productivity_live-dashboard_SKILL -> 107 chunks (version 1)
+2026-10-18 21:07:05,352 | INFO  | app.memory.knowledge_base | Indexed doc skill_productivity_memento-flashcards_SKILL -> 427 chunks (version 1)
+2026-10-18 21:07:05,508 | INFO  | app.memory.knowledge_base | Indexed doc skill_productivity_nano-pdf_SKILL -> 1 chunks (version 1)
+2026-10-18 21:07:08,595 | INFO  | app.memory.knowledge_base | Indexed doc skill_productivity_ocr-and-documents_SKILL -> 193 chunks (version 1)
+2026-10-18 21:07:10,477 | INFO  | app.memory.knowledge_base | Indexed doc skill_productivity_property-listings_SKILL -> 99 chunks (version 1)
+2026-10-18 21:07:12,387 | INFO  | app.memory.knowledge_base | Indexed doc skill_productivity_session-librarian_SKILL -> 107 chunks (version 1)
+2026-10-18 21:07:15,216 | INFO  | app.memory.knowledge_base | Indexed doc skill_productivity_shop_SKILL -> 281 chunks (version 1)
+2026-10-18 21:07:22,725 | INFO  | app.memory.knowledge_base | Indexed doc skill_productivity_shopify_SKILL -> 561 chunks (version 1)
+2026-10-18 21:07:27,562 | INFO  | app.memory.knowledge_base | Indexed doc skill_productivity_siyuan_SKILL -> 395 chunks (version 1)
+2026-10-18 21:07:35,290 | INFO  | app.memory.knowledge_base | Indexed doc skill_productivity_telephony_SKILL -> 533 chunks (version 1)
+2026-10-18 21:07:35,968 | INFO  | app.memory.knowledge_base | Indexed doc skill_red-teaming_android-exploitation-orchestration_SKILL -> 49 chunks (version 1)
+2026-10-18 21:07:40,309 | INFO  | app.memory.knowledge_base | Indexed doc skill_red-teaming_godmode_SKILL -> 577 chunks (version 1)
+2026-10-18 21:07:42,754 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_bioinformatics_SKILL -> 331 chunks (version 1)
+2026-10-18 21:07:43,894 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_blogwatcher_SKILL -> 155 chunks (version 1)
+2026-10-18 21:07:46,701 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_darwinian-evolver_SKILL -> 251 chunks (version 1)
+2026-10-18 21:07:47,835 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_domain-intel_SKILL -> 89 chunks (version 1)
+2026-10-18 21:07:51,776 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_drug-discovery_SKILL -> 301 chunks (version 1)
+2026-10-18 21:07:54,526 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_duckduckgo-search_SKILL -> 269 chunks (version 1)
+2026-10-18 21:07:58,801 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_gitnexus-explorer_SKILL -> 265 chunks (version 1)
+2026-10-18 21:08:07,678 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_osint-investigation_SKILL -> 373 chunks (version 1)
+2026-10-18 21:08:15,863 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_parallel-cli_SKILL -> 521 chunks (version 1)
+2026-10-18 21:08:16,351 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_pinecone-research_SKILL -> 79 chunks (version 1)
+2026-10-18 21:08:17,325 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_polymarket_SKILL -> 55 chunks (version 1)
+2026-10-18 21:08:28,049 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_qmd_SKILL -> 587 chunks (version 1)
+2026-10-18 21:09:22,393 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_research-paper-writing_SKILL -> 3593 chunks (version 1)
+2026-10-18 21:09:23,956 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_rss-feeds_SKILL -> 87 chunks (version 1)
+2026-10-18 21:09:28,750 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_scrapling_SKILL -> 411 chunks (version 1)
+2026-10-18 21:09:31,968 | INFO  | app.memory.knowledge_base | Indexed doc skill_research_searxng-search_SKILL -> 221 chunks (version 1)
+2026-10-18 21:09:34,071 | INFO  | app.memory.knowledge_base | Indexed doc skill_security_1password_SKILL -> 157 chunks (version 1)
+2026-10-18 21:09:41,593 | INFO  | app.memory.knowledge_base | Indexed doc skill_security_oss-forensics_SKILL -> 545 chunks (version 1)
+2026-10-18 21:09:44,326 | INFO  | app.memory.knowledge_base | Indexed doc skill_security_sherlock_SKILL -> 207 chunks (version 1)
+2026-10-18 21:09:52,307 | INFO  | app.memory.knowledge_base | Indexed doc skill_security_unbroker_SKILL -> 515 chunks (version 1)
+2026-10-18 21:09:56,271 | INFO  | app.memory.knowledge_base | Indexed doc skill_security_web-pentest_SKILL -> 441 chunks (version 1)
+2026-10-18 21:09:57,058 | INFO  | app.memory.knowledge_base | Indexed doc skill_smart-home_openhue_SKILL -> 67 chunks (version 1)
+2026-10-18 21:09:58,838 | INFO  | app.memory.knowledge_base | Indexed doc skill_social-media_reddit-reading_SKILL -> 141 chunks (version 1)
+2026-10-18 21:09:59,025 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_android-offensive-ops_SKILL -> 13 chunks (version 1)
+2026-10-18 21:09:59,117 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_android-root-mirroring_SKILL -> 7 chunks (version 1)
+2026-10-18 21:10:02,018 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_ast-grep_SKILL -> 351 chunks (version 1)
+2026-10-18 21:10:07,811 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_autonomous-ai-agent-build_SKILL -> 543 chunks (version 1)
+2026-10-18 21:10:14,545 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_code-wiki_SKILL -> 583 chunks (version 1)
+2026-10-18 21:10:16,221 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_codebase-inspection_SKILL -> 85 chunks (version 1)
+2026-10-18 21:10:18,612 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_codebase-structural-scan_SKILL -> 309 chunks (version 1)
+2026-10-18 21:10:18,932 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_cyber-agent-deployment_SKILL -> 49 chunks (version 1)
+2026-10-18 21:10:20,015 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_debugging-hermes-tui-commands_SKILL -> 165 chunks (version 1)
+2026-10-18 21:10:21,742 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_destructive-rm-safety_SKILL -> 53 chunks (version 1)
+2026-10-18 21:10:25,257 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_dogfood_SKILL -> 193 chunks (version 1)
+2026-10-18 21:10:25,611 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_github_SKILL -> 31 chunks (version 1)
+2026-10-18 21:10:28,625 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_grill-me_SKILL -> 115 chunks (version 1)
+2026-10-18 21:10:31,065 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_hermes-agent-skill-authoring_SKILL -> 185 chunks (version 1)
+2026-10-18 21:10:31,898 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_hermes-terminal-file-authoring_SKILL -> 63 chunks (version 1)
+2026-10-18 21:10:32,659 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_local-agent-runtime-build_SKILL -> 63 chunks (version 1)
+2026-10-18 21:10:46,648 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_moon-agent-additive-build_SKILL -> 815 chunks (version 1)
+2026-10-18 21:10:50,237 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_moon-interface-exposure_SKILL -> 229 chunks (version 1)
+2026-10-18 21:10:54,790 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_moon-operations_SKILL -> 353 chunks (version 1)
+2026-10-18 21:11:40,798 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_moon-ops_SKILL -> 3135 chunks (version 1)
+2026-10-18 21:12:00,491 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_moon-web-hud_SKILL -> 1658 chunks (version 1)
+2026-10-18 21:12:01,051 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_plan_SKILL -> 15 chunks (version 1)
+2026-10-18 21:12:03,082 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_pr-lens_SKILL -> 147 chunks (version 1)
+2026-10-18 21:12:14,681 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_rest-graphql-debug_SKILL -> 713 chunks (version 1)
+2026-10-18 21:12:19,562 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_subagent-driven-development_SKILL -> 443 chunks (version 1)
+2026-10-18 21:12:24,552 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_systematic-debugging_SKILL -> 429 chunks (version 1)
+2026-10-18 21:12:25,444 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_verified-python-scaffolding_SKILL -> 85 chunks (version 1)
+2026-10-18 21:12:29,612 | INFO  | app.memory.knowledge_base | Indexed doc skill_software-development_writing-plans_SKILL -> 363 chunks (version 1)
+2026-10-18 21:12:31,297 | INFO  | app.memory.knowledge_base | Indexed doc skill_web-development_cloudflare-temporary-deploy_SKILL -> 151 chunks (version 1)
+2026-10-18 21:12:32,251 | INFO  | app.memory.knowledge_base | Indexed doc skill_web-development_did-avatar-terminal_SKILL -> 135 chunks (version 1)
+2026-10-18 21:12:34,368 | INFO  | app.memory.knowledge_base | Indexed doc skill_web-development_har-derived-api-client_SKILL -> 195 chunks (version 1)
+2026-10-18 21:12:37,747 | INFO  | app.memory.knowledge_base | Indexed doc skill_web-development_page-agent_SKILL -> 227 chunks (version 1)
+2026-10-18 21:12:39,741 | INFO  | app.memory.knowledge_base | Indexed doc skill_web-development_publish-site_SKILL -> 169 chunks (version 1)
+2026-10-18 21:12:42,697 | INFO  | app.memory.knowledge_base | Indexed doc skill_web-development_scrollcraft_SKILL -> 337 chunks (version 1)
+2026-10-18 21:12:42,723 | INFO  | app.knowledge.skills_library | Indexed 259 skills into knowledge base
+2026-10-18 21:12:42,767 | INFO  | app.memory.knowledge_base | Indexed doc ltm_mem_29d88de20efc -> 1 chunks (version 1)
+2026-10-18 21:12:42,773 | INFO  | app.memory.knowledge_base | Indexed doc ltm_mem_d8880d88e775 -> 1 chunks (version 1)
+2026-10-18 21:12:42,779 | INFO  | app.memory.knowledge_base | Indexed doc ltm_mem_0f5d97db7bb2 -> 1 chunks (version 1)
+2026-10-18 21:12:42,786 | INFO  | app.memory.knowledge_base | Indexed doc ltm_mem_b9be0a4fbe6a -> 1 chunks (version 1)
+2026-10-18 21:12:42,792 | INFO  | app.memory.knowledge_base | Indexed doc ltm_mem_369754543105 -> 1 chunks (version 1)
+2026-10-18 21:12:42,798 | INFO  | app.memory.knowledge_base | Indexed doc ltm_mem_dc0f7b313c53 -> 1 chunks (version 1)
+2026-10-18 21:12:42,802 | INFO  | app.memory.knowledge_base | Indexed doc ltm_mem_b50613786607 -> 1 chunks (version 1)
+2026-10-18 21:12:42,806 | INFO  | app.memory.knowledge_base | Indexed doc ltm_mem_08a74f9b250d -> 1 chunks (version 1)
+2026-10-18 21:12:42,810 | INFO  | app.memory.knowledge_base | Indexed doc ltm_mem_26669c088c0c -> 1 chunks (version 1)
+2026-10-18 21:12:42,817 | INFO  | app.memory.knowledge_base | Indexed doc ltm_mem_5f5530ca7bd8 -> 1 chunks (version 1)
+2026-10-18 21:12:42,821 | INFO  | app.memory.knowledge_base | Indexed doc ltm_mem_d4e9dfda13a4 -> 1 chunks (version 1)
+2026-10-18 21:12:42,826 | INFO  | app.memory.knowledge_base | Indexed doc ltm_mem_54c4181f68b9 -> 1 chunks (version 1)
+2026-10-18 21:12:42,831 | INFO  | app.memory.knowledge_base | Indexed doc ltm_mem_e99fd373fd78 -> 1 chunks (version 1)
+2026-10-18 21:12:42,837 | INFO  | app.memory.knowledge_base | Indexed doc ltm_mem_441dda5f016e -> 1 chunks (version 1)
+2026-10-18 21:12:42,839 | INFO  | app.brain.orchestrator | Seeded KB with 14 prior long-term memories
+2026-10-18 21:12:42,909 | INFO  | plugins.loader | plugin github_main.py load skipped: No module named 'qrcode'
+2026-10-18 21:12:42,951 | INFO  | app.knowledge.galaxy | Galaxy built: 40 nodes, 4 edges
+2026-10-18 21:12:42,966 | INFO  | app.brain.orchestrator | agent config applied from agents.json
+2026-10-18 21:12:42,977 | WARNING | app.agents.professional.self_healing | Component communication_bus marked DEGRADED (stale health)
+2026-10-18 21:12:42,978 | WARNING | app.agents.professional.self_healing | Component task_queue marked DEGRADED (stale health)
+2026-10-18 21:12:42,979 | WARNING | app.agents.professional.self_healing | Component quality_gate marked DEGRADED (stale health)
+2026-10-18 21:12:42,979 | WARNING | app.agents.professional.self_healing | Component analytics marked DEGRADED (stale health)
+2026-10-18 21:12:44,196 | INFO  | app.brain.agent_model_manager | Agent 'coding' bound to model 'qwen2.5-coder:1.5b'
+2026-10-18 21:12:44,200 | INFO  | app.brain.agent_brain | Agent 'coding' brain bound to its own model
+2026-10-18 21:12:44,201 | INFO  | app.brain.agent_brain | Agent brain 'coding' ready (4 prior episodes)
+2026-10-18 21:12:45,148 | INFO  | app.brain.agent_model_manager | Agent 'research' bound to model 'qwen2.5:3b'
+2026-10-18 21:12:45,153 | INFO  | app.brain.agent_brain | Agent 'research' brain bound to its own model
+2026-10-18 21:12:45,157 | INFO  | app.brain.agent_brain | Agent brain 'research' ready (0 prior episodes)
+2026-10-18 21:12:46,547 | INFO  | app.brain.agent_model_manager | Agent 'browser' bound to model 'qwen2.5:3b'
+2026-10-18 21:12:46,548 | INFO  | app.brain.agent_brain | Agent 'browser' brain bound to its own model
+2026-10-18 21:12:46,549 | INFO  | app.brain.agent_brain | Agent brain 'browser' ready (0 prior episodes)
+2026-10-18 21:12:46,844 | INFO  | app.brain.agent_model_manager | Agent 'writing' bound to model 'qwen2.5:1.5b'
+2026-10-18 21:12:46,845 | INFO  | app.brain.agent_brain | Agent 'writing' brain bound to its own model
+2026-10-18 21:12:46,846 | INFO  | app.brain.agent_brain | Agent brain 'writing' ready (3 prior episodes)
+2026-10-18 21:12:47,087 | INFO  | app.brain.agent_model_manager | Agent 'vision' bound to model 'qwen2.5:1.5b'
+2026-10-18 21:12:47,088 | INFO  | app.brain.agent_brain | Agent 'vision' brain bound to its own model
+2026-10-18 21:12:47,089 | INFO  | app.brain.agent_brain | Agent brain 'vision' ready (0 prior episodes)
+2026-10-18 21:12:48,041 | INFO  | app.brain.agent_model_manager | Agent 'planning' bound to model 'qwen2.5:3b'
+2026-10-18 21:12:48,042 | INFO  | app.brain.agent_brain | Agent 'planning' brain bound to its own model
+2026-10-18 21:12:48,042 | INFO  | app.brain.agent_brain | Agent brain 'planning' ready (0 prior episodes)
+2026-10-18 21:12:48,427 | INFO  | app.brain.agent_model_manager | Agent 'memory' bound to model 'qwen2.5:1.5b'
+2026-10-18 21:12:48,431 | INFO  | app.brain.agent_brain | Agent 'memory' brain bound to its own model
+2026-10-18 21:12:48,432 | INFO  | app.brain.agent_brain | Agent brain 'memory' ready (0 prior episodes)
+2026-10-18 21:12:49,754 | INFO  | app.brain.agent_model_manager | Agent 'review' bound to model 'qwen2.5:3b'
+2026-10-18 21:12:49,759 | INFO  | app.brain.agent_brain | Agent 'review' brain bound to its own model
+2026-10-18 21:12:49,762 | INFO  | app.brain.agent_brain | Agent brain 'review' ready (0 prior episodes)
+2026-10-18 21:12:51,074 | INFO  | app.brain.agent_model_manager | Agent 'debug' bound to model 'qwen2.5-coder:1.5b'
+2026-10-18 21:12:51,075 | INFO  | app.brain.agent_brain | Agent 'debug' brain bound to its own model
+2026-10-18 21:12:51,076 | INFO  | app.brain.agent_brain | Agent brain 'debug' ready (0 prior episodes)
+2026-10-18 21:12:52,218 | INFO  | app.brain.agent_model_manager | Agent 'coordinator' bound to model 'qwen2.5:3b'
+2026-10-18 21:12:52,222 | INFO  | app.brain.agent_brain | Agent 'coordinator' brain bound to its own model
+2026-10-18 21:12:52,223 | INFO  | app.brain.agent_brain | Agent brain 'coordinator' ready (0 prior episodes)
+2026-10-18 21:12:54,069 | INFO  | app.brain.agent_model_manager | Agent 'manager' bound to model 'deepseek-r1:1.5b'
+2026-10-18 21:12:54,071 | INFO  | app.brain.agent_brain | Agent 'manager' brain bound to its own model
+2026-10-18 21:12:54,073 | INFO  | app.brain.agent_brain | Agent brain 'manager' ready (0 prior episodes)
+2026-10-18 21:12:55,744 | INFO  | app.brain.agent_model_manager | Agent 'math' bound to model 'deepseek-r1:1.5b'
+2026-10-18 21:12:55,748 | INFO  | app.brain.agent_brain | Agent 'math' brain bound to its own model
+2026-10-18 21:12:55,749 | INFO  | app.brain.agent_brain | Agent brain 'math' ready (0 prior episodes)
+2026-10-18 21:12:56,959 | INFO  | app.brain.agent_model_manager | Agent 'science' bound to model 'deepseek-r1:1.5b'
+2026-10-18 21:12:56,960 | INFO  | app.brain.agent_brain | Agent 'science' brain bound to its own model
+2026-10-18 21:12:56,961 | INFO  | app.brain.agent_brain | Agent brain 'science' ready (0 prior episodes)
+2026-10-18 21:12:58,687 | INFO  | app.brain.agent_model_manager | Agent 'data_science' bound to model 'qwen2.5:3b'
+2026-10-18 21:12:58,688 | INFO  | app.brain.agent_brain | Agent 'data_science' brain bound to its own model
+2026-10-18 21:12:58,697 | INFO  | app.brain.agent_brain | Agent brain 'data_science' ready (0 prior episodes)
+2026-10-18 21:13:00,396 | INFO  | app.brain.agent_model_manager | Agent 'security' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:00,397 | INFO  | app.brain.agent_brain | Agent 'security' brain bound to its own model
+2026-10-18 21:13:00,399 | INFO  | app.brain.agent_brain | Agent brain 'security' ready (0 prior episodes)
+2026-10-18 21:13:01,921 | INFO  | app.brain.agent_model_manager | Agent 'cyber' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:01,922 | INFO  | app.brain.agent_brain | Agent 'cyber' brain bound to its own model
+2026-10-18 21:13:01,925 | INFO  | app.brain.agent_brain | Agent brain 'cyber' ready (0 prior episodes)
+2026-10-18 21:13:02,804 | INFO  | app.brain.agent_model_manager | Agent 'red_team' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:02,806 | INFO  | app.brain.agent_brain | Agent 'red_team' brain bound to its own model
+2026-10-18 21:13:02,806 | INFO  | app.brain.agent_brain | Agent brain 'red_team' ready (0 prior episodes)
+2026-10-18 21:13:03,815 | INFO  | app.brain.agent_model_manager | Agent 'blue_team' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:03,817 | INFO  | app.brain.agent_brain | Agent 'blue_team' brain bound to its own model
+2026-10-18 21:13:03,817 | INFO  | app.brain.agent_brain | Agent brain 'blue_team' ready (0 prior episodes)
+2026-10-18 21:13:05,691 | INFO  | app.brain.agent_model_manager | Agent 'purple_team' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:05,692 | INFO  | app.brain.agent_brain | Agent 'purple_team' brain bound to its own model
+2026-10-18 21:13:05,695 | INFO  | app.brain.agent_brain | Agent brain 'purple_team' ready (0 prior episodes)
+2026-10-18 21:13:06,958 | INFO  | app.brain.agent_model_manager | Agent 'forensics' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:06,966 | INFO  | app.brain.agent_brain | Agent 'forensics' brain bound to its own model
+2026-10-18 21:13:06,967 | INFO  | app.brain.agent_brain | Agent brain 'forensics' ready (0 prior episodes)
+2026-10-18 21:13:08,511 | INFO  | app.brain.agent_model_manager | Agent 'reverse_eng' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:08,515 | INFO  | app.brain.agent_brain | Agent 'reverse_eng' brain bound to its own model
+2026-10-18 21:13:08,518 | INFO  | app.brain.agent_brain | Agent brain 'reverse_eng' ready (0 prior episodes)
+2026-10-18 21:13:10,014 | INFO  | app.brain.agent_model_manager | Agent 'threat_hunt' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:10,015 | INFO  | app.brain.agent_brain | Agent 'threat_hunt' brain bound to its own model
+2026-10-18 21:13:10,017 | INFO  | app.brain.agent_brain | Agent brain 'threat_hunt' ready (0 prior episodes)
+2026-10-18 21:13:11,035 | INFO  | app.brain.agent_model_manager | Agent 'siem' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:11,036 | INFO  | app.brain.agent_brain | Agent 'siem' brain bound to its own model
+2026-10-18 21:13:11,037 | INFO  | app.brain.agent_brain | Agent brain 'siem' ready (0 prior episodes)
+2026-10-18 21:13:12,528 | INFO  | app.brain.agent_model_manager | Agent 'github_sync' bound to model 'qwen2.5-coder:1.5b'
+2026-10-18 21:13:12,529 | INFO  | app.brain.agent_brain | Agent 'github_sync' brain bound to its own model
+2026-10-18 21:13:12,533 | INFO  | app.brain.agent_brain | Agent brain 'github_sync' ready (0 prior episodes)
+2026-10-18 21:13:13,795 | INFO  | app.brain.agent_model_manager | Agent 'translation' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:13,798 | INFO  | app.brain.agent_brain | Agent 'translation' brain bound to its own model
+2026-10-18 21:13:13,799 | INFO  | app.brain.agent_brain | Agent brain 'translation' ready (0 prior episodes)
+2026-10-18 21:13:14,119 | INFO  | app.brain.agent_model_manager | Agent 'audio' bound to model 'qwen2.5:1.5b'
+2026-10-18 21:13:14,120 | INFO  | app.brain.agent_brain | Agent 'audio' brain bound to its own model
+2026-10-18 21:13:14,121 | INFO  | app.brain.agent_brain | Agent brain 'audio' ready (0 prior episodes)
+2026-10-18 21:13:15,111 | INFO  | app.brain.agent_model_manager | Agent 'search' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:15,112 | INFO  | app.brain.agent_brain | Agent 'search' brain bound to its own model
+2026-10-18 21:13:15,113 | INFO  | app.brain.agent_brain | Agent brain 'search' ready (0 prior episodes)
+2026-10-18 21:13:16,362 | INFO  | app.brain.agent_model_manager | Agent 'qa' bound to model 'qwen2.5-coder:1.5b'
+2026-10-18 21:13:16,365 | INFO  | app.brain.agent_brain | Agent 'qa' brain bound to its own model
+2026-10-18 21:13:16,365 | INFO  | app.brain.agent_brain | Agent brain 'qa' ready (0 prior episodes)
+2026-10-18 21:13:17,411 | INFO  | app.brain.agent_model_manager | Agent 'infra' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:17,416 | INFO  | app.brain.agent_brain | Agent 'infra' brain bound to its own model
+2026-10-18 21:13:17,417 | INFO  | app.brain.agent_brain | Agent brain 'infra' ready (0 prior episodes)
+2026-10-18 21:13:18,621 | INFO  | app.brain.agent_model_manager | Agent 'finance' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:18,622 | INFO  | app.brain.agent_brain | Agent 'finance' brain bound to its own model
+2026-10-18 21:13:18,622 | INFO  | app.brain.agent_brain | Agent brain 'finance' ready (0 prior episodes)
+2026-10-18 21:13:19,758 | INFO  | app.brain.agent_model_manager | Agent 'legal' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:19,759 | INFO  | app.brain.agent_brain | Agent 'legal' brain bound to its own model
+2026-10-18 21:13:19,760 | INFO  | app.brain.agent_brain | Agent brain 'legal' ready (0 prior episodes)
+2026-10-18 21:13:20,833 | INFO  | app.brain.agent_model_manager | Agent 'medical' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:20,836 | INFO  | app.brain.agent_brain | Agent 'medical' brain bound to its own model
+2026-10-18 21:13:20,838 | INFO  | app.brain.agent_brain | Agent brain 'medical' ready (0 prior episodes)
+2026-10-18 21:13:21,141 | INFO  | app.brain.agent_model_manager | Agent 'design' bound to model 'qwen2.5:1.5b'
+2026-10-18 21:13:21,142 | INFO  | app.brain.agent_brain | Agent 'design' brain bound to its own model
+2026-10-18 21:13:21,143 | INFO  | app.brain.agent_brain | Agent brain 'design' ready (0 prior episodes)
+2026-10-18 21:13:21,507 | INFO  | app.brain.agent_model_manager | Agent 'summarizer' bound to model 'qwen2.5:1.5b'
+2026-10-18 21:13:21,509 | INFO  | app.brain.agent_brain | Agent 'summarizer' brain bound to its own model
+2026-10-18 21:13:21,511 | INFO  | app.brain.agent_brain | Agent brain 'summarizer' ready (0 prior episodes)
+2026-10-18 21:13:23,147 | INFO  | app.brain.agent_model_manager | Agent 'fact_checker' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:23,149 | INFO  | app.brain.agent_brain | Agent 'fact_checker' brain bound to its own model
+2026-10-18 21:13:23,149 | INFO  | app.brain.agent_brain | Agent brain 'fact_checker' ready (0 prior episodes)
+2026-10-18 21:13:24,179 | INFO  | app.brain.agent_model_manager | Agent 'strategist' bound to model 'qwen2.5:3b'
+2026-10-18 21:13:24,181 | INFO  | app.brain.agent_brain | Agent 'strategist' brain bound to its own model
+2026-10-18 21:13:24,181 | INFO  | app.brain.agent_brain | Agent brain 'strategist' ready (0 prior episodes)

@@ -1,17 +1,23 @@
 # ---------------------------------------------------------------------------
 # MOON — CORE dependencies (required for the terminal HUD + agent runtime).
-# These are resolved/installed first by install.sh and MUST succeed.
+# These are resolved/installed FIRST by install.sh and MUST succeed.
+# All of these are imported at module import time by the core runtime
+# (app/, app/*/ or scripts/). Anything imported lazily or used only by an
+# optional feature (voice cloning, cloud store, embeddings) lives in
+# requirements-optional.txt, where it is installed best-effort and MOON
+# degrades gracefully when it is absent (see OFFLINE/DEGRADED MODE, spec 47).
 # ---------------------------------------------------------------------------
+
 # Web framework / API
 fastapi>=0.141
 uvicorn[standard]>=0.52
 pydantic>=2.13
 pydantic-settings>=2.15
 
-# Async runtime
+# Async runtime / HTTP tooling
 anyio>=4.3
 httpx>=0.27
-asyncpg>=0.29
+requests>=2.31
 
 # Model providers (OpenAI-compatible client -> points at your LOCAL model)
 openai>=2.53
@@ -21,35 +27,15 @@ numpy>=1.26
 python-dotenv>=1.0
 rich>=13.7
 tenacity>=8.2
-scipy>=1.11
-
-# Voice engine — MOON's natural FEMALE voice (offline, CPU, py3.13-compatible).
-# Kokoro-ONNX is the default premium voice (af_heart/af_bella); espeak+sox is a
-# graceful fallback. XTTS-v2 (Coqui) is intentionally NOT a hard dep: it requires
-# Python <3.12 and cannot install on 3.13 (use a 3.11 venv for cloning, or an
-# OpenAI key with quota for nova/shimmer). The Kokoro model/voices binaries are
-# fetched at install time by install_moon.py (or on first voice use).
-kokoro-onnx>=0.2.1
-
-# PyTorch CPU-only (pinned so GPU-less hosts never pull CUDA builds that
-# dlopen() the missing libcudart.so.13 and hard-crash F5-TTS voice cloning).
-# NOTE: keep the two torch lines on the SAME minor as each other; if a +cpu
-# wheel isn't published for a given PyTorch release, fall back to the plain
-# cpuindex wheel below. The MOON installer resolves these with the CPU index
-# and tolerates whichever published variant installs cleanly.
-# torch==2.9.0+cpu   # +cpu wheels not always published — install via index
-# torchaudio==2.9.0+cpu
-torch
-torchaudio
 
 # Testing / quality
 pytest>=8.0
 pytest-asyncio>=0.23
 
-# Multilingual TTS — auto-detect input language so Moon can speak reply in kind
-# (used by VoiceEngine.detect_language / speak_multilingual).
-langdetect>=1.0.0
-
-# NOTE: the primary terminal UI is the pure HTML/CSS/Canvas2D HUD served by
-# app.terminal_interface (no Python UI dep). A separate beautiful Textual TUI
-# is available via `moon tui` (optional dep: textual, see requirements-optional.txt).
+# Optional runtime extras (installed best-effort by install.sh;
+# MOON degrades gracefully when these are absent):
+#   asyncpg   -> PostgreSQL cloud memory store
+#   scipy     -> audio DSP utilities
+#   kokoro-onnx -> offline female voice engine
+#   langdetect -> multilingual TTS language auto-detect
+#   torch/torchaudio -> F5-TTS voice cloning (optional)
