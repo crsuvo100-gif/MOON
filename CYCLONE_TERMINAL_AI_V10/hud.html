@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#02070b">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="MOON Neural Core — holographic AI HUD">
+  <title>MOON HUD</title>
+  <style>
+    :root { --bg:#02070b; --fg:#e8e8e8; --accent:#00d4ff; --dim:#4a6a7a; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:var(--bg); color:var(--fg); font-family:'Segoe UI',system-ui,sans-serif; overflow:hidden; height:100vh; }
+    .hud-shell { display:flex; height:100%; }
+    .hud-nav { width:220px; background:#06121c; border-right:1px solid var(--dim); padding:16px; overflow-y:auto; }
+    .hud-nav h1 { font-size:18px; margin-bottom:16px; letter-spacing:1px; }
+    .hud-nav .nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:6px; cursor:pointer; margin-bottom:4px; transition:background 0.15s; }
+    .hud-nav .nav-item:hover { background:#0d2137; }
+    .hud-nav .nav-item.active { background:#0d2137; color:var(--accent); }
+    .hud-nav .nav-item .ico { font-size:16px; }
+    .hud-main { flex:1; display:flex; flex-direction:column; padding:20px; overflow:hidden; }
+    .hud-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+    .hud-head .title { font-size:18px; font-weight:600; display:flex; align-items:center; gap:10px; }
+    .hud-head .status { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--dim); }
+    .dot { width:8px; height:8px; border-radius:50%; background:var(--accent); animation:pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .hud-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; flex:1; overflow-y:auto; padding:12px 0; }
+    .metric { background:#06121c; border:1px solid var(--dim); border-radius:8px; padding:12px; text-align:center; }
+    .metric .label { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; }
+    .metric .value { font-size:20px; font-weight:600; margin-top:4px; color:var(--fg); }
+    .hud-foot { display:flex; justify-content:space-between; align-items:center; padding-top:12px; margin-top:12px; border-top:1px solid var(--dim); }
+    .hud-foot .info { font-size:12px; color:var(--dim); }
+    .hud-foot .live { font-size:12px; color:var(--accent); font-weight:600; }
+    .panel { background:#06121c; border:1px solid var(--dim); border-radius:8px; padding:14px; margin-bottom:12px; }
+    .panel h3 { font-size:13px; margin-bottom:8px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; }
+    .panel ul { list-style:none; }
+    .panel li { padding:6px 0; border-bottom:1px solid #0d2137; font-size:13px; }
+    .panel li:last-child { border-bottom:none; }
+  </style>
+</head>
+<body>
+  <div class="hud-shell">
+    <div class="hud-nav">
+      <h1>MOON HUD</h1>
+      <div class="nav-item active"><span class="ico">▤</span> Neural Core</div>
+      <div class="nav-item"><span class="ico">⟐</span> Agents</div>
+      <div class="nav-item"><span class="ico">⊞</span> Workflows</div>
+      <div class="nav-item"><span class="ico">▣</span> Memory</div>
+      <div class="nav-item"><span class="ico">⚙</span> Settings</div>
+    </div>
+    <div class="hud-main">
+      <div class="hud-head">
+        <div class="title">MOON Neural Core <span style="font-weight:400;color:var(--dim);font-size:13px;">// V10</span></div>
+        <div class="status"><span class="dot"></span> LIVE // <span id="clock">--:--:--</span></div>
+      </div>
+      <div class="hud-grid">
+        <div class="metric"><div class="label">Neural Load</div><div class="value" id="neuralLoad">42%</div></div>
+        <div class="metric"><div class="label">Memory</div><div class="value" id="memoryValue">6.8 GB</div></div>
+        <div class="metric"><div class="label">Latency</div><div class="value" id="latencyValue">28 ms</div></div>
+        <div class="metric"><div class="label">Autonomy</div><div class="value">97.4%</div></div>
+        <div class="metric"><div class="label">Agents</div><div class="value">4</div></div>
+        <div class="metric"><div class="label">Uptime</div><div class="value" id="uptimeValue">--</div></div>
+      </div>
+      <div class="hud-foot">
+        <div class="info">MOON Neural Core HUD v10.0</div>
+        <div class="live">● LIVE</div>
+      </div>
+    </div>
+  </div>
+  <script>
+    function updateClock() { document.getElementById('clock').textContent = new Date().toLocaleTimeString(); }
+    setInterval(updateClock, 1000); updateClock();
+    const uptime = document.getElementById('uptimeValue');
+    uptime.textContent = Math.floor(process.uptime()) + 's';
+  </script>
+</body>
+</html>

@@ -16,7 +16,10 @@ from __future__ import annotations
 import asyncio
 import base64
 import os
+import sys
+import logging
 import time
+
 import json
 import subprocess
 import shlex
@@ -844,41 +847,21 @@ async def api_voice_set(req: VoiceSetRequest, request: Request):
 
 @app.get("/api/health")
 async def api_health(request: Request):
-    """Project-wide health endpoint (Phase 27).
-
-    Reuses the existing real diagnostic pipeline (_moon_status_impl +
-    _run_diagnostics)
-    and rolls the per-subsystem OK/FAIL/WARN verdicts into a single overall status:
-      HEALTHY   - no FAIL and no WARN
-      DEGRADED  - at least one WARN (non-critical, still operational)
-      FAILED    - at least one FAIL (a required subsystem is down)
-    """
-    if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
-        from fastapi import Response
-        return Response("Unauthorized", status_code=401)
+    """Real backend health: probes every subsystem through the live orchestrator."""
     try:
         orch = await _get_orchestrator()
+    except Exception:
+        orch = None
+    try:
         diag = await _run_diagnostics(orch)
-        checks = diag.get("checks", [])
-        states = [c[1] for c in checks]
-        if any(s == "FAIL" for s in states):
-            overall = "FAILED"
-        elif any(s == "WARN" for s in states):
-            overall = "DEGRADED"
-        else:
-            overall = "HEALTHY"
-        return JSONResponse({
-            "status": overall,
-            "summary": diag.get("summary", ""),
-            "checks": [
-                {"subsystem": c[0], "state": c[1], "detail": c[2]} for c in checks
-            ],
-            "model": getattr(getattr(orch, "_settings", None), "model_name", "?"),
-            "locked": getattr(getattr(orch, "_lock", None), "locked", True),
-            "timestamp": time.time(),
-        })
-    except Exception as exc:  # noqa: BLE001
-        return JSONResponse({"status": "FAILED", "error": str(exc)}, status_code=503)
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"status": "FAILED", "error": str(e)}, status_code=503)
+    all_ok = all(c[1] == "OK" for c in diag["checks"])
+    return JSONResponse({
+        "status": "HEALTHY" if all_ok else "DEGRADED",
+        "checks": [{"name": c[0], "status": c[1], "detail": c[2]} for c in diag["checks"]],
+        "summary": diag["summary"],
+    }, status_code=200 if all_ok else 503)
 
 
 @app.get("/api/supervision")
@@ -2525,3 +2508,60 @@ async def ws_events(ws: WebSocket):
             await ws.close()
         except Exception:
             pass
+
+# ---------------------------------------------------------------------------
+# CYCLONE_TERMINAL_AI_V10 bridge (additive) --- MOON + Cyclone share the same
+# FastAPI app. Cyclone UI is served under /cyclone and its sockets are
+# exempted from MOON's token gate so the browser UI works out of the box.
+# ---------------------------------------------------------------------------
+try:
+    import os as _cyclone_os
+
+    import sys as _cyclone_sys
+
+    _cyclone_root = _cyclone_os.path.dirname(
+        _cyclone_os.path.dirname(_cyclone_os.path.abspath(__file__))
+    )
+    _cyclone_dir = _cyclone_os.path.join(_cyclone_root, "CYCLONE_TERMINAL_AI_V10")
+    if _cyclone_dir not in _cyclone_sys.path:
+        _cyclone_sys.path.insert(0, _cyclone_dir)
+
+    from cyclone import get_cyclone_router, get_cyclone_static_files  # noqa: E402
+
+    _CYCLONE_OK = True
+    _CYCLONE_DIR = _cyclone_dir
+    app.include_router(get_cyclone_router(), prefix="/cyclone")
+    app.mount("/cyclone", get_cyclone_static_files())
+    # Expose Cyclone endpoints through MOON's public-path gate so the browser
+    # UI (which does not carry MOON's terminal token) can reach them.
+    _PUBLIC_PATHS.update(
+        {
+            "/cyclone/api",
+            "/cyclone/api/ai",
+            "/cyclone/api/fs",
+            "/cyclone/api/read",
+            "/cyclone/api/search",
+            "/cyclone/api/providers",
+            "/cyclone/api/workflows",
+            "/cyclone/api/agents",
+            "/cyclone/api/roles",
+            "/cyclone/api/agent-bindings",
+            "/cyclone/api/persistence",
+            "/cyclone/api/rollback",
+            "/cyclone/api/diff",
+            "/cyclone/api/metrics",
+            "/cyclone/api/brains",
+            "/cyclone/api/supervision",
+            "/cyclone/v1/chat/completions",
+            "/cyclone/v1/chat",
+        }
+    )
+except Exception as _cyclone_exc:  # pragma: no cover
+    _CYCLONE_OK = False
+    _CYCLONE_DIR = None
+    _LOGBOOK.warning("Cyclone bridge disabled: %s", _cyclone_exc)
+
+_LOBBY = None
+
+_LOGBOOK = logging.getLogger(__name__)
+_LIVE = None

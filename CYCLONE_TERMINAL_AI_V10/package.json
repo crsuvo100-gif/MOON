@@ -1,0 +1,13 @@
+{
+  "name": "cyclone-terminal-ai",
+  "version": "10.0.0",
+  "private": true,
+  "description": "CYCLONE V9 with durable multi-agent workspace, persistent checkpoints, rollback snapshots and interactive operator controls",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
