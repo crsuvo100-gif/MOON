@@ -1,4 +1,38 @@
 {
+    "acp.autoConnect": true,
+    "acp.defaultWorkingDirectory": "${workspaceFolder}",
+    "acp.logTraffic": true,
+    "acp.autoApprovePermissions": "ask",
+    "acp.agents": {
+        "Hermes Agent": {
+            "command": "hermes",
+            "args": ["acp"],
+            "env": {
+                "HERMES_MODEL": "nvidia/nemotron-3-super-120b-a12b:free",
+                "HERMES_PROVIDER": "openrouter"
+            },
+            "cwd": "${workspaceFolder}",
+            "autoConnect": true
+        }
+    },
+    "terminal.integrated.profiles.linux": {
+        "hermes": {
+            "path": "bash",
+            "args": ["-l"]
+        },
+        "hermes-acp": {
+            "path": "bash",
+            "args": ["-lc", "hermes acp"]
+        }
+    },
+    "python.defaultInterpreterPath": ".venv/bin/python",
+    "python.analysis.autoImportCompletions": true,
+    "python.linting.enabled": true,
+    "python.formatting.provider": "black",
+    "editor.tabSize": 2,
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "git.autofetch": true,
     "chatgpt.promptBasedTools.enabled": true,
     "chatgpt.autoAddCurrentFile": true,
     "chatgpt.response.showNotification": true,

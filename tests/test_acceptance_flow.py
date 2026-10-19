@@ -11,7 +11,7 @@ def repo_copy(tmp_path):
     The copy is selective (settings exclude tool caches, version control and
     virtualenv directories) so the fixture stays fast on large monorepos.
     """
-    src = Path(__file__).resolve().parents[2]  # project root
+    src = Path(__file__).resolve().parents[1]  # project root
     dst = tmp_path / "MOON-AI"
     shutil.copytree(
         src,

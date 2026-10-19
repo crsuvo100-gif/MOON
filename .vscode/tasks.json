@@ -1,0 +1,73 @@
+{
+    "version": "2.0.0",
+    "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+    },
+    "tasks": [
+        {
+            "label": "MOON: Run Terminal HUD",
+            "type": "shell",
+            "command": "python3 scripts/moon_launcher.py terminal",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "detail": "Launch the MOON terminal HUD (8777) from hermes terminal"
+        },
+        {
+            "label": "MOON: Build & Run",
+            "type": "shell",
+            "command": "make run",
+            "group": "build",
+            "detail": "Run MOON with hermes terminal (make run)"
+        },
+        {
+            "label": "MOON: Serve",
+            "type": "shell",
+            "command": "make serve",
+            "group": "build",
+            "detail": "Run the MOON web/app server (make serve)"
+        },
+        {
+            "label": "MOON: Test",
+            "type": "shell",
+            "command": "make test",
+            "group": "test",
+            "detail": "Run MOON test suite (make test)"
+        },
+        {
+            "label": "MOON: Voice Test",
+            "type": "shell",
+            "command": "make voice-test",
+            "group": "test",
+            "detail": "Run voice test (make voice-test)"
+        },
+        {
+            "label": "MOON: Install / Sync Deps",
+            "type": "shell",
+            "command": "make models",
+            "group": "none",
+            "detail": "Install/update models and dependencies (make models)"
+        },
+        {
+            "label": "hermes ACP Server",
+            "type": "shell",
+            "command": "hermes acp",
+            "args": [],
+            "group": "none",
+            "detail": "Start the hermes ACP server for VS Code ACP Client integration"
+        },
+        {
+            "label": "VS Code hermes Terminal",
+            "type": "shell",
+            "command": "hermes",
+            "args": [],
+            "group": "none",
+            "detail": "Open hermes terminal from VS Code integrated terminal"
+        }
+    ]
+}

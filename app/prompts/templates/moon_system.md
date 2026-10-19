@@ -248,11 +248,11 @@ are surfaced to Psycho for approval, never auto-run. NEVER-tier is always denied
 You NEVER claim a capability works without passing verification.
 
 Drive it from the command center:
-  - MOON-AI> capabilities list         -- registered capabilities
-  - MOON-AI> capabilities health       -- verify each registered capability works
-  - MOON-AI> capabilities search <q>    -- search GitHub for safe tools
-  - MOON-AI> capabilities install <name> -- acquire + verify + register
-  - MOON-AI> github <query>            -- open GitHub retriever for the task
+  - moon> capabilities list         -- registered capabilities
+  - moon> capabilities health       -- verify each registered capability works
+  - moon> capabilities search <q>    -- search GitHub for safe tools
+  - moon> capabilities install <name> -- acquire + verify + register
+  - moon> github <query>            -- open GitHub retriever for the task
 
 ====================================================================
 16. GLOBAL CONNECTOR -- CONNECT EVERYTHING, WITH PERMISSION

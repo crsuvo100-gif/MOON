@@ -2514,6 +2514,8 @@ async def ws_events(ws: WebSocket):
 # FastAPI app. MOON-AI UI is served under /cyclone and its sockets are
 # exempted from MOON-AI's token gate so the browser UI works out of the box.
 # ---------------------------------------------------------------------------
+_LOGBOOK = logging.getLogger(__name__)
+
 try:
     import os as _cyclone_os
 
@@ -2563,5 +2565,4 @@ except Exception as _cyclone_exc:  # pragma: no cover
 
 _LOBBY = None
 
-_LOGBOOK = logging.getLogger(__name__)
 _LIVE = None

@@ -1,0 +1,62 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "MOON: Terminal HUD (Debug)",
+            "type": "python",
+            "request": "launch",
+            "program": "scripts/moon_launcher.py",
+            "args": ["terminal"],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "purpose": ["debug"]
+        },
+        {
+            "name": "MOON: Run (make run)",
+            "type": "python",
+            "request": "launch",
+            "program": "main.py",
+            "args": ["run"],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "purpose": ["debug"]
+        },
+        {
+            "name": "MOON: ACP Adapter (Debug)",
+            "type": "python",
+            "request": "launch",
+            "program": "hermes",
+            "args": ["acp"],
+            "env": {
+                "HERMES_MODEL": "nvidia/nemotron-3-super-120b-a12b:free",
+                "HERMES_PROVIDER": "openrouter"
+            },
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "purpose": ["debug"]
+        },
+        {
+            "name": "MOON: Tests",
+            "type": "python",
+            "request": "launch",
+            "program": "make",
+            "args": ["test"],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "purpose": ["debug"]
+        }
+    ],
+    "compounds": [
+        {
+            "name": "MOON + hermes ACP",
+            "configurations": ["MOON: Run (make run)", "hermes ACP Adapter (Debug)"],
+            "stopAll": true
+        }
+    ]
+}
