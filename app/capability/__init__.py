@@ -1,6 +1,6 @@
-"""Capability system -- MOON's autonomous capability-management subsystem.
+"""Capability system -- MOON-AI's autonomous capability-management subsystem.
 
-ADDITIVE: this package never replaces existing MOON modules. It reuses the
+ADDITIVE: this package never replaces existing MOON-AI modules. It reuses the
 existing ToolRegistry / BaseTool / SafetyValidator / ErrorRecovery / Planner
 / GitHub integration and layers a persistent Capability Manager on top.
 

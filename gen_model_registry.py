@@ -1,4 +1,4 @@
-"""Build the MOON model registry (main brain + every agent) at a 1M context
+"""Build the MOON-AI model registry (main brain + every agent) at a 1M context
 window, then a qwen-family variant.
 
 Generated from the REAL roster in app/brain/agent_model_manager.py so the agent

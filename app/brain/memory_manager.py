@@ -112,7 +112,7 @@ class MemoryManager:
             self._stats.record_store("long_term" if long_term else "short_term")
 
     async def learn(self, content: str, *, tags: list[str] | None = None, importance: float = 0.5) -> None:
-        """Consolidate ``content`` into MOON's durable brain."""
+        """Consolidate ``content`` into MOON-AI's durable brain."""
         if self._ltm is not None:
             if hasattr(self._ltm, '_enhanced_entries'):
                 await self._ltm.store({"content": content, "tags": tags or []}, importance=importance)

@@ -1,4 +1,4 @@
-"""Agent Factory: Tester (spec 43 + MOON Factory design).
+"""Agent Factory: Tester (spec 43 + MOON-AI Factory design).
 
 Runs the generated agent's real pytest inside the sandbox (reuses the existing
 SandboxExecutor / bubblewrap). The performance scoring lives in

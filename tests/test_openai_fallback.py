@@ -1,6 +1,6 @@
-"""Tests for MOON's OpenAI-compatible fallback backend.
+"""Tests for MOON-AI's OpenAI-compatible fallback backend.
 
-MOON must keep working when the local model endpoint (Ollama) is down or a
+MOON-AI must keep working when the local model endpoint (Ollama) is down or a
 completion fails: it transparently retries against a hosted OpenAI-compatible
 API configured via OPENAI_API_KEY. These tests prove the fallback logic
 wires correctly WITHOUT hitting the real network/API.

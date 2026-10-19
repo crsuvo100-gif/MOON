@@ -1,4 +1,4 @@
-"""Core execution engine for MOON terminal.
+"""Core execution engine for MOON-AI terminal.
 
 Orchestrates the full execution pipeline:
 1. State machine transition (IDLE → PLANNING → ...)

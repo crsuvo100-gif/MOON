@@ -1,7 +1,7 @@
 import ast
 import os
 
-root = "/home/meow/Projects/MOON"
+root = "/home/meow/Projects/MOON-AI"
 py_files = []
 for dirpath, dirnames, filenames in os.walk(root):
     dirnames[:] = [d for d in dirnames if d not in (".git", ".ori", "__pycache__", ".pytest_cache", ".pre_commit_checkpoint")]

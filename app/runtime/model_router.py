@@ -2,7 +2,7 @@
 
 Chooses the appropriate model based on task complexity, coding/reasoning
 requirement, latency, cost, local/remote availability, and privacy. Reuses
-MOON's existing settings (local default model + optional stronger local model)
+MOON-AI's existing settings (local default model + optional stronger local model)
 and the LLMService backends. Never hard-codes a single model across the system.
 """
 

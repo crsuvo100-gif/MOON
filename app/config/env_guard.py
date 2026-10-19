@@ -1,10 +1,10 @@
 """env_guard.py -- decontaminate the process environment at launch.
 
-When MOON is launched from a shell that has PYTHONPATH pointing at a *foreign*
+When MOON-AI is launched from a shell that has PYTHONPATH pointing at a *foreign*
 virtualenv (e.g. the Hermes agent environment on this host), naive imports can
 resolve packages from that foreign venv and crash with confusing errors
 (e.g. "No module named 'pydantic_core._pydantic_core'"). This guard strips
-PYTHONPATH so the interpreter always uses MOON's own .venv. Import it FIRST,
+PYTHONPATH so the interpreter always uses MOON-AI's own .venv. Import it FIRST,
 before importing anything else.
 """
 

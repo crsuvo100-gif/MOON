@@ -3,7 +3,7 @@
 Provides isolated workspace, resource limits, environment isolation,
 timeouts, output limits, and cleanup.
 
-Docker is optional — MOON works without it.
+Docker is optional — MOON-AI works without it.
 """
 
 from __future__ import annotations

@@ -1,11 +1,11 @@
 """In-memory vector store (cosine similarity).
 
-Memory notes (this is the single biggest consumer of MOON's RSS):
+Memory notes (this is the single biggest consumer of MOON-AI's RSS):
 
 * Vectors are stored as packed ``array('f')`` (4 bytes/value) instead of a
   Python ``list[float]`` (24 bytes/value object + pointer). At ~88k chunks x 384
   dims that is the difference between ~815 MB and ~136 MB -- on a 3.7 GB host the
-  list-of-floats form made MOON the kernel's OOM victim mid-task.
+  list-of-floats form made MOON-AI the kernel's OOM victim mid-task.
 * ``_cosine`` previously computed ``sum(x * x)`` for BOTH the dot product and the
   norms (it used ``a`` twice), so ranking was wrong: it scored every vector by
   its own magnitude instead of its alignment with the query. Fixed to a real dot

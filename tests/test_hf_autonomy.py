@@ -1,4 +1,4 @@
-"""Tests that MOON can autonomously CHOOSE (discover + acquire) her built-in
+"""Tests that MOON-AI can autonomously CHOOSE (discover + acquire) her built-in
 Hugging Face capabilities -- the "free / choose yourself" autonomy loop.
 
 No network, no pip install: 'builtin' capabilities resolve as already present and

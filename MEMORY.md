@@ -1,4 +1,4 @@
-# MOON Cognitive Memory Infrastructure
+# MOON-AI Cognitive Memory Infrastructure
 
 ## Architecture
 
@@ -6,7 +6,7 @@
                       USER
                         |
                         v
-                MOON TERMINAL/UI
+                MOON-AI TERMINAL/UI
                         |
                         v
                  MAIN BRAIN
@@ -68,20 +68,20 @@ All settings are in `app/config/settings.py` (pydantic BaseSettings). Override v
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MOON_MEMORY_PATH` | `~/.moon/memory` | Local memory data directory |
-| `MOON_DATABASE_URL` | (empty) | Cloud PostgreSQL URL. Empty = local-only |
-| `MOON_SYNC_ENABLED` | `true` | Enable cloud synchronization |
-| `MOON_SYNC_INTERVAL` | `300` | Seconds between sync attempts |
-| `MOON_MEMORY_LIMIT` | `100000` | Max local records before archival |
-| `MOON_CONTEXT_MEMORY_BUDGET` | `2048` | Token budget for memory in context |
-| `MOON_BACKUP_PATH` | `~/.moon/memory/backups` | Backup storage directory |
-| `MOON_MEMORY_CACHE_ENABLED` | `true` | Enable retrieval cache |
-| `MOON_MEMORY_CACHE_TTL` | `60` | Cache TTL in seconds |
-| `MOON_MEMORY_OFFLINE_MODE` | `false` | Force offline mode |
+| `MOON-AI_MEMORY_PATH` | `~/.moon/memory` | Local memory data directory |
+| `MOON-AI_DATABASE_URL` | (empty) | Cloud PostgreSQL URL. Empty = local-only |
+| `MOON-AI_SYNC_ENABLED` | `true` | Enable cloud synchronization |
+| `MOON-AI_SYNC_INTERVAL` | `300` | Seconds between sync attempts |
+| `MOON-AI_MEMORY_LIMIT` | `100000` | Max local records before archival |
+| `MOON-AI_CONTEXT_MEMORY_BUDGET` | `2048` | Token budget for memory in context |
+| `MOON-AI_BACKUP_PATH` | `~/.moon/memory/backups` | Backup storage directory |
+| `MOON-AI_MEMORY_CACHE_ENABLED` | `true` | Enable retrieval cache |
+| `MOON-AI_MEMORY_CACHE_TTL` | `60` | Cache TTL in seconds |
+| `MOON-AI_MEMORY_OFFLINE_MODE` | `false` | Force offline mode |
 
 ## Local-First Operation
 
-MOON operates local-first:
+MOON-AI operates local-first:
 - Primary storage: SQLite at `~/.moon/memory/moon.db`
 - Vector storage: local vector index
 - Cloud sync: queued, non-blocking
@@ -115,7 +115,7 @@ results = await agent.memory_search("Python project", top_k=5, scope="PROJECT")
 
 # Store memory
 memory_id = await agent.memory_store(
-    "MOON uses Python 3.14",
+    "MOON-AI uses Python 3.14",
     memory_type="semantic",
     importance=0.8,
     scope="PROJECT",
@@ -125,7 +125,7 @@ memory_id = await agent.memory_store(
 deleted = await agent.memory_forget("old deployment config")
 
 # Update memory
-success = await agent.memory_update(memory_id, "MOON uses Python 3.14+")
+success = await agent.memory_update(memory_id, "MOON-AI uses Python 3.14+")
 ```
 
 Agents NEVER access database tables directly.

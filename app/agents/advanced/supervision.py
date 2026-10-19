@@ -1,6 +1,6 @@
 """Multi-agent execution modes, task graph, and supervision (spec 29, 30, 31).
 
-MOON must run multi-agent work in the SIMPLEST mode that satisfies the task
+MOON-AI must run multi-agent work in the SIMPLEST mode that satisfies the task
 (spec 29), never execute a task before its dependencies are done (spec 30), and
 supervise every running agent so a stuck one is detected and acted on rather
 than hanging the request forever (spec 31).

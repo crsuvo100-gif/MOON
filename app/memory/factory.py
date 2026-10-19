@@ -1,6 +1,6 @@
 """Factory for selecting the appropriate memory store backend.
 
-Environment variable ``MOON_MEMORY_BACKEND`` determines which concrete
+Environment variable ``MOON-AI_MEMORY_BACKEND`` determines which concrete
 implementation is instantiated:
 
 * ``local`` (default) → :class:`LocalMemoryStore`
@@ -20,7 +20,7 @@ from .store import LocalMemoryStore
 from .cloud_store import CloudMemoryStore
 
 
-_BACKEND_ENV_VAR: Final = "MOON_MEMORY_BACKEND"
+_BACKEND_ENV_VAR: Final = "MOON-AI_MEMORY_BACKEND"
 _DEFAULT_BACKEND: Final = "local"
 
 # Cache the singleton after first creation.
@@ -38,7 +38,7 @@ def memory_store_factory() -> LocalMemoryStore | CloudMemoryStore:
 
     backend = os.getenv(_BACKEND_ENV_VAR, _DEFAULT_BACKEND).lower()
     if backend == "cloud":
-        _instance = CloudMemoryStore()  # uses MOON_DATABASE_URL
+        _instance = CloudMemoryStore()  # uses MOON-AI_DATABASE_URL
     else:
         # Fallback to local SQLite regardless of typo or unknown value.
         _instance = LocalMemoryStore()

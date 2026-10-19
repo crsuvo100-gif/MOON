@@ -1,6 +1,6 @@
-"""MOON 40-Agent spec roster (additive).
+"""MOON-AI 40-Agent spec roster (additive).
 
-Registers the 40 functional agent roles from the MOON Multi-Agent Team
+Registers the 40 functional agent roles from the MOON-AI Multi-Agent Team
 specification into the structured ``AgentRegistry`` (spec 8) with full metadata:
 capabilities, required_tools, permissions, risk_level, dependencies, status.
 
@@ -151,7 +151,7 @@ def register_spec_agents() -> int:
             continue
         reg.register(AgentMetadata(
             id=aid, name=name, version="1.0.0",
-            description=f"MOON 40-agent spec role: {name}",
+            description=f"MOON-AI 40-agent spec role: {name}",
             capabilities=caps, required_tools=tools, permissions=perms,
             risk_level=risk, dependencies=deps, status="active",
             source="spec40", role_group=group,

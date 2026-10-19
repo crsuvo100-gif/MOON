@@ -1,1 +1,1 @@
-"""Test suite for MOON."""
+"""Test suite for MOON-AI."""

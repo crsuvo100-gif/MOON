@@ -1,4 +1,4 @@
-"""model_pull_tool.py -- let MOON (or an agent) pull/install an AI model.
+"""model_pull_tool.py -- let MOON-AI (or an agent) pull/install an AI model.
 
 Thin wrapper over `ollama pull` so any agent can fetch a model it needs for its
 function. Best-effort; reports success/failure. This is the mechanism behind

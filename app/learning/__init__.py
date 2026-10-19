@@ -4,7 +4,7 @@ Implements the learning flow (spec 23): goal -> curriculum -> research ->
 knowledge extraction -> practice -> test -> verification -> memory -> skill ->
 mastery. Plus failure learning (spec 25) and reflection (spec 26).
 
-This package reuses MOON's existing memory/reflection pieces where present and
+This package reuses MOON-AI's existing memory/reflection pieces where present and
 adds the curriculum/mastery + failure-classification scaffolding. It does NOT
 rewrite any existing module (non-destructive); it composes them.
 """

@@ -1,4 +1,4 @@
-# MOON — Configuration
+# MOON-AI — Configuration
 
 All configuration lives in `.env` (created by `setup_wizard.py` on first run). Never edit `.env` by hand unless you know what you're doing — the wizard validates values.
 
@@ -26,16 +26,16 @@ All configuration lives in `.env` (created by `setup_wizard.py` on first run). N
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `MOON_SAFETY boundary` | Yes | (wizard-prompted) | Target organization/domain MOON is authorized to operate on |
-| `MOON_BLOCKED_DOMAINS` | No | — | Comma-separated list of domains MOON must never touch |
+| `MOON-AI_SAFETY boundary` | Yes | (wizard-prompted) | Target organization/domain MOON-AI is authorized to operate on |
+| `MOON-AI_BLOCKED_DOMAINS` | No | — | Comma-separated list of domains MOON-AI must never touch |
 
 ### Service
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `MOON_PORT` | No | `8777` | HTTP API port |
-| `MOON_WORKERS` | No | `4` | Concurrent worker threads |
-| `MOON_LOG_LEVEL` | No | `INFO` | Python logging level |
+| `MOON-AI_PORT` | No | `8777` | HTTP API port |
+| `MOON-AI_WORKERS` | No | `4` | Concurrent worker threads |
+| `MOON-AI_LOG_LEVEL` | No | `INFO` | Python logging level |
 
 ### Voice
 
@@ -48,13 +48,13 @@ All configuration lives in `.env` (created by `setup_wizard.py` on first run). N
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `MOON_MEMORY_DB` | No | `moon_memory.db` | SQLite memory database path |
+| `MOON-AI_MEMORY_DB` | No | `moon_memory.db` | SQLite memory database path |
 
 ### Monitoring
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `MOON_MONITOR_INTERVAL` | No | `900` | Deep monitor interval in seconds (15 min default) |
+| `MOON-AI_MONITOR_INTERVAL` | No | `900` | Deep monitor interval in seconds (15 min default) |
 
 ---
 
@@ -83,7 +83,7 @@ This checks:
 - Ollama reachable at `OLLAMA_BASE_URL`
 - Model specified in `OLLAMA_MODEL` is pullable
 - `.env` has all required fields
-- Port `MOON_PORT` is free
+- Port `MOON-AI_PORT` is free
 
 ---
 
@@ -93,6 +93,6 @@ To switch the main brain model:
 
 1. Edit `.env`: set `OLLAMA_MODEL` to the new model name
 2. Pull the model: `ollama pull <new-model>`
-3. Restart MOON: `systemctl --user restart moon-terminal.service`
+3. Restart MOON-AI: `systemctl --user restart MOON-AI-terminal.service`
 
 Per-agent models can be set in the agent configuration (see `src/agents/`).

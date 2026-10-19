@@ -1,6 +1,6 @@
-"""MOON Agent Factory -- additive autonomous agent-generation subsystem.
+"""MOON-AI Agent Factory -- additive autonomous agent-generation subsystem.
 
-This package adds the *agent generation* half of the MOON Autonomous Agent
+This package adds the *agent generation* half of the MOON-AI Autonomous Agent
 Factory spec (sections 13-15, 39, 43-45, 57). The tool/capability half already
 exists in ``app.capability`` (CapabilityManager, InstallationManager,
 SandboxExecutor, VerificationEngine, ...). This factory REUSES those existing,

@@ -1,4 +1,4 @@
-"""Tests for the MOON 40-agent spec integration + Agent Factory sub-components.
+"""Tests for the MOON-AI 40-agent spec integration + Agent Factory sub-components.
 
 Real behavior, no mocks: registry selection, spec-agent registration, factory
 BUILD->REGISTER->REUSE pipeline, and terminal/REST surface existence.

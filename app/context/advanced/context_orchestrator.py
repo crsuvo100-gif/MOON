@@ -1,7 +1,7 @@
 """ContextOrchestrator — unified context self-function orchestrator.
 
 This is the central orchestrator that ties together all context self-function
-modules into a cohesive system. Every agent, brain, and tool in MOON can use
+modules into a cohesive system. Every agent, brain, and tool in MOON-AI can use
 this orchestrator to manage its own context like a professional AI assistant.
 
 The orchestrator provides:

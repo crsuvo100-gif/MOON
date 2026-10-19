@@ -1,7 +1,7 @@
 """agent_model_manager.py -- every agent runs on its OWN AI model.
 
-Per the system spec, each MOON agent should be able to pull/install and use a
-model best suited to its function, then feed its result up to the main MOON
+Per the system spec, each MOON-AI agent should be able to pull/install and use a
+model best suited to its function, then feed its result up to the main MOON-AI
 brain for accurate consolidation.
 
 Design
@@ -12,7 +12,7 @@ Design
 - When an agent runs, it gets its OWN LLMService instance pointed at its model
   (cached). The model is pulled/installed lazily via `ollama pull` if missing
   (best-effort -- falls back to the default model if offline / OOM).
-- The agent's draft is still validated by the main MOON brain's two-phase gate,
+- The agent's draft is still validated by the main MOON-AI brain's two-phase gate,
   so the per-agent result is cross-checked before it reaches the operator.
 """
 
@@ -30,12 +30,12 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Per-agent AI model map  (THE core of "every agent runs on its own model").
 #
-# Each MOON agent is assigned a model best-suited to its FUNCTION. Model ids are
+# Each MOON-AI agent is assigned a model best-suited to its FUNCTION. Model ids are
 # Ollama tags. `None` => use the global default (settings.model_name).
 #
 # CPU-only host constraint: the active assignments below are restricted to the
 # small models that actually load on this box (~0.6b-3b). The
-# RECOMMENDED_FOR_CAPABLE_HW map lists the stronger models to use when MOON runs
+# RECOMMENDED_FOR_CAPABLE_HW map lists the stronger models to use when MOON-AI runs
 # on a machine with a GPU / >16 GB RAM -- set them in .env / agent overrides to
 # raise accuracy. The model manager pulls any tag lazily via `ollama pull`.
 # ---------------------------------------------------------------------------
@@ -116,7 +116,7 @@ AGENT_MULTIMODAL: dict[str, dict[str, str | None]] = {
 }
 
 # Stronger models recommended for capable hardware. Operators can copy these
-# into AGENT_MODELS (or set STRONG_MODEL_NAME) when MOON runs on a GPU host.
+# into AGENT_MODELS (or set STRONG_MODEL_NAME) when MOON-AI runs on a GPU host.
 RECOMMENDED_FOR_CAPABLE_HW: dict[str, str] = {
     "coding": "qwen2.5-coder:7b",
     "debug": "qwen2.5-coder:7b",

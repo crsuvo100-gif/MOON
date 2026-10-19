@@ -1,4 +1,4 @@
-"""Tests for MOON's self-evolution / autonomous capability acquisition.
+"""Tests for MOON-AI's self-evolution / autonomous capability acquisition.
 
 Covers:
   - _auto_acquire_for_task runs the discovery->acquire gating WITHOUT breaking
@@ -6,7 +6,7 @@ Covers:
   - run_task end-to-end via the main.py `run` path returns a real answer from
     the local model (skips heavy tool loop on a simple query).
 
-These prove MOON can extend herself when a capability is missing -- the
+These prove MOON-AI can extend herself when a capability is missing -- the
 "work perfectly on everything" loop -- without requiring network in CI.
 """
 
@@ -66,7 +66,7 @@ async def test_run_task_end_to_end_local_model():
     o = Orchestrator(get_settings())
     await o.setup()
     try:
-        res = await o.run_task(Task.create("Reply with the single word: MOON", agent_name="qa"))
+        res = await o.run_task(Task.create("Reply with the single word: MOON-AI", agent_name="qa"))
         assert res is not None
         assert res.result is not None and len(res.result.strip()) > 0
     finally:

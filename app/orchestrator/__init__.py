@@ -1,4 +1,4 @@
-"""MOON Orchestrator package (spec section 6: orchestrator/).
+"""MOON-AI Orchestrator package (spec section 6: orchestrator/).
 
 This is a COMPATIBILITY LAYER. The real orchestrator lives at
 ``app.brain.orchestrator.Orchestrator`` and the runtime analysis modules live in

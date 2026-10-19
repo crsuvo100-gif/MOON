@@ -1,10 +1,10 @@
-"""Agent Factory: Security Reviewer + Repair Agent (spec 18, 29 + MOON Factory).
+"""Agent Factory: Security Reviewer + Repair Agent (spec 18, 29 + MOON-AI Factory).
 
 Security Reviewer: static checks of generated code for forbidden patterns
-(modifying MOON core, secret exfiltration, unsafe eval/exec, network exfil)
+(modifying MOON-AI core, secret exfiltration, unsafe eval/exec, network exfil)
 and verifies required permissions are within the requested risk level.
 Repair Agent: on test failure, applies a safe, bounded fix (re-generate with
-the corrected capability) -- never silently rewrites MOON core.
+the corrected capability) -- never silently rewrites MOON-AI core.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ _FORBIDDEN = [
     (r"import\s+os\s*;.*system\(", "shell escape"),
     (r"eval\s*\(", "unrestricted eval"),
     (r"exec\s*\(", "unrestricted exec"),
-    (r"app\.brain", "modifies MOON core"),
+    (r"app\.brain", "modifies MOON-AI core"),
     (r"app\.agent_factory\.models", "tampers factory models"),
     (r"subprocess.*shell\s*=\s*True", "unsafe shell"),
     (r"requests\.get\(.*verify\s*=\s*False", "tls verification disabled"),
@@ -61,7 +61,7 @@ class SecurityReviewer:
 class RepairAgent:
     """On test failure, attempt a safe re-generation (spec 29 DIAGNOSE->REPAIR).
 
-    Does NOT edit MOON core. It re-runs the Builder with the same spec and
+    Does NOT edit MOON-AI core. It re-runs the Builder with the same spec and
     returns a fresh artifact + whether the repair changed anything.
     """
 

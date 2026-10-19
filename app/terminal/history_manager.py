@@ -1,4 +1,4 @@
-"""Execution history manager for MOON terminal.
+"""Execution history manager for MOON-AI terminal.
 
 Stores execution history with search, filtering, and pagination.
 Never stores secrets — commands are sanitized before storage.

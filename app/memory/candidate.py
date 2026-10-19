@@ -11,7 +11,7 @@
       -> POLICY CHECK             (spec 42)
       -> PERSIST OR DISCARD
 
-This is the single gate between "something happened" and "MOON remembers it",
+This is the single gate between "something happened" and "MOON-AI remembers it",
 so it is where memory pollution (spec 78) and secret leakage (spec 43) are
 stopped.
 """

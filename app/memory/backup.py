@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def backup_dir() -> Path:
-    d = Path(os.environ.get("MOON_BACKUP_PATH", "")
+    d = Path(os.environ.get("MOON-AI_BACKUP_PATH", "")
              or (default_db_path().parent / "backups"))
     return d
 
@@ -139,7 +139,7 @@ def restore_backup(store: MemoryStore, path: str | Path) -> ImportReport:
 
 
 def _emit(event: str, extra: dict | None = None) -> None:
-    """spec 60: memory events on the existing MOON event bus."""
+    """spec 60: memory events on the existing MOON-AI event bus."""
     try:
         from app.runtime.event_bus import bus
         bus().publish(event, detail="backup", payload=extra or {})

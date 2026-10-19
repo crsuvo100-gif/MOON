@@ -3,7 +3,7 @@
 Replaces the in-memory stub with a real, persistent, async PostgreSQL
 implementation. The store satisfies the same :class:`MemoryStore` interface
 as the local SQLite store, so it can be used as a drop-in replacement when
-``MOON_MEMORY_BACKEND=cloud`` and ``MOON_DATABASE_URL`` is set.
+``MOON-AI_MEMORY_BACKEND=cloud`` and ``MOON-AI_DATABASE_URL`` is set.
 
 The asyncpg driver runs in a dedicated background event-loop thread; all
 public methods are synchronous and bridge to that loop, so no caller
@@ -20,7 +20,7 @@ import threading
 import time
 from typing import Any
 
-# Optional driver: required only when MOON_MEMORY_BACKEND=cloud.
+# Optional driver: required only when MOON-AI_MEMORY_BACKEND=cloud.
 # Import lazily so importing the memory package never hard-fails on a missing
 # optional dependency (a clean install without PostgreSQL must still be able
 # to import app.memory).
@@ -96,16 +96,16 @@ class CloudMemoryStore(MemoryStore):
     Parameters
     ----------
     dsn:
-        PostgreSQL connection string. Defaults to ``MOON_DATABASE_URL``.
+        PostgreSQL connection string. Defaults to ``MOON-AI_DATABASE_URL``.
     """
 
     name = "cloud_postgres"
 
     def __init__(self, dsn: str | None = None) -> None:
-        self._dsn = dsn or os.getenv("MOON_DATABASE_URL", "")
+        self._dsn = dsn or os.getenv("MOON-AI_DATABASE_URL", "")
         if not self._dsn:
             raise RuntimeError(
-                "CloudMemoryStore requires MOON_DATABASE_URL to be set"
+                "CloudMemoryStore requires MOON-AI_DATABASE_URL to be set"
             )
         self._loop = asyncio.new_event_loop()
         self._pool: asyncpg.Pool | None = None

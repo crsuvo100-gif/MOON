@@ -46,7 +46,7 @@ async def main():
     # Real inference through the main brain
     print("\n=== LIVE INFERENCE (quick_reply) ===")
     try:
-        ans = await o.quick_reply("Reply with exactly: MOON MULTIBRAIN ONLINE")
+        ans = await o.quick_reply("Reply with exactly: MOON-AI MULTIBRAIN ONLINE")
         print(f"  answer: {ans!r}")
     except Exception as e:
         print(f"  inference failed: {type(e).__name__}: {e}")

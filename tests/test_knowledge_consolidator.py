@@ -1,4 +1,4 @@
-"""Tests for the autonomous KnowledgeConsolidator (MOON self-learning loop)."""
+"""Tests for the autonomous KnowledgeConsolidator (MOON-AI self-learning loop)."""
 
 import asyncio
 
@@ -53,7 +53,7 @@ def test_consolidate_persists_to_long_term_memory(tmp_path):
     c = KnowledgeConsolidator(mm, use_llm=False)
     n = _run(c.consolidate(
         prompt="Tell me about Neptune.",
-        response="Neptune is the eighth planet from the Sun. It has 14 known moons.",
+        response="Neptune is the eighth planet from the Sun. It has 14 known MOON-AIs.",
     ))
     assert n >= 1
     entries = _run(mm._ltm.all())

@@ -36,22 +36,22 @@ def main() -> int:
     from app.memory.commands import parse_memory_command
 
     store = LocalMemoryStore(tmp / "moon.db")
-    m = CognitiveMemoryManager(store=store, project_id="MOON")
+    m = CognitiveMemoryManager(store=store, project_id="MOON-AI")
 
-    # ---- existing MOON functionality preserved -------------------------
+    # ---- existing MOON-AI functionality preserved -------------------------
     try:
         import app.terminal_interface as T
         routes = T.app.openapi().get("paths", {})
-        rec("Existing MOON functionality preserved",
+        rec("Existing MOON-AI functionality preserved",
             len(routes) > 30 and "/api/health" in routes,
             f"{len(routes)} API paths still served (incl /api/health)")
     except Exception as e:  # noqa: BLE001
-        rec("Existing MOON functionality preserved", False, str(e))
+        rec("Existing MOON-AI functionality preserved", False, str(e))
 
     # ---- storage layers -------------------------------------------------
     try:
-        r = MemoryRecord(content="MOON uses Python 3.14", scope=Scope.PROJECT,
-                         type=MemoryType.SEMANTIC, project_id="MOON",
+        r = MemoryRecord(content="MOON-AI uses Python 3.14", scope=Scope.PROJECT,
+                         type=MemoryType.SEMANTIC, project_id="MOON-AI",
                          source_type=SourceType.USER).apply_defaults()
         store.upsert(r)
         got = store.get(r.memory_id)
@@ -105,9 +105,9 @@ def main() -> int:
     try:
         # dedup is scope+type aware (spec 88 boundary), so store the SAME shape
         # twice: same content, scope, type and agent.
-        first = m.store("MOON uses Python 3.14", source_type=SourceType.USER,
+        first = m.store("MOON-AI uses Python 3.14", source_type=SourceType.USER,
                         scope=Scope.PROJECT, explicit=True)
-        dup = m.store("MOON uses Python 3.14", source_type=SourceType.USER,
+        dup = m.store("MOON-AI uses Python 3.14", source_type=SourceType.USER,
                       scope=Scope.PROJECT, explicit=True)
         rec("Memory deduplication works", dup is None,
             f"identical re-store rejected (first={'stored' if first else 'none'})")
@@ -145,7 +145,7 @@ def main() -> int:
         store.upsert(rr); eng.record(rr, Operation.CREATE)
         out = eng.sync()
         rec("Offline operation works", out["local_only"] and eng.status()["pending"] >= 1,
-            "cloud OFFLINE -> write queued, MOON continues")
+            "cloud OFFLINE -> write queued, MOON-AI continues")
         rec("Sync queue works", eng.status()["pending"] >= 1,
             f"pending={eng.status()['pending']}")
         rec("Local-first operation works", out.get("cloud") == "OFFLINE",
@@ -183,7 +183,7 @@ def main() -> int:
     # ---- backup / restore / export --------------------------------------
     try:
         import os
-        os.environ["MOON_BACKUP_PATH"] = str(tmp / "bk")
+        os.environ["MOON-AI_BACKUP_PATH"] = str(tmp / "bk")
         p = B.create_backup(store, name="moon_memory_acc", keep=2)
         fresh = LocalMemoryStore(tmp / "fresh.db")
         rep = B.restore_backup(fresh, p)
@@ -206,7 +206,7 @@ def main() -> int:
             MemoryHealthService(manager=m).check().components.get("local_db", {}).get("status") == "ONLINE",
             "structured health across local/vector/cloud/sync/storage")
         rec("Terminal integration works",
-            "MOON MEMORY" in MemoryHealthService(manager=m).terminal_status(),
+            "MOON-AI MEMORY" in MemoryHealthService(manager=m).terminal_status(),
             "spec-59 panel renders")
     except Exception as e:  # noqa: BLE001
         rec("API/health", False, str(e))

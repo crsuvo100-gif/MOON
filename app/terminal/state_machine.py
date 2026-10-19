@@ -1,4 +1,4 @@
-"""Execution state machine for MOON terminal.
+"""Execution state machine for MOON-AI terminal.
 
 States:
     IDLE → PLANNING → WAITING_PERMISSION → STARTING → RUNNING → VERIFYING → COMPLETED

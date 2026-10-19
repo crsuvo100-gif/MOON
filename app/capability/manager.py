@@ -1,4 +1,4 @@
-"""CapabilityManager -- orchestrates MOON's autonomous acquisition loop.
+"""CapabilityManager -- orchestrates MOON-AI's autonomous acquisition loop.
 
 Wires together the registry, permission manager, dependency analyzer, GitHub
 retriever, sandbox, installer, verification, and self-repair into the pipeline
@@ -8,11 +8,11 @@ described by the integration spec:
   -> CHECK EXISTING -> MISSING? -> DISCOVER -> ACQUIRE -> VERIFY -> EXECUTE
   -> (ERROR? -> DIAGNOSE -> SAFE REPAIR -> RETRY -> TEST -> VERIFY) -> COMPLETE
 
-It is ADDITIVE: it prefers existing MOON capabilities and already-installed
+It is ADDITIVE: it prefers existing MOON-AI capabilities and already-installed
 system utilities before any network acquisition, and it reuses the existing
 ToolRegistry / BaseTool / SafetyValidator / ErrorRecovery / Planner.
 
-Nothing here deletes or replaces existing MOON functionality.
+Nothing here deletes or replaces existing MOON-AI functionality.
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ _BUILTIN_SPECS: dict[str, dict] = {
     "beautifulsoup4": {"type": "python", "method": "pip", "package": "beautifulsoup4", "verify": "bs4"},
     "requests": {"type": "python", "method": "pip", "package": "requests", "verify": "requests"},
     "playwright": {"type": "python", "method": "pip", "package": "playwright", "verify": "playwright"},
-    # Hugging Face capabilities are BUILT-IN (no network install needed): MOON ships
+    # Hugging Face capabilities are BUILT-IN (no network install needed): MOON-AI ships
     # the huggingface + huggingface_deploy tools. The planner can freely choose them
     # for hosted chat (gpt-oss, DeepSeek-R1, ...) and text-to-image (FLUX).
     "huggingface": {"type": "builtin", "method": "none", "package": "", "verify": "huggingface"},

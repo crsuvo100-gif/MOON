@@ -1,4 +1,4 @@
-"""Agent Factory: Registrar + Rollback (spec 14, 44, 45 + MOON Factory).
+"""Agent Factory: Registrar + Rollback (spec 14, 44, 45 + MOON-AI Factory).
 
 Registrar: writes the generated agent into the structured Agent Registry and
 the Factory store, moving it from staging -> approved (spec 14). Rollback:

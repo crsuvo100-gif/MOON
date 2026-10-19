@@ -1,12 +1,12 @@
-"""knowledge_consolidator.py -- MOON's autonomous self-learning loop.
+"""knowledge_consolidator.py -- MOON-AI's autonomous self-learning loop.
 
-After every interaction MOON consolidates whatever knowledge she gained into
+After every interaction MOON-AI consolidates whatever knowledge she gained into
 her durable "main brain" (LongTermMemory, a disk-backed JSONL store that
 survives restarts) and into the semantic KnowledgeBase (RAG) so future context
 retrieval reuses it.
 
 What gets learned ("all type of knowledge"):
-  * factual statements from MOON's own answers (offline heuristic extraction of
+  * factual statements from MOON-AI's own answers (offline heuristic extraction of
     informative sentences: definitions, "X is/are Y", figures, dates, ...),
   * explicit user-provided facts,
   * tool execution results (what a tool returned), and
@@ -85,7 +85,7 @@ class KnowledgeConsolidator:
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("consolidate: learn failed for fact: %s", exc)
             if stored:
-                logger.info("MOON learned %d new fact(s) into her brain", stored)
+                logger.info("MOON-AI learned %d new fact(s) into her brain", stored)
             return stored
         except Exception as exc:  # noqa: BLE001
             logger.warning("KnowledgeConsolidator.consolidate failed (skipped): %s", exc)

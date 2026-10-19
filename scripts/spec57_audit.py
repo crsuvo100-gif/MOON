@@ -45,7 +45,7 @@ def has_method(obj, *names) -> tuple[bool, str]:
 
 # ---------------------------------------------------------------- §57 checks
 print("=" * 74)
-print("MOON §57 ACCEPTANCE AUDIT")
+print("MOON-AI §57 ACCEPTANCE AUDIT")
 print("=" * 74)
 
 # --- 1/2/3/4: registries + brain router (static contract checks) -----------
@@ -331,7 +331,7 @@ try:
 except Exception as e:
     rec("25. Tests pass", False, f"{type(e).__name__}: {e}")
 
-# --- 26: existing MOON functionality still operational --------------------
+# --- 26: existing MOON-AI functionality still operational --------------------
 # The systemd control plane, the HUD/UI route and the voice subsystem all
 # predate this work; if they still answer, nothing was broken by the rebuild.
 try:
@@ -351,12 +351,12 @@ try:
         _voice = True
     except Exception:
         _voice = False
-    rec("26. Existing MOON functionality operational",
+    rec("26. Existing MOON-AI functionality operational",
         _svc_ok and _ui and _voice,
         f"moon-terminal.service={_svc.stdout.strip()}, HUD route={_ui}, "
         f"voice_engine={_voice}")
 except Exception as e:
-    rec("26. Existing MOON functionality operational", False, f"{type(e).__name__}: {e}")
+    rec("26. Existing MOON-AI functionality operational", False, f"{type(e).__name__}: {e}")
 
 # --- spec 17/18/19/37: brain provider abstraction + health + fallback -----
 try:

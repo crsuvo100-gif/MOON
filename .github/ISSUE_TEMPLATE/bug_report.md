@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report a bug in MOON
+about: Report a bug in MOON-AI
 title: '[BUG] '
 labels: bug
 ---
@@ -20,7 +20,7 @@ What you expected to happen.
 ## Environment
 - OS: 
 - Python version: 
-- MOON version: 
+- MOON-AI version: 
 - Model: 
 
 ## Logs

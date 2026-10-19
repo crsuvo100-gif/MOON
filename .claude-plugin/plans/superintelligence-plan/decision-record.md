@@ -1,4 +1,4 @@
-# Decision Record: Feature Selection for MOON Superintelligence Upgrade
+# Decision Record: Feature Selection for MOON-AI Superintelligence Upgrade
 
 **Date**: 2026-02-28  
 **Status**: Accepted  
@@ -6,7 +6,7 @@
 
 ## Context
 
-MOON agent v1.0 has a solid foundation:
+MOON-AI agent v1.0 has a solid foundation:
 - 8 specialized personas (general, code, security, research, voice, admin, creative, monitor)
 - Intent-based agent routing
 - 30+ tool schemas defined (but most are stubs/not wired)
@@ -46,7 +46,7 @@ However, the pipeline is **stub-heavy**: `generate_response()` returns a canned 
 Rationale:
 1. The 5 tools (plan, reflect, self_evolve, evidence_hub, spawn_swarm) already have schemas — they form a natural "think → act → learn → research → parallelize" loop.
 2. Wiring a real Ollama-backed `generate_response()` is the single highest-leverage change: everything else (tool calls, persona injection, memory) becomes actually useful once responses come from a real model.
-3. This creates a coherent upgrade story: "MOON now thinks before answering, critiques its own answers, learns from injected knowledge, researches across sources, and can parallelize work — all backed by a real local LLM."
+3. This creates a coherent upgrade story: "MOON-AI now thinks before answering, critiques its own answers, learns from injected knowledge, researches across sources, and can parallelize work — all backed by a real local LLM."
 4. Scope is bounded and testable: 5 tool handlers + 1 LLM integration + memory/context wiring.
 
 ## Implementation Plan (ordered)

@@ -1,4 +1,4 @@
-"""Environment manager for MOON terminal sessions.
+"""Environment manager for MOON-AI terminal sessions.
 
 Handles:
 - Shell detection (bash, sh, zsh, fish)

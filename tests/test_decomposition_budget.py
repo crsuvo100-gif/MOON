@@ -80,7 +80,7 @@ def test_budget_evicts_and_summarizes_when_over() -> None:
     o._settings.model_max_tokens = 200
     big = "word " * 5000          # ~6250 estimated tokens
     msgs = [
-        _Msg("system", "you are moon"),
+        _Msg("system", "you are MOON-AI"),
         _Msg("user", "old context 1 " + big),
         _Msg("user", "old context 2 " + big),
         _Msg("user", "recent " + big),
@@ -92,7 +92,7 @@ def test_budget_evicts_and_summarizes_when_over() -> None:
     assert rep["after"] <= rep["budget"] or rep["after"] < rep["before"]
     assert rep["summarized"] is True
     # the system prompt and the final user turn must survive
-    assert out[0].content == "you are moon"
+    assert out[0].content == "you are MOON-AI"
     assert out[-1].content == "the actual question"
     # and the report is attached to the task for observability
     assert task.data["_context_budget"]["evicted"] == rep["evicted"]

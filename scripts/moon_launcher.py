@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-moon_launcher.py -- run MOON anywhere with one cross-platform command.
+moon_launcher.py -- run MOON-AI anywhere with one cross-platform command.
 
-Pure-Python, OS-agnostic launcher for MOON. It:
+Pure-Python, OS-agnostic launcher for MOON-AI. It:
   1. Ensures her model backend (Ollama) is reachable on OLLAMA_HOST, starting
      the service when possible (systemd on Linux with root/sudo; background
      ``ollama serve`` on macOS/Windows).
-  2. Boots MOON's terminal interface (default), dashboard, or runs a one-shot
+  2. Boots MOON-AI's terminal interface (default), dashboard, or runs a one-shot
      task via main.py.
 
 Usage:
@@ -78,10 +78,10 @@ def ensure_ollama() -> None:
 
 
 def ensure_env() -> None:
-    """Ensure a local .env exists so MOON can read API keys / unlock flags.
+    """Ensure a local .env exists so MOON-AI can read API keys / unlock flags.
 
     .env is gitignored (it holds secrets) so a fresh clone has none. If absent,
-    we copy .env.example into .env so MOON launches in a fully-configured state
+    we copy .env.example into .env so MOON-AI launches in a fully-configured state
     (all features unlocked; API-key fields blank for the operator to fill).
     We NEVER create or touch .env when one already exists, and we NEVER commit it.
     """
@@ -98,9 +98,9 @@ def ensure_env() -> None:
 
 
 def start_tunnel() -> int:
-    """Expose MOON's Terminal through a secure tunnel, behind an authz token.
+    """Expose MOON-AI's Terminal through a secure tunnel, behind an authz token.
 
-    Safety: the Terminal's WebSocket + /status REQUIRE `MOON_TERMINAL_TOKEN`.
+    Safety: the Terminal's WebSocket + /status REQUIRE `MOON-AI_TERMINAL_TOKEN`.
     If it is unset we generate a random one (printed once) so remote exposure is
     never unauthenticated. We then start `cloudflared` (if installed) to create a
     public URL. If cloudflared is missing we still run the token-gated server on
@@ -108,24 +108,24 @@ def start_tunnel() -> int:
     """
     import secrets
 
-    token = os.environ.get("MOON_TERMINAL_TOKEN", "").strip()
+    token = os.environ.get("MOON-AI_TERMINAL_TOKEN", "").strip()
     if not token:
         token = secrets.token_hex(16)
-        os.environ["MOON_TERMINAL_TOKEN"] = token
-        log(f"Generated MOON_TERMINAL_TOKEN (keep this secret): {token}")
+        os.environ["MOON-AI_TERMINAL_TOKEN"] = token
+        log(f"Generated MOON-AI_TERMINAL_TOKEN (keep this secret): {token}")
     else:
-        log("Using existing MOON_TERMINAL_TOKEN (Terminal is auth-gated)")
+        log("Using existing MOON-AI_TERMINAL_TOKEN (Terminal is auth-gated)")
 
     # Start the Terminal in the background (token-gated via env).
-    log("Starting MOON Terminal (auth-gated)...")
+    log("Starting MOON-AI Terminal (auth-gated)...")
     srv = subprocess.Popen(
         [venv_python_or_default(), "main.py", "start"],
-        env={**os.environ, "MOON_TERMINAL_TOKEN": token},
+        env={**os.environ, "MOON-AI_TERMINAL_TOKEN": token},
     )
     try:
         cf = shutil.which("cloudflared")
         if cf:
-            log("cloudflared found -- opening a secure tunnel to MOON Terminal...")
+            log("cloudflared found -- opening a secure tunnel to MOON-AI Terminal...")
             tun = subprocess.Popen(
                 [cf, "tunnel", "--url", "http://127.0.0.1:8777"],
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -163,7 +163,7 @@ def main(argv: list[str]) -> int:
     ensure_env()
     ensure_ollama()
 
-    # Decontaminate PYTHONPATH so MOON's venv is used (see app/config/env_guard.py)
+    # Decontaminate PYTHONPATH so MOON-AI's venv is used (see app/config/env_guard.py)
     os.environ.pop("PYTHONPATH", None)
     venv_python = venv_python_or_default()
     if not os.path.exists(venv_python):
@@ -172,24 +172,24 @@ def main(argv: list[str]) -> int:
         return 1
 
     if mode in ("terminal", "serve", "start"):
-        log("MOON Terminal starting at http://127.0.0.1:8777")
+        log("MOON-AI Terminal starting at http://127.0.0.1:8777")
         return subprocess.call([venv_python, "main.py", "start"])
     if mode == "dashboard":
-        log("MOON Dashboard starting at http://127.0.0.1:5000")
+        log("MOON-AI Dashboard starting at http://127.0.0.1:5000")
         return subprocess.call([venv_python, "main.py", "dashboard"])
     if mode == "tui":
-        log("MOON TUI starting (curses)...")
+        log("MOON-AI TUI starting (curses)...")
         return subprocess.call([venv_python, "main.py", "tui"])
     if mode == "telegram":
-        log("MOON Telegram bot starting (polling)...")
+        log("MOON-AI Telegram bot starting (polling)...")
         return subprocess.call([venv_python, "main.py", "telegram"])
     if mode == "tunnel":
         return start_tunnel()
     if mode == "run":
         task = " ".join(argv[2:]) if len(argv) > 2 else "Say hello."
-        log(f"MOON running: {task}")
+        log(f"MOON-AI running: {task}")
         return subprocess.call([venv_python, "main.py", "run", task])
-    log("Usage: moon_launcher.py [terminal|dashboard|tui|telegram|tunnel|run <task>]")
+    log("Usage: MOON-AI_launcher.py [terminal|dashboard|tui|telegram|tunnel|run <task>]")
     return 2
 
 

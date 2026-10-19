@@ -12,16 +12,16 @@ def repo_copy(tmp_path):
     virtualenv directories) so the fixture stays fast on large monorepos.
     """
     src = Path(__file__).resolve().parents[2]  # project root
-    dst = tmp_path / "MOON"
+    dst = tmp_path / "MOON-AI"
     shutil.copytree(
         src,
         dst,
         ignore=shutil.ignore_patterns(
             "__pycache__", "*.pyc", ".git", ".gitnexus", ".hermes", "node_modules",
-            ".pre_commit_checkpoint", ".venv", "build", "dist", "MOON_HOME",
+            ".pre_commit_checkpoint", ".venv", "build", "dist", "MOON-AI_HOME",
             "*.egg-info", "backups", "data", "deploy", "skills", "regexr", "voices",
             "moon_ui", "web", ".claude", ".claude-plugin", ".github", ".vscode",
-            ".pytest_cache", "CYCLONE_TERMINAL_AI_V10", ".moon", ".moon_logs",
+            ".pytest_cache", ".moon", ".moon_logs",
         ),
     )
     return dst
@@ -31,11 +31,11 @@ def test_acceptance_flow(repo_copy):
     The script should exit with 0 and print a summary containing the word
     'Summar' or 'All tests passed'.
     """
-    # The repo may contain a top-level 'MOON' package directory.
+    # The repo may contain a top-level 'MOON-AI' package directory.
     script = repo_copy / "scripts" / "acceptance_test.py"
     if not script.is_file():
-        # Fallback to nested layout where the package resides in a 'MOON' subdirectory.
-        script = repo_copy / "MOON" / "scripts" / "acceptance_test.py"
+        # Fallback to nested layout where the package resides in a 'MOON-AI' subdirectory.
+        script = repo_copy / "MOON-AI" / "scripts" / "acceptance_test.py"
     script.chmod(0o755)
     result = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
     assert result.returncode == 0, f"Non-zero exit: {result.returncode}\n{result.stderr}"

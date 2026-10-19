@@ -1,11 +1,11 @@
-"""telegram_bot.py -- MOON's Telegram chat channel (polling listener).
+"""telegram_bot.py -- MOON-AI's Telegram chat channel (polling listener).
 
-Lets you talk to MOON from Telegram. Uses long-polling (getUpdates) so no public
+Lets you talk to MOON-AI from Telegram. Uses long-polling (getUpdates) so no public
 webhook is required. The Telegram bot token + allowed chat id come from the
 environment (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID) -- never hardcoded, never
 logged. Only messages from an authorized chat id are answered (anti-spam gate).
 
-This is ADDITIVE: it does not change MOON's core; it just drives the Orchestrator.
+This is ADDITIVE: it does not change MOON-AI's core; it just drives the Orchestrator.
 
 Usage:
     python main.py telegram          # blocks, listening until Ctrl-C
@@ -123,7 +123,7 @@ def main() -> int:
         return 0
     except Exception as exc:  # noqa: BLE001
         logger.exception("Telegram bot stopped: %s", exc)
-        print(f"[MOON Telegram] fatal: {exc}", file=__import__("sys").stderr)
+        print(f"[MOON-AI Telegram] fatal: {exc}", file=__import__("sys").stderr)
         return 1
     return 0
 

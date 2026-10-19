@@ -20,7 +20,7 @@ def test_per_agent_brains_connected():
     o = asyncio.new_event_loop()
     try:
         orch = o.run_until_complete(_make_orch())
-        # Every agent has its OWN brain wired to the main MOON brain.
+        # Every agent has its OWN brain wired to the main MOON-AI brain.
         assert len(orch._agents) >= 36
         assert len(orch._agent_brains) == len(orch._agents)
         for name, brain in orch._agent_brains.items():
@@ -149,7 +149,7 @@ def test_pick_llm_routing():
         # took 74s/reply on the host CPU). _pick_llm must reflect that.
         assert orch._pick_llm("what is 2+2?") is orch._llm, "factual -> default (fast)"
         assert orch._pick_llm("scan this host for exploits") is orch._llm_strong, "cyber-critical -> strong"
-        assert orch._pick_llm("write me a haiku about the moon") is orch._llm, "creative -> default"
+        assert orch._pick_llm("write me a haiku about the MOON-AI") is orch._llm, "creative -> default"
         o.run_until_complete(orch.teardown())
     finally:
         o.close()

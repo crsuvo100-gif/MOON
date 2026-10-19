@@ -1,6 +1,6 @@
 """SkillSystem (spec section 24).
 
-A skill is reusable procedural knowledge. MOON already ships a large skills/
+A skill is reusable procedural knowledge. MOON-AI already ships a large skills/
 corpus; this system registers those (and any runtime-added skills) with
 metadata + a performance score, and evaluates them. It does not reimplement the
 corpus -- it indexes and scores what already exists (additive).

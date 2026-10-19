@@ -43,10 +43,10 @@ async def test_stdio_connector_real():
             names = [(x.get("name") if isinstance(x, dict) else x) for x in (t.data or {}).get("tools", [])]
             assert "echo" in names, f"expected 'echo' tool, got {names}"
 
-            c = await conn.call_tool("echo", {"msg": "MOON接続は実動作!"})
+            c = await conn.call_tool("echo", {"msg": "MOON-AI接続は実動作!"})
             assert c.ok, f"call_tool failed: {c.error}"
             content = (c.data or {}).get("content", [{}])[0].get("text", "")
-            assert "MOON接続は実動作!" in content, f"unexpected content: {content}"
+            assert "MOON-AI接続は実動作!" in content, f"unexpected content: {content}"
         finally:
             try:
                 proc.kill()

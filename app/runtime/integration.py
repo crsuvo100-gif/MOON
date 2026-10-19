@@ -1,5 +1,5 @@
 """Integration glue: makes the spec runtime modules (app/runtime/*) functional
-inside MOON's live orchestrator instead of being orphaned (spec sections 9, 10,
+inside MOON-AI's live orchestrator instead of being orphaned (spec sections 9, 10,
 12, 28, 30, 41, 46).
 
 Design (NON-DESTRUCTIVE):

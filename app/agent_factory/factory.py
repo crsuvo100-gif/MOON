@@ -1,6 +1,6 @@
-"""MOON Agent Factory pipeline (spec sections 13-15, 25, 43, 45, 57).
+"""MOON-AI Agent Factory pipeline (spec sections 13-15, 25, 43, 45, 57).
 
-Reuses existing, working MOON components (NON-DESTRUCTIVE):
+Reuses existing, working MOON-AI components (NON-DESTRUCTIVE):
   * app.capability.SandboxExecutor  -- isolated test execution
   * app.capability.VerificationEngine -- prove the agent imports/runs
   * app.tools.registry.ToolRegistry -- reuse existing tools (search existing)

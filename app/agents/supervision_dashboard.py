@@ -1,11 +1,11 @@
 """Agent Supervision Dashboard (spec 41).
 
 Terminal integration for multi-agent supervision. Displays:
-    MOON STATUS, TASK, ACTENT, AGENT STATUS, BRAIN, TOOL, PROGRESS,
+    MOON-AI STATUS, TASK, ACTENT, AGENT STATUS, BRAIN, TOOL, PROGRESS,
     PERMISSION, ERROR, VERIFICATION, FINAL RESULT
 
 Example:
-    MOON
+    MOON-AI
     +-- Main Brain: planning
     +-- Coding Agent: executing
     +-- Coding Brain: active
@@ -180,7 +180,7 @@ class AgentSupervisionDashboard:
         s = self._state
         lines: list[str] = []
         lines.append("=" * 60)
-        lines.append("MOON MULTI-AGENT SUPERVISION DASHBOARD")
+        lines.append("MOON-AI MULTI-AGENT SUPERVISION DASHBOARD")
         lines.append("=" * 60)
         lines.append(f"Main Brain: {s.main_brain_status}")
         if s.main_brain_task:

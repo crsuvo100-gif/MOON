@@ -1,4 +1,4 @@
-"""Agent Factory: Performance Evaluator (spec 28 + MOON Factory design).
+"""Agent Factory: Performance Evaluator (spec 28 + MOON-AI Factory design).
 
 Scores a generated agent with the weighted formula from spec section 28 and
 records a performance benchmark. Kept in its own module per the spec

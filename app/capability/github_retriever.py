@@ -1,6 +1,6 @@
 """GitHubRetriever -- search, inspect, and trust-evaluate repositories.
 
-REUSES existing MOON GitHub integration (app.tools.github_feed for search +
+REUSES existing MOON-AI GitHub integration (app.tools.github_feed for search +
 app.tools.github_sync_tool for auth/owner-repo parsing) instead of duplicating
 it. Adds: README/release/manifest inspection, dependency-file analysis, an
 executable/install-script scan, a permission/trust evaluation, and candidate

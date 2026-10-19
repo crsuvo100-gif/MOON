@@ -1,11 +1,11 @@
 """Verification subsystem (spec section 27).
 
-MOON must never accept "Done." as success -- it requires evidence. This
+MOON-AI must never accept "Done." as success -- it requires evidence. This
 package provides a reusable Verifier that checks structured results produced
 by agents/tools against concrete evidence requirements (spec 27 examples):
 test pass, file exists, HTTP+schema, version check, expected==actual state.
 
-Reuses MOON's existing ``app.brain.validator`` output-validation where present
+Reuses MOON-AI's existing ``app.brain.validator`` output-validation where present
 and adds evidence-based checks on top. Non-destructive: this is a new package,
 no existing module is touched.
 """

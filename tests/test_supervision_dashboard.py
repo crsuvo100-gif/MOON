@@ -91,7 +91,7 @@ class TestAgentSupervisionDashboard:
         dash.update_agent("coding", status=AgentStatus.EXECUTING, current_tool="terminal")
         dash.update_main_brain("planning", task="Fix bug")
         text = dash.render_text()
-        assert "MOON MULTI-AGENT SUPERVISION DASHBOARD" in text
+        assert "MOON-AI MULTI-AGENT SUPERVISION DASHBOARD" in text
         assert "coding" in text
         assert "planning" in text
         assert "Fix bug" in text

@@ -221,7 +221,7 @@ class Orchestrator:
             logger.info("Strong model enabled: %s @ %s", strong_name, strong_url)
 
         # --- OpenAI-compatible FALLBACK backend ----------------------------
-        # If the local endpoint (Ollama) is down or a completion fails, MOON
+        # If the local endpoint (Ollama) is down or a completion fails, MOON-AI
         # transparently retries against a hosted OpenAI-compatible API. The key
         # comes from OPENAI_API_KEY (gitignored .env) and is never logged.
         self._llm_fallback: LLMService | None = None
@@ -507,7 +507,7 @@ class Orchestrator:
             self._recovery_policy = None
 
         # Index the bundled Hermes skill corpus into the knowledge base so the
-        # skills are retrievable via semantic recall (MOON can use them).
+        # skills are retrievable via semantic recall (MOON-AI can use them).
         try:
             from app.knowledge.skills_library import index_skills
 
@@ -797,7 +797,7 @@ class Orchestrator:
         return m.group(1) if m else None
 
     async def set_main_model(self, model_name: str) -> None:
-        """Switch MOON's main brain active model at runtime."""
+        """Switch MOON-AI's main brain active model at runtime."""
         if not model_name:
             return
         try:
@@ -890,7 +890,7 @@ class Orchestrator:
         try:
             if self._llm is not None:
                 sys_p = (
-                    "You are MOON's tool planner. If the task needs a tool MOON lacks, "
+                    "You are MOON-AI's tool planner. If the task needs a tool MOON-AI lacks, "
                     "reply ONLY with JSON: {\"need\": \"<capability>\", \"name\": \"<tool_name>\", "
                     "\"purpose\": \"<one line>\", \"code\": \"<Python BaseTool subclass source>\"}. "
                     "If no new tool is needed, reply {\"need\": null}. Output JSON only."
@@ -918,7 +918,7 @@ class Orchestrator:
 
     @staticmethod
     def _final_report(task: Task, actions: list[str], evidence: str, results: str) -> str:
-        """Format a task result per MOON's system-prompt report standard."""
+        """Format a task result per MOON-AI's system-prompt report standard."""
         remaining = "None" if results else "Incomplete -- needs human input"
         return (
             f"OBJECTIVE:\n{task.prompt}\n\n"
@@ -1151,7 +1151,7 @@ class Orchestrator:
         logger.info("parallel fan-out: %d subtasks, concurrency limit %d",
                     len(subtasks), limit)
         # spec 52/58: bound the fan-out. Each subtask may now run a tool, and a
-        # tool like python_executor spawns `pytest`, which imports the whole MOON
+        # tool like python_executor spawns `pytest`, which imports the whole MOON-AI
         # app (including the 88k-vector knowledge base). Running all subtasks at
         # once peaked at 311 MB and got the unit OOM-killed on a 3.7 GB host.
         # A semaphore keeps the peak bounded without serialising the fan-out.
@@ -1234,7 +1234,7 @@ class Orchestrator:
         if self._llm is None or self._tools is None or self._context is None:
             raise RuntimeError("Orchestrator.setup() must be called first")
 
-        # MOON is always unlocked (lock mode removed) — no gate, proceed directly.
+        # MOON-AI is always unlocked (lock mode removed) — no gate, proceed directly.
         task.mark_running()
         self._history.clear()
         self._route_intent(task)
@@ -1260,7 +1260,7 @@ class Orchestrator:
             # non-composite goals.
             if task.data.get("_decomposed"):
                 refined = "coordinator"
-            # Registry-driven capability selection (spec 12 / MOON 40-agent spec):
+            # Registry-driven capability selection (spec 12 / MOON-AI 40-agent spec):
             # if the runtime router did not refine, ask the Agent Registry for a
             # capability match so the structured roster actually drives routing.
             if (not refined or refined not in self._agents) and not task.data.get("_decomposed"):
@@ -2169,7 +2169,7 @@ class Orchestrator:
             # GUARD: a per-agent reasoning model (e.g. deepseek-r1:1.5b) can
             # "think" for 100+ seconds on CPU and stall the whole task, leaving
             # the terminal with no reply. Bound every completion to a hard timeout
-            # and, on stall, retry on the fast shared model (qwen2.5:1.5b) so MOON
+            # and, on stall, retry on the fast shared model (qwen2.5:1.5b) so MOON-AI
             # always answers promptly instead of hanging. 30s: a 1.5b/3b call
             # finishes in 1-3s; anything past 30s is a stuck reasoning model.
             try:
@@ -2215,7 +2215,7 @@ class Orchestrator:
             # transient / Ollama hiccup). Rescue it instead of failing the whole
             # task: retry on the shared main LLM and, failing that, the full
             # multi-tier fallback chain (local -> OpenAI -> OpenRouter -> HF) so
-            # MOON always returns a real answer once ANY backend is reachable.
+            # MOON-AI always returns a real answer once ANY backend is reachable.
             if not final_text.strip():
                 try:
                     r2 = await self._complete_with_fallback(
@@ -2302,7 +2302,7 @@ class Orchestrator:
         if self._llm is None:
             await self.setup()
         if self._llm is None:
-            return "MOON is not ready to reply yet."
+            return "MOON-AI is not ready to reply yet."
         persona = self._system_persona()
         # --- Advanced memory: proactive context injection ---
         proactive_msgs: list = []
@@ -2363,7 +2363,7 @@ class Orchestrator:
         try:
             text = path.read_text(encoding="utf-8")
         except Exception:
-            text = "You are MOON, a helpful autonomous AI assistant."
+            text = "You are MOON-AI, a helpful autonomous AI assistant."
         Orchestrator._persona_cache = text
         return text
 

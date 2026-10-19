@@ -1,4 +1,4 @@
-"""Pytest configuration for MOON.
+"""Pytest configuration for MOON-AI.
 
 # Added top‑level fixtures for temporary repo copy and session guard.
 
@@ -24,7 +24,7 @@ import pytest
 def _ollama_reachable() -> bool:
     host = os.environ.get("OLLAMA_HOST", "127.0.0.1:11434")
     # Allow forcing offline for CI / dry-runs.
-    if os.environ.get("MOON_OFFLINE") in ("1", "true", "yes"):
+    if os.environ.get("MOON-AI_OFFLINE") in ("1", "true", "yes"):
         return False
     url = f"http://{host}/api/tags"
     try:
@@ -93,6 +93,6 @@ def sandbox_env(monkeypatch, temp_dir):
     # Provide a minimal safe PATH.
     monkeypatch.setenv("PATH", "/usr/bin:/bin")
     # Ensure a temp directory for any file writes.
-    monkeypatch.setenv("MOON_TEMP", str(temp_dir))
+    monkeypatch.setenv("MOON-AI_TEMP", str(temp_dir))
     yield
 

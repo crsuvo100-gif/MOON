@@ -1,6 +1,6 @@
 """Agent implementations.
 
-Public surface for MOON's agent layer. Two complementary contracts live here,
+Public surface for MOON-AI's agent layer. Two complementary contracts live here,
 deliberately kept separate (spec 3: the Agent is persistent, the Brain is
 replaceable):
 

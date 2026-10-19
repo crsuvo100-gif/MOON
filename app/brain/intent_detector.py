@@ -1,11 +1,11 @@
-"""intent_detector.py -- classify a user prompt into one of MOON's intents.
+"""intent_detector.py -- classify a user prompt into one of MOON-AI's intents.
 
 This powers intent detection / routing. It is lightweight and robust:
 a keyword/regex classifier for fast, offline routing, with an optional LLM
 refinement when the signal is ambiguous. Returns an intent label that the
 orchestrator maps to the right agent + pipeline path.
 
-Intents (aligned with MOON's 39 agents and the capability list):
+Intents (aligned with MOON-AI's 39 agents and the capability list):
   code, research, web, writing, vision, planning, math, science, security,
   cyber, red_team, blue_team, forensics, reverse_eng, threat_hunt, siem,
   data_science, translation, audio, qa, infra, finance, legal, medical,

@@ -79,7 +79,7 @@ class ExecutionManager:
     """Persistent async job system (spec 31)."""
 
     def __init__(self, db_path: str | Path | None = None) -> None:
-        self._db = str(db_path or Path(os.environ.get("MOON_DATA_DIR", "data")) / "executions.db")
+        self._db = str(db_path or Path(os.environ.get("MOON-AI_DATA_DIR", "data")) / "executions.db")
         Path(self._db).parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
         self._queue: asyncio.Queue[Job] = asyncio.Queue()

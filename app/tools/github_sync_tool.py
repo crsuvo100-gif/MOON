@@ -1,4 +1,4 @@
-"""github_sync_tool.py -- MOON's SAFE, always-connected GitHub capability.
+"""github_sync_tool.py -- MOON-AI's SAFE, always-connected GitHub capability.
 
 Two modes (one tool, selected by `mode`):
 
@@ -11,7 +11,7 @@ Two modes (one tool, selected by `mode`):
      * auth="gh"    -> uses the GitHub CLI (`gh auth`) if installed + logged in.
    Pauses for approval if neither auth is available (never bypasses).
 
-2) "fetch" -- MOON autonomously pulls a tool/file from a connected GitHub repo
+2) "fetch" -- MOON-AI autonomously pulls a tool/file from a connected GitHub repo
    when a task needs it. Clones/checks-out the requested path into the local
    project (e.g. a plugin under plugins/ or a script) so it can be used. This
    is the "always connected to GitHub, auto-install tools on demand" behavior.

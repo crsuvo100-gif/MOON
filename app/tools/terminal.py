@@ -1,6 +1,6 @@
 """Shell command execution tool (hosted, guarded).
 
-Provides a guard‑ed terminal execution that respects MOON's risk, permission, backend, and verification pipelines.
+Provides a guard‑ed terminal execution that respects MOON-AI's risk, permission, backend, and verification pipelines.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ class TerminalTool(BaseTool):
     """Agent‑visible terminal tool.
 
     Accepts a ``request`` argument (dict or ExecutionRequest) and runs it via
-    MOON's ``ExecutionEngine``. Returns the ``ExecutionResult`` as a plain dict.
+    MOON-AI's ``ExecutionEngine``. Returns the ``ExecutionResult`` as a plain dict.
     """
 
     name = "terminal"

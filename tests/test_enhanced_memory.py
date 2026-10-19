@@ -74,11 +74,11 @@ class TestEnhancedLTM:
     @pytest.mark.asyncio
     async def test_store_and_query(self, ltm):
         await ltm.setup()
-        await ltm.store({"content": "MOON is a cyber agent", "tags": ["agent"]}, importance=0.9)
+        await ltm.store({"content": "MOON-AI is a cyber agent", "tags": ["agent"]}, importance=0.9)
         await ltm.store({"content": "Python is great", "tags": ["lang"]}, importance=0.5)
-        results = await ltm.query("MOON")
+        results = await ltm.query("MOON-AI")
         assert len(results) == 1
-        assert results[0].content == "MOON is a cyber agent"
+        assert results[0].content == "MOON-AI is a cyber agent"
 
     @pytest.mark.asyncio
     async def test_importance_scoring(self, ltm):
@@ -200,8 +200,8 @@ class TestMemoryGraph:
     @pytest.mark.asyncio
     async def test_add_and_link(self, graph):
         await graph.setup()
-        node1 = await graph.add_memory("MOON is an agent", memory_type="ltm")
-        node2 = await graph.add_memory("MOON uses Python", memory_type="ltm")
+        node1 = await graph.add_memory("MOON-AI is an agent", memory_type="ltm")
+        node2 = await graph.add_memory("MOON-AI uses Python", memory_type="ltm")
         await graph.link_co_occurring(node1.id, node2.id)
         # Verify both nodes exist
         s = graph.stats()
@@ -298,10 +298,10 @@ class TestMemoryManager:
     @pytest.mark.asyncio
     async def test_remember_and_recall(self, manager):
         await manager.setup()
-        await manager.remember("MOON is a cyber agent", long_term=True, importance=0.9)
-        results = await manager.recall("MOON")
+        await manager.remember("MOON-AI is a cyber agent", long_term=True, importance=0.9)
+        results = await manager.recall("MOON-AI")
         assert len(results) >= 1
-        assert any("MOON" in r for r in results)
+        assert any("MOON-AI" in r for r in results)
 
     @pytest.mark.asyncio
     async def test_learn(self, manager):

@@ -61,7 +61,7 @@ class GitHubAgentConfig:
     require_reviews: int = 1
     require_ci_pass: bool = True
     auto_merge: bool = False  # Never auto-merge; always require authorization
-    commit_message_template: str = "[MOON] {description}"
+    commit_message_template: str = "[MOON-AI] {description}"
 
 
 @dataclass

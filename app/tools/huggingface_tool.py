@@ -1,11 +1,11 @@
-"""huggingface_tool.py -- Hugging Face inference via MOON's tool interface.
+"""huggingface_tool.py -- Hugging Face inference via MOON-AI's tool interface.
 
 Exposes two actions:
   * chat         -> chat completion through HF router (provider-selectable)
   * text_to_image-> generate an image (FLUX etc.) from a prompt
 
 Uses app.services.hf_inference.HuggingFaceInference, which lazily imports
-huggingface_hub so MOON still runs if the package is absent. When the package or
+huggingface_hub so MOON-AI still runs if the package is absent. When the package or
 token is missing, actions return a clear error instead of fabricating output.
 """
 

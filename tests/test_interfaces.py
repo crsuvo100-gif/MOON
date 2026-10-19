@@ -1,7 +1,7 @@
-"""Tests for the new MOON interfaces: Telegram channel and the Terminal authz gate.
+"""Tests for the new MOON-AI interfaces: Telegram channel and the Terminal authz gate.
 
-The TUI (Textual NEURAL TERMINAL) was removed — MOON now has a single terminal
-type: the Hermes-style CLI REPL (moon / moon run / moon terminal / moon cli).
+The TUI (Textual NEURAL TERMINAL) was removed — MOON-AI now has a single terminal
+type: the Hermes-style CLI REPL (moon / MOON-AI run / MOON-AI terminal / MOON-AI cli).
 Telegram + terminal authz tests remain.
 """
 
@@ -55,7 +55,7 @@ def _make_bot():
 
     # Fake orchestrator
     class _FakeResult:
-        result = "MOON says hi back"
+        result = "MOON-AI says hi back"
     class _FakeOrch:
         async def setup(self): pass
         async def teardown(self): pass
@@ -77,8 +77,8 @@ def test_telegram_routes_authorized_chat_and_replies(monkeypatch):
     # _handle needs _bot; inject a fake so replies can be captured.
     fake_bot = _FakeBot()
     bot._bot = fake_bot
-    asyncio.run(bot._handle("12345", "hello MOON"))
-    assert any("MOON says hi back" in t for _, t in fake_bot.sent)
+    asyncio.run(bot._handle("12345", "hello MOON-AI"))
+    assert any("MOON-AI says hi back" in t for _, t in fake_bot.sent)
 
 
 def test_telegram_ignores_unauthorized_chat(monkeypatch):

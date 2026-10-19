@@ -50,7 +50,7 @@ class Layer:
 # ---------------------------------------------------------------------------
 # Layer definitions (spec 4‑8). Values are chosen to satisfy the design goals
 # while remaining safe for low‑resource environments. They can be overridden
-# at runtime via the ``MOON_LAYER_TTLS`` environment variable if needed.
+# at runtime via the ``MOON-AI_LAYER_TTLS`` environment variable if needed.
 # ---------------------------------------------------------------------------
 
 LAYER_REGISTRY: Dict[MemoryType, Layer] = {

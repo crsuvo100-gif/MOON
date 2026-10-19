@@ -1,4 +1,4 @@
-"""Tests for MOON's Global Connector (permission-gated outbound connections).
+"""Tests for MOON-AI's Global Connector (permission-gated outbound connections).
 
 Covers: permission gate (SAFE/CONFIRMATION/NEVER), connection persistence,
 connector clients (real httpx-backed), and the agent-facing tool. No live
@@ -149,7 +149,7 @@ async def test_tool_call_unknown_name():
 
 @pytest.mark.asyncio
 async def test_federation_with_real_peer_agent():
-    """MOON federates with a peer AI agent (her own Ollama) for real.
+    """MOON-AI federates with a peer AI agent (her own Ollama) for real.
 
     Registers Ollama's /v1 endpoint as a peer 'agent' connection, then delegates
     a prompt via the `federate` action and asserts the peer actually replies with
@@ -162,8 +162,8 @@ async def test_federation_with_real_peer_agent():
     """
     import os
     import httpx
-    # Only run against a live Ollama on loopback (MOON's own model host).
-    base = os.environ.get("MOON_TEST_OLLAMA", "http://127.0.0.1:11434/v1")
+    # Only run against a live Ollama on loopback (MOON-AI's own model host).
+    base = os.environ.get("MOON-AI_TEST_OLLAMA", "http://127.0.0.1:11434/v1")
     model = "qwen3:0.6b"
     # Availability probe. If the peer endpoint is not even reachable, SKIP
     # (do not hang) -- the suite stays green and fast on machines without
@@ -215,7 +215,7 @@ async def test_federation_with_real_peer_agent():
             res = await asyncio.wait_for(
                 tool.execute(
                     action="federate", name="peer",
-                    message="Reply with the single word: MOON",
+                    message="Reply with the single word: MOON-AI",
                     system="You are a terse peer agent.",
                 ),
                 timeout=120.0,

@@ -1,4 +1,4 @@
-"""utility_tools.py -- environment, conversion, and location utilities for MOON.
+"""utility_tools.py -- environment, conversion, and location utilities for MOON-AI.
 
 Real implementations (no simulation). Secrets (API keys) come from environment
 variables, never hardcoded.

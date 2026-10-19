@@ -13,7 +13,7 @@ of install / runtime / persistence, then a release-readiness verdict.
    Verdict: GENUINE GAP — requires a fix (create scripts/install_ollama.py), OR
    the supported path `./install.sh` is authoritative (verified working):
        ./install.sh                     -> creates venv, installs deps, editable pkg,
-       -> fixes editable .pth, symlinks moon CLI, runs first-run wizard, post-install
+       -> fixes editable .pth, symlinks MOON-AI CLI, runs first-run wizard, post-install
        -> health check. VERIFIED PASS in a clean venv.
 
 2) Ollama backend health after `make install` (which errored above):
@@ -23,17 +23,17 @@ of install / runtime / persistence, then a release-readiness verdict.
    => 404 page not found  (NO MODELS LOADED)
    root cause: the Ollama backend service is installed but empty; models are not
    pre-pulled. Default model is "qwen2.5:1.5b" against Ollama /v1 endpoint.
-   Consequence: in a clean Ollama (no models), MOON's first task fails until the
-   model is pulled or MOON auto-pulls it.
+   Consequence: in a clean Ollama (no models), MOON-AI's first task fails until the
+   model is pulled or MOON-AI auto-pulls it.
    Verdict: CONFIGURATION GAP (user step) — resolve by `ollama pull qwen2.5:1.5b`
-   (or enable MOON's autopull in model_pull_tool). Not a code defect.
+   (or enable MOON-AI's autopull in model_pull_tool). Not a code defect.
 
 3) Fresh CLI smoke across a clean terminal (supported path):
    $ .venv/bin/moon run "Say hello and confirm the agent is ready to work."
    => PASS, exit 0 (loads model, executes task, returns result, graceful shutdown)
    Persistence across restart (/tmp/moind state):
-   $ moon status            -> healthy
-   $ moon restart           -> clean reload
+   $ MOON-AI status            -> healthy
+   $ MOON-AI restart           -> clean reload
    => PASS, exit 0
 
 ## Second, independent look for anything missed after the build

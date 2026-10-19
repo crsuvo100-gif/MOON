@@ -42,7 +42,7 @@ class CognitiveMemoryManager:
     """The cognitive memory facade (spec 28/61/62)."""
 
     def __init__(self, *, store: MemoryStore | None = None,
-                 device_id: str = "", project_id: str = "MOON",
+                 device_id: str = "", project_id: str = "MOON-AI",
                  embed_fn: Any = None, vector_store: Any = None,
                  agent_id: str = "") -> None:
         self._store: MemoryStore = store or memory_store_factory()
@@ -409,7 +409,7 @@ class CognitiveMemoryManager:
                 "project_id": self._project_id, "stats": self._stats}
 
     def _emit(self, event: str, rec: MemoryRecord, extra: dict | None = None) -> None:
-        """spec 60: memory events on the existing MOON event bus."""
+        """spec 60: memory events on the existing MOON-AI event bus."""
         try:
             from app.runtime.event_bus import bus
             bus().publish(event, detail=rec.memory_id,

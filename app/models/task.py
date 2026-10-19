@@ -1,4 +1,4 @@
-"""Task model -- the unit of work MOON executes."""
+"""Task model -- the unit of work MOON-AI executes."""
 
 from __future__ import annotations
 

@@ -105,7 +105,7 @@ class MemoryExporter:
             by_tag.setdefault(primary_tag, []).append(mem)
 
         lines: list[str] = [
-            "# MOON Memory Export",
+            "# MOON-AI Memory Export",
             "",
             f"Exported: {time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())}",
             f"Total memories: {len(memories)}",
@@ -179,7 +179,7 @@ class MemoryExporter:
         memories = await self._gather_all_memories()
 
         lines: list[str] = [
-            "MOON MEMORY EXPORT",
+            "MOON-AI MEMORY EXPORT",
             f"Total: {len(memories)} memories",
             "=" * 60,
             "",

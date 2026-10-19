@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-MOON deep-operational monitor (self-contained, no agent required).
+MOON-AI deep-operational monitor (self-contained, no agent required).
 
-Runs a REAL operational scan of the MOON backend every invocation:
+Runs a REAL operational scan of the MOON-AI backend every invocation:
   - backend reachable + /api/health == HEALTHY (8 checks)
   - agents >= 30 and tools >= 30 live
   - DEEP PROOF: unlock + run the system_info tool in-process and assert the
@@ -40,7 +40,7 @@ def http_get(path, timeout=6):
 
 
 def restart_backend():
-    log("HEAL: backend unhealthy -- restarting moon-terminal.service")
+    log("HEAL: backend unhealthy -- restarting MOON-AI-terminal.service")
     subprocess.run(["systemctl", "--user", "restart", "moon-terminal.service"],
                    capture_output=True, text=True)
     time.sleep(10)
@@ -75,7 +75,7 @@ def deep_proof():
 
 
 def main():
-    log("=== MOON deep monitor run ===")
+    log("=== MOON-AI deep monitor run ===")
     st, h = http_get("/api/health")
     h_dict = h if isinstance(h, dict) else {}
     if st != 200 or h_dict.get("status") != "HEALTHY":
@@ -107,7 +107,7 @@ def main():
             log("FAIL: deep proof still failing after restart")
             return 1
 
-    log("OK: MOON fully operational (health + registry + real execution)")
+    log("OK: MOON-AI fully operational (health + registry + real execution)")
     return 0
 
 

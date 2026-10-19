@@ -1,6 +1,6 @@
 """Memory API router (spec 29, 30, 45, 51).
 
-Mounts the cognitive memory surface on MOON's EXISTING FastAPI app
+Mounts the cognitive memory surface on MOON-AI's EXISTING FastAPI app
 (app/terminal_interface.py) rather than starting a second server -- spec 1 says
 reuse the existing infrastructure.
 

@@ -1,4 +1,4 @@
-name: MOON CI
+name: MOON-AI CI
 
 on:
   push:

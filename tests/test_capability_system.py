@@ -1,4 +1,4 @@
-"""Tests for MOON's autonomous Capability Management subsystem.
+"""Tests for MOON-AI's autonomous Capability Management subsystem.
 
 Covers: registry persistence, permission policy, dependency analysis, sandbox
 detection, installer dispatch, verification, self-repair classification, GitHub

@@ -1,4 +1,4 @@
-"""Regression tests for the installed MOON control-plane service."""
+"""Regression tests for the installed MOON-AI control-plane service."""
 
 from __future__ import annotations
 

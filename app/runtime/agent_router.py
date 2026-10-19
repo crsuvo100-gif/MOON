@@ -1,7 +1,7 @@
 """AgentRouter (spec section 12).
 
 Selects agents based on capability match, permissions, historical performance,
-risk, and tool availability -- NOT by name alone. Reuses MOON's existing agent
+risk, and tool availability -- NOT by name alone. Reuses MOON-AI's existing agent
 registry (built-ins + factory-generated) and the AgentFactory store for
 performance/risk data. Falls back gracefully when no strong match exists.
 """

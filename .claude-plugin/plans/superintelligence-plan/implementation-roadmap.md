@@ -1,4 +1,4 @@
-# MOON Superintelligence Plan — Phase 1
+# MOON-AI Superintelligence Plan — Phase 1
 
 **Date**: 2026-02-28  
 **Scope**: Self-improvement pipeline + real LLM backend  
@@ -66,4 +66,4 @@
 - Ollama base URL: http://127.0.0.1:11434 (default)
 - Default model: llama3.2 (configurable)
 - If Ollama unreachable: fallback to structured mock, document limitation
-- Knowledge base storage: SQLite FTS table or JSON file in MOON data dir
+- Knowledge base storage: SQLite FTS table or JSON file in MOON-AI data dir

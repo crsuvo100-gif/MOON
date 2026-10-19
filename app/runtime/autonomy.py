@@ -1,6 +1,6 @@
 """AutonomyLevel (spec section 46).
 
-Configurable autonomy gate. MOON must never make high-risk system changes fully
+Configurable autonomy gate. MOON-AI must never make high-risk system changes fully
 autonomous by default. Levels:
   0 read-only analysis
   1 suggest actions

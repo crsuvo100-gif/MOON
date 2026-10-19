@@ -68,9 +68,9 @@ def test_context_marks_memory_as_data() -> None:
 
 
 def test_context_dedupes() -> None:
-    s1 = type("S", (), {"record": MemoryRecord(content="MOON uses Python"),
+    s1 = type("S", (), {"record": MemoryRecord(content="MOON-AI uses Python"),
                         "score": 0.9})()
-    s2 = type("S", (), {"record": MemoryRecord(content="MOON uses Python."),
+    s2 = type("S", (), {"record": MemoryRecord(content="MOON-AI uses Python."),
                         "score": 0.8})()
     r = ContextEngine().build(memories=[s1, s2])
     assert len(r.included) == 1
@@ -109,7 +109,7 @@ def test_export_excludes_secrets(store) -> None:
 
 def test_backup_rotation(store, tmp_path, monkeypatch) -> None:
     """spec 47: rotation must bound storage."""
-    monkeypatch.setenv("MOON_BACKUP_PATH", str(tmp_path / "bk"))
+    monkeypatch.setenv("MOON-AI_BACKUP_PATH", str(tmp_path / "bk"))
     for i in range(5):
         p = B.create_backup(store, name=f"moon_memory_test_{i:02d}", keep=3)
     backups = B.list_backups()
@@ -130,7 +130,7 @@ def test_import_validates_and_rejects(store) -> None:
 
 
 def test_backup_restore_roundtrip(store, tmp_path, monkeypatch) -> None:
-    monkeypatch.setenv("MOON_BACKUP_PATH", str(tmp_path / "bk"))
+    monkeypatch.setenv("MOON-AI_BACKUP_PATH", str(tmp_path / "bk"))
     store.upsert(MemoryRecord(content="remember this fact").apply_defaults())
     p = B.create_backup(store, name="moon_memory_roundtrip")
     fresh = LocalMemoryStore(tmp_path / "fresh.db")
@@ -153,7 +153,7 @@ def test_terminal_status_has_all_lines(store) -> None:
 
     m = CognitiveMemoryManager(store=store)
     panel = MemoryHealthService(manager=m).terminal_status()
-    for needle in ("MOON MEMORY", "Local DB", "Vector Memory", "Cloud Memory",
+    for needle in ("MOON-AI MEMORY", "Local DB", "Vector Memory", "Cloud Memory",
                    "Sync", "Pending", "Conflicts", "Last Sync"):
         assert needle in panel
     m.close()

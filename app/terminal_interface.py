@@ -1,14 +1,14 @@
-"""terminal_interface.py -- MOON's terminal interface backend (API + WebSocket).
+"""terminal_interface.py -- MOON-AI's terminal interface backend (API + WebSocket).
 
-Serves MOON's terminal backend over HTTP: a WebSocket (/ws) that streams MOON's
+Serves MOON-AI's terminal backend over HTTP: a WebSocket (/ws) that streams MOON-AI's
 real brain output to a front-end client, plus a REST API for health, agents,
 tools, memory, knowledge, voice, settings, telemetry, and more. The front-end
 is the Hermes-style CLI REPL (app/cli/main.py); this backend is the engine
-it connects to. Uses the existing Orchestrator (no modification of MOON core).
+it connects to. Uses the existing Orchestrator (no modification of MOON-AI core).
 
 Run:  uvicorn app.terminal_interface:app --port 8777
-Or:    moon / moon run / moon terminal   (moonscope TUI)
-Or:    moon cli                          (readline REPL - fallback)
+Or:    MOON-AI / MOON-AI run / MOON-AI terminal   (moonscope TUI)
+Or:    MOON-AI cli                          (readline REPL - fallback)
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ _DEFAULT_SETTINGS = {
 def _load_settings() -> dict:
     return dict(_DEFAULT_SETTINGS)
 
-app = FastAPI(title="MOON Terminal", version="1.0.0")
+app = FastAPI(title="MOON-AI Terminal", version="1.0.0")
 
 # CORS middleware — restrict to configured origins
 from fastapi.middleware.cors import CORSMiddleware as _CORSMiddleware
@@ -70,7 +70,7 @@ _HUD_PATH = Path(__file__).resolve().parent.parent / "moon_ui" / "hud.html"
 # --- Cognitive memory API (spec 29/30) -------------------------------------
 # Mounted on the EXISTING app rather than starting a second server (spec 1).
 # The router is self-contained and degrades cleanly if the memory subsystem is
-# unavailable, so it can never prevent MOON from starting (spec 55/58).
+# unavailable, so it can never prevent MOON-AI from starting (spec 55/58).
 try:
     from app.memory.api import router as _memory_router
 
@@ -83,9 +83,9 @@ except Exception as _mem_exc:  # noqa: BLE001
 
 @app.get("/ui", response_class=HTMLResponse)
 async def ui_hud():
-    """MOON Neural Core interactive HUD — single-page app, live health + WS feed + API explorer."""
+    """MOON-AI Neural Core interactive HUD — single-page app, live health + WS feed + API explorer."""
     if not _HUD_PATH.is_file():
-        return HTMLResponse("<h1>MOON HUD — not deployed</h1><p>Copy moon_ui/hud.html beside this file.</p>", status_code=503)
+        return HTMLResponse("<h1>MOON-AI HUD — not deployed</h1><p>Copy MOON-AI_ui/hud.html beside this file.</p>", status_code=503)
     return HTMLResponse(_HUD_PATH.read_text(encoding="utf-8"))
 
 @app.get("/hud")
@@ -98,16 +98,16 @@ async def hud_catch(ext: str):
     return await ui_hud()
 
 # --- Remote-access authorization gate ----------------------------------------
-# When MOON_TERMINAL_TOKEN / settings.terminal_access_token is set, the Terminal
+# When MOON-AI_TERMINAL_TOKEN / settings.terminal_access_token is set, the Terminal
 # interface REQUIRES a matching `Authorization: Bearer <token>` on the WebSocket
-# and /status. This is the ONLY safe way to expose MOON beyond loopback (pair with
-# a tunnel/relay). When unset, MOON stays local-only (no token checked) -- her
+# and /status. This is the ONLY safe way to expose MOON-AI beyond loopback (pair with
+# a tunnel/relay). When unset, MOON-AI stays local-only (no token checked) -- her
 # default, safest posture.
 try:
     from app.config.settings import get_settings
-    TERMINAL_TOKEN = get_settings().terminal_access_token.strip() or os.environ.get("MOON_TERMINAL_TOKEN", "").strip()
+    TERMINAL_TOKEN = get_settings().terminal_access_token.strip() or os.environ.get("MOON-AI_TERMINAL_TOKEN", "").strip()
 except Exception:  # noqa: BLE001
-    TERMINAL_TOKEN = os.environ.get("MOON_TERMINAL_TOKEN", "").strip()
+    TERMINAL_TOKEN = os.environ.get("MOON-AI_TERMINAL_TOKEN", "").strip()
 
 
 def _token_ok(ws_or_headers) -> bool:
@@ -178,7 +178,7 @@ async def _get_orchestrator():
 
 # ---- Live telemetry ring buffer + structured log sink (advanced HUD) ----
 _TELEM = deque(maxlen=240)          # rolling {t, cpu, ram, net, load}
-_LOG_FILE = Path(os.environ.get("MOON_TERMINAL_LOG", "/tmp/moon_terminal.log"))
+_LOG_FILE = Path(os.environ.get("MOON-AI_TERMINAL_LOG", "/tmp/moon_terminal.log"))
 _LOG_BUF = deque(maxlen=400)        # rolling backend log lines for the HUD
 _telem_t = 0.0
 
@@ -246,7 +246,7 @@ def _emit_event(kind: str, detail: str, sev: str = "info") -> None:
         pass
 
 
-# Voice / TTS (MOON's premium female voice + cloning via VoiceEngine)
+# Voice / TTS (MOON-AI's premium female voice + cloning via VoiceEngine)
 _voice_engine = None
 _voice_muted = False
 _stop_requested = False
@@ -285,7 +285,7 @@ def _is_simple_chat(text: str) -> bool:
 
 
 def _current_emotion(locked: bool) -> dict:
-    """Derive MOON's live emotional state from REAL signals (no fake model).
+    """Derive MOON-AI's live emotional state from REAL signals (no fake model).
     locked -> calm/guarded; speaking -> engaged; recent error -> alert;
     otherwise happy/attentive. Returns {value, label} for the EMOT gauge."""
     global _last_error
@@ -313,7 +313,7 @@ def _get_voice_engine():
                 _voice_engine = VoiceEngine(settings=s)
             except Exception:  # noqa: BLE001
                 _voice_engine = VoiceEngine()
-            # Default to MOON's premium local female voice (kokoro 'aria') when no
+            # Default to MOON-AI's premium local female voice (kokoro 'aria') when no
             # user-selected voice is set. Offline, no API key required.
             try:
                 _voice_engine.set_voice("aria")
@@ -328,7 +328,7 @@ def _get_voice_engine():
 
 
 async def _speak(text: str, lang: str | None = None):
-    """Synthesize MOON's reply with her real voice and return base64 WAV.
+    """Synthesize MOON-AI's reply with her real voice and return base64 WAV.
     Detects the reply language from context when `lang` is None; routes
     through the best available TTS backend for that language (espeak/SoX,
     OpenAI TTS, XTTS, F5, Kokoro).  Returns None when muted or TTS unavailable.
@@ -470,7 +470,7 @@ def _advanced_memory_status(orch) -> dict:
 
 
 async def _moon_status_impl(orch) -> dict:
-    """Real MOON status for the terminal HUD (no simulation)."""
+    """Real MOON-AI status for the terminal HUD (no simulation)."""
     n_agents = 0
     agents = []
     try:
@@ -613,8 +613,8 @@ class BrainStatusRequest(BaseModel):
 
 @app.get(
     "/api/brain-status",
-    summary="Full MOON brain-core status (model, pipeline, agents, tools, memory, knowledge, system, voice, sensors, emotion)",
-    description="Returns the real MOON brain-core status computed by _moon_status_impl. "
+    summary="Full MOON-AI brain-core status (model, pipeline, agents, tools, memory, knowledge, system, voice, sensors, emotion)",
+    description="Returns the real MOON-AI brain-core status computed by _moon_status_impl. "
                 "Public endpoint — no auth required when TERMINAL_TOKEN is unset; "
                 "requires Bearer token when set (same gate as /ws).",
 )
@@ -677,7 +677,7 @@ async def api_brain_status_post(request: Request):
 # safe read-only/diagnostic ones, so the interface is powerful without being a
 # remote-code-execution hole. Extend deliberately; never allow arbitrary shells.
 _SHELL_ALLOW = {
-    "status": "echo MOON CORE ONLINE",
+    "status": "echo MOON-AI CORE ONLINE",
     "ps": "ps -eo pid,pcpu,pmem,comm | head -20",
     "top": "ps -eo pid,pcpu,pmem,comm | sort -k2 -r | head -12",
     "df": "df -h",
@@ -692,7 +692,7 @@ _SHELL_ALLOW = {
     "echo": "echo",
     "date": "date",
     "whoami": "whoami",
-    "env": "env | grep -iE 'MOON|PATH|HOME|USER' | grep -v TOKEN | grep -v SECRET | grep -v KEY | head",
+    "env": "env | grep -iE 'MOON-AI|PATH|HOME|USER' | grep -v TOKEN | grep -v SECRET | grep -v KEY | head",
     "nproc": "nproc",
     "cat": "cat",   # gated below to text files only
 }
@@ -804,7 +804,7 @@ class VoiceCloneRequest(BaseModel):
 @app.post("/api/voice/clone")
 async def api_voice_clone(req: VoiceCloneRequest, request: Request):
     """Clone a voice from an uploaded reference WAV (zero-shot, F5-TTS).
-    MOON can then speak as that voice. Exposes the cloning function via the API."""
+    MOON-AI can then speak as that voice. Exposes the cloning function via the API."""
     if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
         from fastapi import Response
         return Response("Unauthorized", status_code=401)
@@ -830,7 +830,7 @@ class VoiceSetRequest(BaseModel):
 
 @app.post("/api/voice/set")
 async def api_voice_set(req: VoiceSetRequest, request: Request):
-    """Switch MOON's active voice (a built-in female preset or a cloned voice)."""
+    """Switch MOON-AI's active voice (a built-in female preset or a cloned voice)."""
     if TERMINAL_TOKEN and not _token_ok(dict(request.headers)):
         from fastapi import Response
         return Response("Unauthorized", status_code=401)
@@ -937,7 +937,7 @@ async def api_brains(request: Request):
 
 @app.get("/api/brain-stats")
 async def api_brain_stats(request: Request):
-    """MOON's brain-core learning profile (accumulated task history).
+    """MOON-AI's brain-core learning profile (accumulated task history).
 
     Persisted across sessions in app/data/brain_stats.json so the HUD orb's
     maturity (and thus its reaction envelope) survives restarts -- the core
@@ -966,7 +966,7 @@ async def api_brain_stats(request: Request):
 
 @app.get("/api/agents")
 async def api_agents(request: Request):
-    """Read-only roster of MOON's agent brains (real data from the Orchestrator).
+    """Read-only roster of MOON-AI's agent brains (real data from the Orchestrator).
 
     Additive: reuses _moon_status_impl (no new data source). Useful for the HUD and
     any external monitor that wants the live agent list.
@@ -1000,7 +1000,7 @@ async def api_agents(request: Request):
 
 @app.get("/api/tools")
 async def api_tools(request: Request):
-    """Read-only roster of MOON's registered tools (real data from the Orchestrator).
+    """Read-only roster of MOON-AI's registered tools (real data from the Orchestrator).
 
     Additive: reuses _moon_status_impl (no new data source).
     """
@@ -1153,7 +1153,7 @@ async def api_agent_run(agent_id: str, request: Request):
             s.record_execution(result.get("execution_id", ""), agent_id, "SUCCESS", result=str(result))
             return JSONResponse(result)
         # Fallback: built-in agent (e.g. "coding", "research"). Route through
-        # the real orchestrator so it uses MOON's brain + tools + memory.
+        # the real orchestrator so it uses MOON-AI's brain + tools + memory.
         orch = await _get_orchestrator()
         if agent_id in getattr(orch, "_agents", {}):
             from app.models.task import Task
@@ -1268,8 +1268,8 @@ async def api_tools_discover(request: Request):
 async def api_moon_agent(request: Request):
     """External AI-agent integration endpoint.
 
-    Other AI agents call into MOON's full function: send a task + optional
-    agent hint, get back MOON's completed response. Uses the orchestrator's
+    Other AI agents call into MOON-AI's full function: send a task + optional
+    agent hint, get back MOON-AI's completed response. Uses the orchestrator's
     run_task (real tool execution + cognition loop + validation) instead of a
     standalone LLM call, and injects ALL agent personas so the LLM knows the
     full capability surface.
@@ -1352,7 +1352,7 @@ async def api_moon_agent(request: Request):
 
 @app.get("/api/memory")
 async def api_memory_search(q: str = "", request: Request = None):
-    """Search MOON memory (spec 35 GET /memory/search)."""
+    """Search MOON-AI memory (spec 35 GET /memory/search)."""
     if TERMINAL_TOKEN and request is not None and not _token_ok(dict(request.headers)):
         from fastapi import Response
         return Response("Unauthorized", status_code=401)
@@ -1367,7 +1367,7 @@ async def api_memory_search(q: str = "", request: Request = None):
 
 @app.get("/api/knowledge/search")
 async def api_knowledge_search(q: str = "", request: Request = None):
-    """Search MOON knowledge base (spec 35 GET /knowledge/search)."""
+    """Search MOON-AI knowledge base (spec 35 GET /knowledge/search)."""
     if TERMINAL_TOKEN and request is not None and not _token_ok(dict(request.headers)):
         from fastapi import Response
         return Response("Unauthorized", status_code=401)
@@ -1503,8 +1503,8 @@ async def _run_diagnostics(orch) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# MOON brain-core behavior model
-# The terminal HUD orb IS MOON's brain core. Its animation/reactivity is driven by
+# MOON-AI brain-core behavior model
+# The terminal HUD orb IS MOON-AI's brain core. Its animation/reactivity is driven by
 # real workflow events classified into severity tiers. This classifier + persisted
 # stats make the core behave with her brain: calm when idle, alive when working,
 # red/volatile when the task is dangerous or aggressive. Stats accumulate across
@@ -1549,11 +1549,11 @@ def _classify_severity(stage: str, detail: str, risk_level=None) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Full-brain orb mapping: every real subsystem MOON has becomes an orb signal.
+# Full-brain orb mapping: every real subsystem MOON-AI has becomes an orb signal.
 # The EventBus already publishes her entire brain activity (per-agent brains,
 # skill updates, memory writes, tool/capability use, the verification gate, agent
 # creation, errors). Here we map each event type to (severity tier, brain aspect)
-# so the orb literally reflects MOON's whole mind, not just chat pulses.
+# so the orb literally reflects MOON-AI's whole mind, not just chat pulses.
 # ---------------------------------------------------------------------------
 # Brain aspect = WHICH subsystem is firing (drives the orb's aura color).
 _ASPECT_FROM_EVENT = {
@@ -1629,7 +1629,7 @@ def _bump_brain_stats(tier: str, aspect: str = None, agent_id: str = None) -> di
     """Increment the running brain-profile counters for one event; persist; return it.
 
     Tracks both the severity tier AND the brain aspect (which subsystem fired),
-    plus a per-agent brain activity count -- so MOON's orb 'learns/upgrades' from
+    plus a per-agent brain activity count -- so MOON-AI's orb 'learns/upgrades' from
     her real, full workload across sessions (honest accumulation, not fabricated ML).
     """
     stats = _load_brain_stats()
@@ -1691,7 +1691,7 @@ async def ws_endpoint(ws: WebSocket):
         elif _kind == "exec_output":
             _emit_event("exec", str(msg.get("output", ""))[:200])
         # Brain-core behavior: classify severity + accumulate the brain profile so
-        # the HUD orb can react to MOON's real workload (calm/normal/working/
+        # the HUD orb can react to MOON-AI's real workload (calm/normal/working/
         # dangerous/aggressive) and "learn/upgrade" across sessions.
         # Two event families feed the orb:
         #   1) workflow/exec/reply  -> _classify_severity (stage/detail based)
@@ -1719,7 +1719,7 @@ async def ws_endpoint(ws: WebSocket):
                 pass
 
     async def stream_event(ev: dict):
-        # surface MOON's real workflow through the avatar (her "body")
+        # surface MOON-AI's real workflow through the avatar (her "body")
         await send(type="workflow", stage=ev.get("stage"), detail=ev.get("detail", ""))
 
     async def _handle(data: dict):
@@ -1745,7 +1745,7 @@ async def ws_endpoint(ws: WebSocket):
                 if _stop_requested:
                     await send(type="notice", message="[STOP] task start blocked — use the TERMINAL/chat freely, new tasks are paused until you tell me to resume.")
                     return
-                # MOON is always unlocked (lock mode removed). observe() is a
+                # MOON-AI is always unlocked (lock mode removed). observe() is a
                 # no-op and orch._lock.locked is always False, so we skip the
                 # locked-branch entirely and run the real brain on every message.
                 unlock_notice = None
@@ -1771,7 +1771,7 @@ async def ws_endpoint(ws: WebSocket):
                         answer = await asyncio.wait_for(
                             orch.quick_reply(text), timeout=60)
                     except (asyncio.TimeoutError, Exception) as e2:  # noqa: BLE001
-                        answer = f"[MOON error: {e2}]"
+                        answer = f"[MOON-AI error: {e2}]"
                     else:
                         task = Task.create(text, agent_name="auto")
                         try:
@@ -1786,7 +1786,7 @@ async def ws_endpoint(ws: WebSocket):
                                 answer = await asyncio.wait_for(
                                     orch.quick_reply(text), timeout=150)
                             except (asyncio.TimeoutError, Exception) as e2:  # noqa: BLE001
-                                answer = f"[MOON error: {e2}]"
+                                answer = f"[MOON-AI error: {e2}]"
                     if not answer:
                         answer = "(no response)"
                 await send(type="workflow", stage="speaking", detail="forming response")
@@ -1843,7 +1843,7 @@ async def ws_endpoint(ws: WebSocket):
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "run":
-                # Quick-action buttons: route to MOON's real subsystems when a
+                # Quick-action buttons: route to MOON-AI's real subsystems when a
                 # direct function applies, else run through her brain.
                 cmd = (data.get("command") or "").strip().lower()
                 if not cmd:
@@ -1857,7 +1857,7 @@ async def ws_endpoint(ws: WebSocket):
                 if "knowledge" in cmd:
                     await _handle({"action": "knowledge", "query": "summary"})
                     return
-                # default: run through MOON's real brain
+                # default: run through MOON-AI's real brain
                 if _stop_requested:
                     await send(type="notice", message="[STOP] task start blocked — new tasks paused until you tell me to resume.")
                     return
@@ -1870,7 +1870,7 @@ async def ws_endpoint(ws: WebSocket):
                     result_task = await orch.run_task(task, on_event=stream_event)
                     answer = result_task.result or "(no response)"
                 except Exception as e:  # noqa: BLE001
-                    answer = f"[MOON error: {e}]"
+                    answer = f"[MOON-AI error: {e}]"
                     _last_error = True
                 await send(type="workflow", stage="speaking", detail="forming response")
                 for chunk in _stream_text(answer):
@@ -1890,7 +1890,7 @@ async def ws_endpoint(ws: WebSocket):
                 ags = getattr(orch, "_agents", {})
                 names = [getattr(v, "name", k) for k, v in ags.items()] if isinstance(ags, dict) else list(ags)
                 names = [str(n) for n in names][:40]
-                out = (f"Connected {len(names)} agent brains to MOON's main cortex:\n"
+                out = (f"Connected {len(names)} agent brains to MOON-AI's main cortex:\n"
                        + ", ".join(names))
                 _stream = _stream_text(out, yield_every=9999 if len(out) > 300 else 1)
                 for chunk in _stream:
@@ -1920,7 +1920,7 @@ async def ws_endpoint(ws: WebSocket):
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "voice":
-                # MOON's premium female voice + cloning control surface.
+                # MOON-AI's premium female voice + cloning control surface.
                 await send(type="assistant_start")
                 await send(type="workflow", stage="voice", detail="voice engine")
                 sub = (data.get("command") or data.get("query") or "status").strip().lower()
@@ -1929,7 +1929,7 @@ async def ws_endpoint(ws: WebSocket):
                     out = "[voice] engine unavailable."
                 elif sub.startswith("list"):
                     vs = eng.list_voices()
-                    out = "MOON voices:\n" + "\n".join(
+                    out = "MOON-AI voices:\n" + "\n".join(
                         f"  - {v['name']} [{v['backend']}]{' (cloned)' if v['cloned'] else ''} :: {v['desc']}"
                         for v in vs)
                 elif sub.startswith("set"):
@@ -1948,7 +1948,7 @@ async def ws_endpoint(ws: WebSocket):
                     out = "[voice] auto-speak MUTED. Replies will be text-only."
                 elif sub.startswith("unmute"):
                     _voice_muted = False
-                    out = "[voice] auto-speak ON. MOON's voice is active (female, default)."
+                    out = "[voice] auto-speak ON. MOON-AI's voice is active (female, default)."
                 elif sub.startswith("status"):
                     st = eng.backend_status()
                     mode = "MUTED" if _voice_muted else "AUTO"
@@ -2046,7 +2046,7 @@ async def ws_endpoint(ws: WebSocket):
                         await send(type="assistant_chunk", content=chunk)
                     await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "connect":
-                # NEW: MOON's global connection layer (additive).
+                # NEW: MOON-AI's global connection layer (additive).
                 await send(type="assistant_start")
                 await send(type="workflow", stage="tools", detail="global connector")
                 try:
@@ -2064,7 +2064,7 @@ async def ws_endpoint(ws: WebSocket):
                         elif cmd == "health":
                             out = await conn_tool.execute(action="health")
                         elif cmd == "connect" and len(parts) >= 3:
-                            # moon> connect <name> <url> [kind]
+                            # MOON-AI> connect <name> <url> [kind]
                             out = await conn_tool.execute(action="connect", name=parts[1],
                                                              url=parts[2], kind=(parts[3] if len(parts) > 3 else "service"))
                         elif cmd == "call" and len(parts) >= 2:
@@ -2283,7 +2283,7 @@ async def ws_endpoint(ws: WebSocket):
                     await send(type="assistant_chunk", content=chunk)
                 await send(type="assistant_done", elapsed=0.0, locked=orch._lock.locked)
             elif action == "automation":
-                # Real self-improvement status: surface MOON's continuous-learning /
+                # Real self-improvement status: surface MOON-AI's continuous-learning /
                 # autonomous-improvement pipeline state from the running brain.
                 await send(type="assistant_start")
                 await send(type="workflow", stage="tools", detail="checking automation")
@@ -2316,7 +2316,7 @@ async def ws_endpoint(ws: WebSocket):
                 mem = st.get("memory", {})
                 sys_ = st.get("system", {})
                 out = (
-                    "MOON COMMAND CENTER\n"
+                    "MOON-AI COMMAND CENTER\n"
                     f"- Version: {st.get('version')}  Model: {st.get('model')}\n"
                     f"- State: {'LOCKED' if st.get('locked') else 'UNLOCKED'}\n"
                     f"- Agents connected: {st.get('agents')}  Tools: {st.get('n_tools')}\n"
@@ -2334,13 +2334,13 @@ async def ws_endpoint(ws: WebSocket):
             elif action == "help":
                 await send(type="assistant_start")
                 out = (
-                    "MOON COMMANDS\n"
+                    "MOON-AI COMMANDS\n"
                     "- Say 'Moon' (or WAKE) to wake me; 'love you 3000 Moon' to unlock.\n"
                     "- Tabs: DASHBOARD, DIAGNOSTICS, MEMORY, KNOWLEDGE, TOOLS, AUTOMATION, "
                       "SECURITY, NETWORK, SETTINGS.\n"
                     "- Quick actions: SYSTEM STATUS, RUN DIAGNOSTICS, ACTIVE WORKFLOW, "
                       "MEMORY SEARCH, KNOWLEDGE BASE, STOP TASKS.\n"
-                    "- Buttons: WAKE MOON, CONNECT AGENTS, LIST TOOLS, MUTE/UNMUTE.\n"
+                    "- Buttons: WAKE MOON-AI, CONNECT AGENTS, LIST TOOLS, MUTE/UNMUTE.\n"
                     "- Just type anything to talk to me (when unlocked I run my real brain)."
                 )
                 await send(type="workflow", stage="speaking", detail="reporting")
@@ -2356,7 +2356,7 @@ async def ws_endpoint(ws: WebSocket):
                 pass
 
     try:
-        await send(type="ready", message="MOON terminal connected.")
+        await send(type="ready", message="MOON-AI terminal connected.")
         # Push a real status frame immediately so the HUD populates live
         # monitoring on connect (cpu/ram/threat/agents) without the client
         # having to request it. This is genuine backend data, not a placeholder.
@@ -2393,7 +2393,7 @@ async def ws_endpoint(ws: WebSocket):
             elif action == "wake":
                 # Wake word "Moon": avatar opens her eyes / enters listening state.
                 # Wake does NOT unlock -- only "love you 3000 Moon" unlocks.
-                await send(type="wake", message="🌙 MOON is listening...", locked=orch._lock.locked)
+                await send(type="wake", message="🌙 MOON-AI is listening...", locked=orch._lock.locked)
             elif action is None:
                 continue
             else:
@@ -2408,7 +2408,7 @@ async def ws_endpoint(ws: WebSocket):
                             err = t.exception()
                             asyncio.create_task(
                                 send(type="assistant_chunk",
-                                     content=f"\n[MOON error: {err}]"))
+                                     content=f"\n[MOON-AI error: {err}]"))
                             asyncio.create_task(
                                 send(type="assistant_done", elapsed=0.0,
                                      locked=orch._lock.locked, error=True))
@@ -2482,7 +2482,7 @@ async def ws_agent(ws: WebSocket, agent_id: str):
 async def ws_events(ws: WebSocket):
     """Live event stream (spec 35: /ws/events).
 
-    Streams MOON's internal event bus (the same _EVENTS ring buffer that powers
+    Streams MOON-AI's internal event bus (the same _EVENTS ring buffer that powers
     /api/events and the HUD EVENTS timeline) to any subscriber. Additive: reuses
     the existing event mechanism; does not create a parallel bus.
     """
@@ -2510,9 +2510,9 @@ async def ws_events(ws: WebSocket):
             pass
 
 # ---------------------------------------------------------------------------
-# CYCLONE_TERMINAL_AI_V10 bridge (additive) --- MOON + Cyclone share the same
-# FastAPI app. Cyclone UI is served under /cyclone and its sockets are
-# exempted from MOON's token gate so the browser UI works out of the box.
+# MOON-AI bridge (additive) --- MOON-AI + Cyclone share the same
+# FastAPI app. MOON-AI UI is served under /cyclone and its sockets are
+# exempted from MOON-AI's token gate so the browser UI works out of the box.
 # ---------------------------------------------------------------------------
 try:
     import os as _cyclone_os
@@ -2522,7 +2522,7 @@ try:
     _cyclone_root = _cyclone_os.path.dirname(
         _cyclone_os.path.dirname(_cyclone_os.path.abspath(__file__))
     )
-    _cyclone_dir = _cyclone_os.path.join(_cyclone_root, "CYCLONE_TERMINAL_AI_V10")
+    _cyclone_dir = _cyclone_os.path.join(_cyclone_root, "MOON-AI")
     if _cyclone_dir not in _cyclone_sys.path:
         _cyclone_sys.path.insert(0, _cyclone_dir)
 
@@ -2532,8 +2532,8 @@ try:
     _CYCLONE_DIR = _cyclone_dir
     app.include_router(get_cyclone_router(), prefix="/cyclone")
     app.mount("/cyclone", get_cyclone_static_files())
-    # Expose Cyclone endpoints through MOON's public-path gate so the browser
-    # UI (which does not carry MOON's terminal token) can reach them.
+    # Expose Cyclone endpoints through MOON-AI's public-path gate so the browser
+    # UI (which does not carry MOON-AI's terminal token) can reach them.
     _PUBLIC_PATHS.update(
         {
             "/cyclone/api",

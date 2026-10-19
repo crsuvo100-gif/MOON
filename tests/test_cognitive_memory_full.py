@@ -134,7 +134,7 @@ class TestMemoryModel:
 
 class TestClassification:
     def test_classify_procedural(self):
-        mtype, scope = classify("To deploy MOON, run the deployment workflow", source_type=SourceType.AGENT)
+        mtype, scope = classify("To deploy MOON-AI, run the deployment workflow", source_type=SourceType.AGENT)
         assert mtype is MemoryType.PROCEDURAL
         assert scope is Scope.PROJECT
 
@@ -195,7 +195,7 @@ class TestImportance:
         assert imp is Importance.HIGH
 
     def test_semantic_high(self):
-        imp = score_importance("MOON uses Python", source_type=SourceType.AGENT, memory_type=MemoryType.SEMANTIC)
+        imp = score_importance("MOON-AI uses Python", source_type=SourceType.AGENT, memory_type=MemoryType.SEMANTIC)
         assert imp is Importance.HIGH
 
     def test_reused_promotes(self):
@@ -245,14 +245,14 @@ class TestDeduplication:
         assert similarity("hello", "world") < 0.5
 
     def test_find_duplicate(self):
-        existing = [MemoryRecord(content="MOON uses Python", scope=Scope.PROJECT, type=MemoryType.PROJECT)]
-        new = MemoryRecord(content="MOON uses Python", scope=Scope.PROJECT, type=MemoryType.PROJECT)
+        existing = [MemoryRecord(content="MOON-AI uses Python", scope=Scope.PROJECT, type=MemoryType.PROJECT)]
+        new = MemoryRecord(content="MOON-AI uses Python", scope=Scope.PROJECT, type=MemoryType.PROJECT)
         dup = find_duplicate(new, existing)
         assert dup is not None
 
     def test_no_duplicate_different_scope(self):
-        existing = [MemoryRecord(content="MOON uses Python", scope=Scope.PROJECT, type=MemoryType.PROJECT)]
-        new = MemoryRecord(content="MOON uses Python", scope=Scope.GLOBAL, type=MemoryType.SEMANTIC)
+        existing = [MemoryRecord(content="MOON-AI uses Python", scope=Scope.PROJECT, type=MemoryType.PROJECT)]
+        new = MemoryRecord(content="MOON-AI uses Python", scope=Scope.GLOBAL, type=MemoryType.SEMANTIC)
         dup = find_duplicate(new, existing)
         assert dup is None
 
@@ -300,12 +300,12 @@ class TestRetrieval:
     def test_hybrid_retriever_basic(self):
         retriever = HybridRetriever()
         records = [
-            MemoryRecord(content="MOON uses Python", scope=Scope.PROJECT, importance=Importance.HIGH),
+            MemoryRecord(content="MOON-AI uses Python", scope=Scope.PROJECT, importance=Importance.HIGH),
             MemoryRecord(content="The weather is nice", scope=Scope.GLOBAL),
         ]
-        results = retriever.search("MOON Python", records, top_k=2)
+        results = retriever.search("MOON-AI Python", records, top_k=2)
         assert len(results) > 0
-        assert results[0].record.content == "MOON uses Python"
+        assert results[0].record.content == "MOON-AI uses Python"
 
     def test_retrieval_cache(self):
         cache = RetrievalCache(ttl=1.0)
@@ -347,7 +347,7 @@ class TestPermissions:
 
     def test_policy_export_normal_allowed(self):
         policy = MemoryPolicyEngine()
-        rec = MemoryRecord(content="MOON uses Python", scope=Scope.GLOBAL)
+        rec = MemoryRecord(content="MOON-AI uses Python", scope=Scope.GLOBAL)
         ok, _ = policy.can("EXPORT", record=rec)
         assert ok is True
 
@@ -545,7 +545,7 @@ class TestVersioning:
 
 class TestBackup:
     def test_create_backup(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MOON_BACKUP_PATH", str(tmp_path / "backups"))
+        monkeypatch.setenv("MOON-AI_BACKUP_PATH", str(tmp_path / "backups"))
         store = LocalMemoryStore(db_path=tmp_path / "test.db")
         store.upsert(MemoryRecord(content="test", scope=Scope.GLOBAL))
         path = create_backup(store, keep=3)
@@ -553,7 +553,7 @@ class TestBackup:
         assert path.suffix == ".json"
 
     def test_backup_rotation(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MOON_BACKUP_PATH", str(tmp_path / "backups"))
+        monkeypatch.setenv("MOON-AI_BACKUP_PATH", str(tmp_path / "backups"))
         store = LocalMemoryStore(db_path=tmp_path / "test.db")
         store.upsert(MemoryRecord(content="test", scope=Scope.GLOBAL))
         for i in range(5):
@@ -597,7 +597,7 @@ class TestBackup:
         assert rep.rejected_secret == 1
 
     def test_restore_backup(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MOON_BACKUP_PATH", str(tmp_path / "backups"))
+        monkeypatch.setenv("MOON-AI_BACKUP_PATH", str(tmp_path / "backups"))
         store = LocalMemoryStore(db_path=tmp_path / "test.db")
         store.upsert(MemoryRecord(content="test", scope=Scope.GLOBAL))
         path = create_backup(store, keep=3)
@@ -700,7 +700,7 @@ class TestSecurity:
         assert v.is_secret is True
 
     def test_detect_normal_text(self):
-        v = detect_secret("MOON uses Python")
+        v = detect_secret("MOON-AI uses Python")
         assert v.is_secret is False
 
     def test_sanitize(self):
@@ -760,7 +760,7 @@ class TestMultiDevice:
 
 class TestCommands:
     def test_parse_remember(self):
-        cmd = parse_memory_command("remember that MOON uses Python")
+        cmd = parse_memory_command("remember that MOON-AI uses Python")
         assert cmd is not None
         assert cmd["op"] == "remember"
 
@@ -781,7 +781,7 @@ class TestCommands:
     def test_handle_command_remember(self, tmp_path):
         store = LocalMemoryStore(db_path=tmp_path / "test.db")
         mgr = CognitiveMemoryManager(store=store)
-        result = mgr.handle_command("remember that MOON uses Python")
+        result = mgr.handle_command("remember that MOON-AI uses Python")
         assert result is not None
         assert result["op"] == "remember"
         assert result["stored"] is True
@@ -789,8 +789,8 @@ class TestCommands:
     def test_handle_command_forget(self, tmp_path):
         store = LocalMemoryStore(db_path=tmp_path / "test.db")
         mgr = CognitiveMemoryManager(store=store)
-        mgr.store("MOON uses Python", explicit=True)
-        result = mgr.handle_command("forget everything about MOON")
+        mgr.store("MOON-AI uses Python", explicit=True)
+        result = mgr.handle_command("forget everything about MOON-AI")
         assert result is not None
         assert result["op"] == "forget"
         assert result["count"] > 0
@@ -814,7 +814,7 @@ class TestHealth:
         mgr = CognitiveMemoryManager(store=store)
         svc = MemoryHealthService(manager=mgr)
         status = svc.terminal_status()
-        assert "MOON MEMORY" in status
+        assert "MOON-AI MEMORY" in status
         assert "Local DB" in status
 
     def test_task_summary(self, tmp_path):
@@ -921,7 +921,7 @@ class TestFullPipeline:
         mgr = CognitiveMemoryManager(store=store)
 
         # Store
-        rec = mgr.store("MOON uses Python 3.14", source_type=SourceType.USER, explicit=True)
+        rec = mgr.store("MOON-AI uses Python 3.14", source_type=SourceType.USER, explicit=True)
         assert rec is not None
 
         # Search
@@ -954,12 +954,12 @@ class TestFullPipeline:
         engine = ContextEngine(window=4096, output_reserve=512)
 
         # Store some memories
-        mgr.store("MOON uses Python", explicit=True)
-        mgr.store("MOON uses FastAPI", explicit=True)
-        mgr.store("MOON uses SQLite", explicit=True)
+        mgr.store("MOON-AI uses Python", explicit=True)
+        mgr.store("MOON-AI uses FastAPI", explicit=True)
+        mgr.store("MOON-AI uses SQLite", explicit=True)
 
         # Retrieve
-        hits = mgr.search("MOON technology", top_k=5)
+        hits = mgr.search("MOON-AI technology", top_k=5)
         assert len(hits) > 0
 
         # Build context
@@ -968,7 +968,7 @@ class TestFullPipeline:
         assert len(result.included) > 0
 
     def test_backup_restore_integration(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("MOON_BACKUP_PATH", str(tmp_path / "backups"))
+        monkeypatch.setenv("MOON-AI_BACKUP_PATH", str(tmp_path / "backups"))
         store = LocalMemoryStore(db_path=tmp_path / "test.db")
         mgr = CognitiveMemoryManager(store=store)
 

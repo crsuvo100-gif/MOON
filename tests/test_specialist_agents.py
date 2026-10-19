@@ -40,7 +40,7 @@ class TestWebAgent:
         assert config.max_pages_per_session == 50
         assert config.request_timeout == 30.0
         assert config.respect_robots_txt is True
-        assert config.user_agent == "MOON-WebAgent/1.0"
+        assert config.user_agent == "MOON-AI-WebAgent/1.0"
 
     def test_agent_creation(self):
         agent = WebAgent()

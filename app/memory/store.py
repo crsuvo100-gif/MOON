@@ -1,7 +1,7 @@
 """Local-first SQLite memory store (spec 26, 28, 52, 71).
 
 Supports per‑memory‑type database files. Each logical memory layer (MemoryType) lives in its own
-SQLite file under ``MOON_MEMORY_PATH`` (or the default ``~/.moon/memory``). The function
+SQLite file under ``MOON-AI_MEMORY_PATH`` (or the default ``~/.moon/memory``). The function
 ``default_db_path`` accepts an optional ``memory_type`` to compute the filename; if omitted
 the historic ``moon.db`` file is used for backward compatibility.
 """
@@ -22,17 +22,17 @@ from app.memory.record import MemoryRecord, Scope, SyncStatus, MemoryType
 logger = logging.getLogger(__name__)
 
 # spec 26: preferred data directory
-DEFAULT_MEMORY_DIR = Path(os.environ.get("MOON_MEMORY_PATH", "") or (Path.home() / ".moon" / "memory"))
+DEFAULT_MEMORY_DIR = Path(os.environ.get("MOON-AI_MEMORY_PATH", "") or (Path.home() / ".moon" / "memory"))
 
 SCHEMA_VERSION = 1
 
 def default_db_path(memory_type: str | None = None) -> Path:
     """Return the default SQLite database path.
     If ``memory_type`` is provided, the file is ``<memory_type>.db``; otherwise the historic
-    ``moon.db`` file is used. ``MOON_MEMORY_PATH`` overrides the base directory for all
+    ``moon.db`` file is used. ``MOON-AI_MEMORY_PATH`` overrides the base directory for all
     stores.
     """
-    base = Path(os.environ.get("MOON_MEMORY_PATH", "") or DEFAULT_MEMORY_DIR)
+    base = Path(os.environ.get("MOON-AI_MEMORY_PATH", "") or DEFAULT_MEMORY_DIR)
     filename = f"{memory_type}.db" if memory_type else "moon.db"
     return base / filename
 

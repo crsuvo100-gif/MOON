@@ -1,4 +1,4 @@
-"""Advanced context self-function system for MOON.
+"""Advanced context self-function system for MOON-AI.
 
 Every agent, brain, and tool can use this package to manage its own
 context like a professional AI assistant:

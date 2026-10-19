@@ -1,6 +1,6 @@
 """Self-improvement subsystem (spec sections 23, 26, 29, 51 PHASE 5).
 
-MOON must NOT silently rewrite itself (spec 50). This implements the
+MOON-AI must NOT silently rewrite itself (spec 50). This implements the
 controlled, PROPOSAL-ONLY improvement flow:
 
   OBSERVATION -> PROBLEM -> PROPOSAL -> GENERATE PATCH -> SANDBOX ->

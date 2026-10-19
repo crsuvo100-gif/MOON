@@ -1,6 +1,6 @@
-"""CapabilityManagerTool -- exposes the Capability Manager to MOON's tool layer.
+"""CapabilityManagerTool -- exposes the Capability Manager to MOON-AI's tool layer.
 
-This is the agent-facing tool. It EXTENDS (not replaces) MOON's existing
+This is the agent-facing tool. It EXTENDS (not replaces) MOON-AI's existing
 tool-calling surface. Logical operations (per spec section 16):
   discover_capabilities, inspect_capability, search_github, inspect_repository,
   analyze_dependencies, install_capability, verify_capability,
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 class CapabilityManagerTool(BaseTool):
     name = "capability_manager"
     description = (
-        "MOON's autonomous capability system. Discover, acquire, verify, and "
+        "MOON-AI's autonomous capability system. Discover, acquire, verify, and "
         "manage tools/libraries/runtimes needed for a task (reusing existing "
         "capabilities first, then safe install). Actions: "
         "discover, list, health, search_github, install, verify, inspect."

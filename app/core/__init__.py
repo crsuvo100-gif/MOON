@@ -1,4 +1,4 @@
-"""MOON Core package (spec section 6: core/).
+"""MOON-AI Core package (spec section 6: core/).
 
 Compatibility layer surfacing the real brain/config/runtime at the spec path.
 The Master Orchestrator brain lives at app.brain; config at app.config; runtime

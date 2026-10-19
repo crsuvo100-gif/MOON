@@ -111,7 +111,7 @@ class E2EVerificationPipeline:
         """Run end-to-end verification.
 
         Args:
-            orchestrator: The MOON orchestrator instance.
+            orchestrator: The MOON-AI orchestrator instance.
             task: The task to verify.
             agents: List of agent IDs to involve.
             llm: Optional LLM service.

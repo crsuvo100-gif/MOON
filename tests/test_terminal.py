@@ -1,4 +1,4 @@
-"""Tests for MOON terminal system."""
+"""Tests for MOON-AI terminal system."""
 
 import time
 import pytest

@@ -58,7 +58,7 @@ class VerificationEngine:
         if rec_type == "cli":
             return self.verify_cli(target)
         if rec_type == "builtin":
-            # Built-in MOON capabilities are verified by confirming the matching tool
+            # Built-in MOON-AI capabilities are verified by confirming the matching tool
             # is actually registered in the live ToolRegistry (not by importing a pip
             # package). `target` is the tool name, e.g. "huggingface".
             try:

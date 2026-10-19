@@ -1,8 +1,8 @@
-"""learning_tool.py -- MOON's continuous learning engine (ReAct tool).
+"""learning_tool.py -- MOON-AI's continuous learning engine (ReAct tool).
 
 Implements learn_topic / check_learning_status / apply_knowledge /
 schedule_auto_learning from the upgraded system prompt. Researches a topic via
-web search, summarizes, and stores condensed knowledge in MOON's long-term
+web search, summarizes, and stores condensed knowledge in MOON-AI's long-term
 memory + prompt_tuner lessons so it can be recalled later.
 """
 

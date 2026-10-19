@@ -36,7 +36,7 @@ class ContextBuilder:
             base = persona_for(getattr(agent, "name", str(agent)))
             sys_text = augment_persona(base, getattr(agent, "name", None))
         else:
-            sys_text = self._prompts.system_prompt() if self._prompts else "You are MOON."
+            sys_text = self._prompts.system_prompt() if self._prompts else "You are MOON-AI."
         messages = [Message.system(sys_text)]
         if retrieved:
             ctx = "\n".join(f"- {r.get('content', r.get('chunk', ''))}" for r in retrieved[:5])

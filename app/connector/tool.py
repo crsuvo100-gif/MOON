@@ -1,6 +1,6 @@
-"""GlobalConnectorTool -- MOON's agent-facing global-connection tool.
+"""GlobalConnectorTool -- MOON-AI's agent-facing global-connection tool.
 
-ADDITIVE: exposes the ConnectionGateway to MOON's tool layer. Logical actions:
+ADDITIVE: exposes the ConnectionGateway to MOON-AI's tool layer. Logical actions:
   connect   -- register a new connection (service/agent/mcp/webhook/ws)
   list      -- show registered connections + permission posture
   call      -- invoke an HTTP/agent connection (permission-checked)
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 class GlobalConnectorTool(BaseTool):
     name = "global_connector"
     description = (
-        "MOON's global connection layer. Register and call connections to external "
+        "MOON-AI's global connection layer. Register and call connections to external "
         "services, other AI agents, MCP tool-servers, webhooks, and websockets -- "
         "all permission-gated. Actions: connect, list, call, health, disconnect, federate."
     )
@@ -147,7 +147,7 @@ class GlobalConnectorTool(BaseTool):
         """Delegate a prompt to a registered peer AI agent; two-way federation.
 
         Reuses the gateway's permission-gated call_agent(); folds the peer's
-        answer back as MOON's own result. This is how MOON 'connects to any AI
+        answer back as MOON-AI's own result. This is how MOON-AI 'connects to any AI
         agent' and collaborates rather than just firing one-shot HTTP.
         """
         name = kw.get("name") or ""

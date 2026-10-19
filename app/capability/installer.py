@@ -1,7 +1,7 @@
 """InstallationManager -- safe, supported-package-manager installs.
 
 Acquisition priority (per spec):
-  1. existing MOON capability   2. already-installed system utility
+  1. existing MOON-AI capability   2. already-installed system utility
   3. OS package manager         4. official package registry
   5. official project release   6. trusted GitHub repo   7. other approved
 
@@ -105,12 +105,12 @@ class InstallationManager:
         """Dispatch by spec: {'method': 'pip'|'npm'|'system'|'go'|'cargo'|'gh'|'none',
         'package': str, 'repo': str, 'path': str}.
 
-        method 'none' (e.g. built-in MOON capabilities like Hugging Face, which ship
+        method 'none' (e.g. built-in MOON-AI capabilities like Hugging Face, which ship
         with the agent and need no install) is treated as already satisfied.
         """
         method = spec.get("method", "pip")
         if method == "none":
-            return InstallResult(True, "builtin", "capability already present in MOON", source="builtin")
+            return InstallResult(True, "builtin", "capability already present in MOON-AI", source="builtin")
         if method == "pip":
             return self.install_pip(spec.get("package", ""))
         if method == "npm":

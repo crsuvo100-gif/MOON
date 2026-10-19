@@ -1,4 +1,4 @@
-# Superadvanced MOON Capabilities — 5 new tools
+# Superadvanced MOON-AI Capabilities — 5 new tools
 # Inserted before the registration block in agent/engine.py
 
 # Location markers for patch insertion:

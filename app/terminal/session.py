@@ -1,4 +1,4 @@
-"""Session model for MOON terminal.
+"""Session model for MOON-AI terminal.
 
 Each session tracks its own working directory, environment, backend, and PTY state.
 """

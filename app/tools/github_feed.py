@@ -1,12 +1,12 @@
-"""github_feed.py -- MOON's autonomous GitHub tool-feed.
+"""github_feed.py -- MOON-AI's autonomous GitHub tool-feed.
 
 This is the "always-connected, self-extending" behavior the operator asked for:
 
 1. PULL FROM YOUR REPO: clone/fetch the connected GitHub repo (SSH or HTTPS)
    and discover every tool/plugin/skill it already contains (plugins/*,
-   app/tools/*, skills/*/SKILL.md). This becomes MOON's local "tool catalog".
+   app/tools/*, skills/*/SKILL.md). This becomes MOON-AI's local "tool catalog".
 
-2. SEARCH IF MISSING: when a task needs a capability MOON does not have locally
+2. SEARCH IF MISSING: when a task needs a capability MOON-AI does not have locally
    and does not find in your repo, search the PUBLIC GitHub ecosystem via the
    GitHub search API, rank by stars/relevance, pull the best match's source
    file(s), and install it as a generated plugin under plugins/generated/.

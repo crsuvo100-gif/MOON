@@ -1,1 +1,1 @@
-"""Data models for MOON."""
+"""Data models for MOON-AI."""

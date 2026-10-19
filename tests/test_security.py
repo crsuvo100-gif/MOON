@@ -1,4 +1,4 @@
-"""Security tests for the MOON terminal.
+"""Security tests for the MOON-AI terminal.
 
 Covers:
 - ``sanitize_command`` correctly redacts secret‑like tokens.

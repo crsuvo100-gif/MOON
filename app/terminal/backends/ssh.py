@@ -34,18 +34,18 @@ class SSHBackend:
         """Build SSH command arguments from an ExecutionRequest.
 
         The SSH connection details are passed via environment variables:
-        - MOON_SSH_HOST: remote hostname (required)
-        - MOON_SSH_PORT: remote port (default: 22)
-        - MOON_SSH_USER: remote username (default: current user)
-        - MOON_SSH_KEY: path to private key (optional)
+        - MOON-AI_SSH_HOST: remote hostname (required)
+        - MOON-AI_SSH_PORT: remote port (default: 22)
+        - MOON-AI_SSH_USER: remote username (default: current user)
+        - MOON-AI_SSH_KEY: path to private key (optional)
         """
-        host = os.environ.get("MOON_SSH_HOST", "")
-        port = os.environ.get("MOON_SSH_PORT", "22")
-        user = os.environ.get("MOON_SSH_USER", os.environ.get("USER", ""))
-        key = os.environ.get("MOON_SSH_KEY", "")
+        host = os.environ.get("MOON-AI_SSH_HOST", "")
+        port = os.environ.get("MOON-AI_SSH_PORT", "22")
+        user = os.environ.get("MOON-AI_SSH_USER", os.environ.get("USER", ""))
+        key = os.environ.get("MOON-AI_SSH_KEY", "")
 
         if not host:
-            raise ValueError("MOON_SSH_HOST environment variable is required for SSH backend")
+            raise ValueError("MOON-AI_SSH_HOST environment variable is required for SSH backend")
 
         args = ["ssh"]
 

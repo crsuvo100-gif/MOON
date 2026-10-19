@@ -51,7 +51,7 @@ def store(tmp_path):
 
 @pytest.fixture()
 def mem(tmp_path, monkeypatch):
-    monkeypatch.setenv("MOON_MEMORY_PATH", str(tmp_path))
+    monkeypatch.setenv("MOON-AI_MEMORY_PATH", str(tmp_path))
     m = CognitiveMemoryManager(store=LocalMemoryStore(tmp_path / "moon.db"))
     yield m
     m.close()
@@ -62,13 +62,13 @@ def test_record_roundtrip_preserves_all_fields() -> None:
     r = MemoryRecord(content="x", scope=Scope.AGENT, type=MemoryType.AGENT,
                      agent_id="coding", confidence=0.77,
                      importance=Importance.CRITICAL, source_type=SourceType.USER,
-                     tags=["a"], project_id="MOON", version=3,
+                     tags=["a"], project_id="MOON-AI", version=3,
                      sync_status=SyncStatus.PENDING)
     r2 = MemoryRecord.from_dict(r.to_dict())
     assert r2.scope is Scope.AGENT and r2.type is MemoryType.AGENT
     assert r2.agent_id == "coding" and r2.confidence == 0.77
     assert r2.importance is Importance.CRITICAL and r2.version == 3
-    assert r2.tags == ["a"] and r2.project_id == "MOON"
+    assert r2.tags == ["a"] and r2.project_id == "MOON-AI"
 
 
 def test_apply_defaults_confidence_by_source() -> None:
@@ -102,7 +102,7 @@ def test_store_soft_delete_is_recoverable(store) -> None:
 
 def test_store_query_filters(store) -> None:
     store.upsert(MemoryRecord(content="alpha project fact", scope=Scope.PROJECT,
-                              project_id="MOON", tags=["arch"]))
+                              project_id="MOON-AI", tags=["arch"]))
     store.upsert(MemoryRecord(content="beta agent note", scope=Scope.AGENT,
                               agent_id="coding"))
     assert len(store.query(scope=Scope.PROJECT)) == 1
@@ -137,28 +137,28 @@ def test_pipeline_rejects_noise_but_keeps_facts() -> None:
     assert p.evaluate("progress: downloading 45%",
                       source_type=SourceType.TOOL)["persist"] is False
     assert p.evaluate("x" * 6000, source_type=SourceType.TOOL)["persist"] is False
-    assert p.evaluate("MOON uses qwen models for local inference",
+    assert p.evaluate("MOON-AI uses qwen models for local inference",
                       source_type=SourceType.AGENT)["persist"] is True
 
 
 def test_pipeline_dedupes() -> None:
     """spec 13: dedup only compares within the same scope+type+agent."""
     p = CandidatePipeline()
-    # match the shape the pipeline actually produces: classify("MOON uses
+    # match the shape the pipeline actually produces: classify("MOON-AI uses
     # Python") yields SEMANTIC, and an explicit scope override sets PROJECT.
-    existing = [MemoryRecord(content="MOON uses Python", scope=Scope.PROJECT,
+    existing = [MemoryRecord(content="MOON-AI uses Python", scope=Scope.PROJECT,
                              type=MemoryType.SEMANTIC, agent_id="")]
-    out = p.evaluate("MOON uses Python", source_type=SourceType.AGENT,
+    out = p.evaluate("MOON-AI uses Python", source_type=SourceType.AGENT,
                      existing=existing, scope=Scope.PROJECT)
     assert out["persist"] is False and out["duplicate_of"]
     # a DIFFERENT scope must NOT be treated as a duplicate (spec 88 boundary)
-    out2 = p.evaluate("MOON uses Python", source_type=SourceType.AGENT,
+    out2 = p.evaluate("MOON-AI uses Python", source_type=SourceType.AGENT,
                       existing=existing, scope=Scope.AGENT, agent_id="coding")
     assert out2["persist"] is True
 
 
 def test_classification_and_importance() -> None:
-    t, s = classify("to deploy MOON run the installer", source_type=SourceType.AGENT)
+    t, s = classify("to deploy MOON-AI run the installer", source_type=SourceType.AGENT)
     assert t is MemoryType.PROCEDURAL
     t2, s2 = classify("I prefer dark mode", source_type=SourceType.USER)
     assert t2 is MemoryType.USER and s2 is Scope.USER
@@ -180,14 +180,14 @@ def test_policy_denies_cross_agent() -> None:
 def test_hybrid_ranking_prefers_relevant_and_recent() -> None:
     now = time.time()
     recs = [
-        MemoryRecord(content="MOON uses qwen models for inference",
+        MemoryRecord(content="MOON-AI uses qwen models for inference",
                      scope=Scope.PROJECT, importance=Importance.HIGH,
                      confidence=0.9, updated_at=now),
         MemoryRecord(content="unrelated cafeteria menu note",
                      scope=Scope.GLOBAL, importance=Importance.LOW,
                      confidence=0.4, updated_at=now - 86400 * 300),
     ]
-    hits = HybridRetriever().search("qwen models", recs, top_k=2, project_id="MOON")
+    hits = HybridRetriever().search("qwen models", recs, top_k=2, project_id="MOON-AI")
     assert hits and "qwen" in hits[0].record.content
 
 
@@ -227,7 +227,7 @@ def test_scope_and_recency_scores() -> None:
 
 # ------------------------------------------------------------ spec 12 commands
 def test_parse_memory_commands() -> None:
-    assert parse_memory_command("Remember that MOON uses Python")["op"] == "remember"
+    assert parse_memory_command("Remember that MOON-AI uses Python")["op"] == "remember"
     assert parse_memory_command("Save this: deploy uses script.py")["op"] == "remember"
     assert parse_memory_command("Forget everything about Python")["op"] == "forget"
     assert parse_memory_command("Show what you remember about Python")["op"] == "show"
@@ -237,7 +237,7 @@ def test_parse_memory_commands() -> None:
 
 # ------------------------------------------------------------- spec 61 facade
 def test_manager_store_search_forget_cycle(mem) -> None:
-    r = mem.handle_command("Remember that the MOON project uses Python 3.14")
+    r = mem.handle_command("Remember that the MOON-AI project uses Python 3.14")
     assert r["stored"] is True
     hits = mem.search("python version", top_k=5, agent_id="coding")
     assert hits, "project memory not retrievable by an agent"
@@ -261,16 +261,16 @@ def test_manager_agent_isolation_and_share(mem) -> None:
 def test_manager_blocks_secret_and_dedup(mem) -> None:
     assert mem.store("api_key = sk-proj-abcdefghijklmnopqrstuvwxyz1234",
                      source_type=SourceType.USER, explicit=True) is None
-    first = mem.store("MOON uses qwen2.5-coder for coding",
+    first = mem.store("MOON-AI uses qwen2.5-coder for coding",
                       source_type=SourceType.AGENT, agent_id="coding")
     assert first is not None
-    dup = mem.store("MOON uses qwen2.5-coder for coding",
+    dup = mem.store("MOON-AI uses qwen2.5-coder for coding",
                     source_type=SourceType.AGENT, agent_id="coding")
     assert dup is None
 
 
 def test_manager_health_and_stats(mem) -> None:
-    mem.store("MOON uses qwen models", source_type=SourceType.AGENT, agent_id="coding")
+    mem.store("MOON-AI uses qwen models", source_type=SourceType.AGENT, agent_id="coding")
     h = mem.health()
     assert h["local_db"]["online"] is True
     assert h["local_db"]["schema_version"] >= 1

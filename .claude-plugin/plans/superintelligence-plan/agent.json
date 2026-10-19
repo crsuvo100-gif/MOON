@@ -1,9 +1,9 @@
 {
-  "title": "MOON Agent — Self-Improving Superintelligence Pipeline",
+  "title": "MOON-AI Agent — Self-Improving Superintelligence Pipeline",
   "color": "#9d00ff",
   "version": "0.1.0",
   "description": "An AI agent that builds and improves itself through iterative self-revision.",
-  "readme": "MOON-SUPERINTELLIGENCE.md",
+  "readme": "MOON-AI-SUPERINTELLIGENCE.md",
   "license": "MIT",
   "python_minimum_version": "3.10",
   "environment_check": [

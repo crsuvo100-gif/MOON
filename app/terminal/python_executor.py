@@ -1,4 +1,4 @@
-"""Python executor for MOON terminal.
+"""Python executor for MOON-AI terminal.
 
 Provides specialized Python execution capabilities:
 - Detect Python (python, python3)

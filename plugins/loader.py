@@ -1,7 +1,7 @@
 """Plugin loader (spec 45).
 
 Spec 45: a new agent/tool must be able to register itself WITHOUT rewriting the
-Main Brain. MOON's orchestrator already calls ``load_plugins(registry)`` at
+Main Brain. MOON-AI's orchestrator already calls ``load_plugins(registry)`` at
 setup, but the module had been removed, so plugin discovery silently no-op'd
 (the import is inside a try/except).
 
@@ -17,7 +17,7 @@ Contract for a plugin file (any one of):
   * subclass ``app.tools.base.BaseTool`` and have a no-arg constructor
 
 Failures are reported per-file and never abort startup (spec 51: a bad plugin
-must not take MOON down).
+must not take MOON-AI down).
 """
 
 from __future__ import annotations

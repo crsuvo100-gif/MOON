@@ -7,7 +7,7 @@ Implements the operator workflow:
      (default: crsuvo) using the `hf` CLI, picking suitable hardware and
      verifying the endpoint responds once running.
 
-Also exposes the OAuth client registration payload MOON presents when registered
+Also exposes the OAuth client registration payload MOON-AI presents when registered
 as an HF OAuth application (Authorization Code + PKCE).
 
 Safety:
@@ -172,7 +172,7 @@ class HuggingFaceDeployTool(BaseTool):
         return {
             "configured": True,
             "client_id": f"{site}/.well-known/oauth-cimd",
-            "client_name": s.hf_oauth_client_name or "MOON",
+            "client_name": s.hf_oauth_client_name or "MOON-AI",
             "redirect_uris": [f"{site}/oauth/callback/huggingface"],
             "token_endpoint_auth_method": "none",
             "logo_uri": s.hf_oauth_logo_uri or None,

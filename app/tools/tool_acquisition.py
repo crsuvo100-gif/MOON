@@ -1,13 +1,13 @@
-"""tool_acquisition.py -- MOON's ability to self-extend with tools on demand.
+"""tool_acquisition.py -- MOON-AI's ability to self-extend with tools on demand.
 
-When a task needs a capability MOON lacks, she can:
+When a task needs a capability MOON-AI lacks, she can:
   1. install a known package from a curated CATALOG (pip) and register a thin
      BaseTool wrapper, or
   2. ask the LLM to GENERATE a small BaseTool plugin for a custom need, write
      it to plugins/generated/, import and register it.
 
 All installs are best-effort and reported; failures degrade gracefully (the
-task continues with whatever tools exist). This makes MOON complete tasks
+task continues with whatever tools exist). This makes MOON-AI complete tasks
 that require tools she did not ship with.
 """
 

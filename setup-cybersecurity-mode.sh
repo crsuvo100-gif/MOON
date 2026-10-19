@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # =============================================================================
 # setup-cybersecurity-mode.sh
-# ONE-CLICK IDEMPOTENT SECURITY TOOL INSTALLER + MOON CYBER-AGENT PATCHER
+# ONE-CLICK IDEMPOTENT SECURITY TOOL INSTALLER + MOON-AI CYBER-AGENT PATCHER
 #
 #   (b) installs every offensive/defensive security tool available in the
 #       terminal, verifying each one after install (silent, no-fail exit).
-#   (c) patches/pins the MOON cyber-agent surface: red/black HUD palette,
+#   (c) patches/pins the MOON-AI cyber-agent surface: red/black HUD palette,
 #       all-functions-open, voice-clone hook, 3 entry points.
 #
 #   NON-DESTRUCTIVE: never removes existing packages. Safe to run twice.
@@ -18,17 +18,17 @@
 set -u
 BINARY=
 VERIFY_ONLY=0
-MOON_ONLY=0
+MOON-AI_ONLY=0
 YES=0
 
-# MOON surface directory (defaults to the standard install location).
-moon="${MOON_DIR:-${HOME}/Projects/MOON}"
+# MOON-AI surface directory (defaults to the standard install location).
+moon="${MOON-AI_DIR:-${HOME}/Projects/MOON-AI}"
 moon="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 for a in "$@"; do
   case "$a" in
     --verify)   VERIFY_ONLY=1 ;;
-    --no-moon)  MOON_ONLY=1 ;;
+    --no-moon)  MOON-AI_ONLY=1 ;;
     --yes)      YES=1 ;;
     -h|--help)
       sed -n '2,34p' "$0" | sed 's/^# \{0,1\}//'
@@ -38,9 +38,9 @@ for a in "$@"; do
   esac
 done
 
-echo "=== MOON CYBERSECURITY-MODE INSTALLER ==="
+echo "=== MOON-AI CYBERSECURITY-MODE INSTALLER ==="
 echo "  (b) offensive + defensive security tools      [terminal install]"
-echo "  (c) MOON cyber-agent surface (Hud+API+Voice)  [patch]"
+echo "  (c) MOON-AI cyber-agent surface (Hud+API+Voice)  [patch]"
 echo "  Running as: $(whoami)  |  OS: $(grep PRETTY_NAME /etc/os-release 2>/dev/null | cut -d= -f2)"
 echo
 
@@ -166,12 +166,12 @@ step3() {
 
 # ------------------------------------------------------------------ step 4 ----
 step4() {
-  say "Step 4/4: patching MOON cyber-agent surface (theme + voice + entry points)"
-  if [ "$MOON_ONLY" -eq 1 ]; then
+  say "Step 4/4: patching MOON-AI cyber-agent surface (theme + voice + entry points)"
+  if [ "$MOON-AI_ONLY" -eq 1 ]; then
     echo "  [skipped — --no-moon]"
     return 0
   fi
-  local moon="/home/meow/Projects/MOON"
+  local MOON-AI="/home/meow/Projects/MOON-AI"
   local theme="$moon/theme.json"
   if [ ! -f "$theme" ]; then echo "  [WARN] $theme not found"; return 0; fi
   # 1) Apply the canonical red/black HUD palette (override mono-cyan).
@@ -181,7 +181,7 @@ import json, sys
 p = sys.argv[1]
 with open(p) as f:
     d = json.load(f)
-d["name"] = "MOON NEURAL CORE"
+d["name"] = "MOON-AI NEURAL CORE"
 d["accent"]  = "#ff2d4c"   # red
 d["accent2"] = "#ff6a00"   # red-orange
 d["danger"]  = "#ff1a2a"
@@ -209,8 +209,8 @@ PY
     esac
     if [ -f "$f" ]; then echo "    [OK] $e entry: $desc"; else echo "    [WARN] $e entry missing"; fi
   done
-  if grep -q "MOON love you 3000" "$moon/app/terminal/repl.py" 2>/dev/null; then
-    echo "    [OK] unlock phrase 'MOON love you 3000' wired (app/terminal/repl.py)"
+  if grep -q "MOON-AI love you 3000" "$moon/app/terminal/repl.py" 2>/dev/null; then
+    echo "    [OK] unlock phrase 'MOON-AI love you 3000' wired (app/terminal/repl.py)"
   else
     echo "    [WARN] unlock phrase not found (app/terminal/repl.py)"
   fi
@@ -221,11 +221,11 @@ PY
     echo "    [OK] API deps wired (fastapi/uvicorn)"
   fi
   # API is live if anything listens on 8777
-  MOON_API_PID=$(ss -ltnp 2>/dev/null | grep 8777 | grep -o 'pid=[0-9]*' | head -1 || true)
-  if [ -n "$MOON_API_PID" ]; then
-    echo "    [OK] MOON API live (pid ${MOON_API_PID#pid=}) on http://127.0.0.1:8777"
+  MOON-AI_API_PID=$(ss -ltnp 2>/dev/null | grep 8777 | grep -o 'pid=[0-9]*' | head -1 || true)
+  if [ -n "$MOON-AI_API_PID" ]; then
+    echo "    [OK] MOON-AI API live (pid ${MOON-AI_API_PID#pid=}) on http://127.0.0.1:8777"
   else
-    echo "    [WARN] MOON API not running yet (start with  moon terminal or python main.py terminal)"
+    echo "    [WARN] MOON-AI API not running yet (start with  MOON-AI terminal or python main.py terminal)"
   fi
   return 0
 }
@@ -256,10 +256,10 @@ echo "=== SECURTIY TOOLING VERIFICATION SUMMARY ==="
 echo "  Installed: $(command -v nmap)  $(command -v sqlmap)  $(command -v aircrack-ng)"
 echo "  Installed: $(command -v hydra)  $(command -v john)  $(command -v nuclei 2>/dev/null)"
 echo "  Installed: $(command -v kubectl)  $(command -v gcloud 2>/dev/null)"
-MOON_API_PID=$(ss -ltnp 2>/dev/null | grep 8777 | grep -o 'pid=[0-9]*' | head -1 || true)
-echo "  MOON: $(grep -c 'mono-red-black' "$moon/theme.json" 2>/dev/null) theme patched  |  API $([ -n "$MOON_API_PID" ] && echo "online pid ${MOON_API_PID#pid=}" || echo "NOT RUNNING")  |  entry: moon terminal"
+MOON-AI_API_PID=$(ss -ltnp 2>/dev/null | grep 8777 | grep -o 'pid=[0-9]*' | head -1 || true)
+echo "  MOON-AI: $(grep -c 'mono-red-black' "$moon/theme.json" 2>/dev/null) theme patched  |  API $([ -n "$MOON-AI_API_PID" ] && echo "online pid ${MOON-AI_API_PID#pid=}" || echo "NOT RUNNING")  |  entry: MOON-AI terminal"
 echo
-echo "  Next: run  moon terminal   to launch MOON cyber-agent."
+echo "  Next: run  MOON-AI terminal   to launch MOON-AI cyber-agent."
 echo
 if [ "$FAILURES" -gt 0 ]; then
   echo "RESULT: PARTIAL ($FAILURES tool(s) missing) — re-run for a clean state."

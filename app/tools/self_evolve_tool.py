@@ -1,10 +1,10 @@
-"""self_evolve_tool.py -- bounded self-evolution: ingest a resource into MOON's KB.
+"""self_evolve_tool.py -- bounded self-evolution: ingest a resource into MOON-AI's KB.
 
-The system prompt says MOON should "evolve automatically from the internet
+The system prompt says MOON-AI should "evolve automatically from the internet
 digital world." This tool makes that concrete and SAFE: given a URL or a
-local file/repo, it fetches the text and learns it into MOON's knowledge base
+local file/repo, it fetches the text and learns it into MOON-AI's knowledge base
 (via the same auto-learning path). It is operator-triggered, not autonomous
-crawling -- MOON evolves when Psycho points her at a source.
+crawling -- MOON-AI evolves when Psycho points her at a source.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from app.tools.base import BaseTool
 
 class SelfEvolveTool(BaseTool):
     name = "self_evolve"
-    description = "Ingest a URL or local file into MOON's knowledge base (bounded self-evolution)."
+    description = "Ingest a URL or local file into MOON-AI's knowledge base (bounded self-evolution)."
 
     async def execute(self, source: str = "", max_chars: int = 8000, **kwargs) -> str:
         if not source:
@@ -50,6 +50,6 @@ class SelfEvolveTool(BaseTool):
             from app.config.settings import get_settings
             o = Orchestrator(get_settings())
             await o._consolidator.consolidate(prompt=f"learned from {source}", response=text, success=True, agent="moon")
-            return f"[self_evolve] ingested {len(text)} chars from {source} into MOON's brain."
+            return f"[self_evolve] ingested {len(text)} chars from {source} into MOON-AI's brain."
         except Exception as exc:  # noqa: BLE001
             return f"[self_evolve] ingested but learn-step skipped: {exc}"

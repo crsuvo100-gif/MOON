@@ -1,5 +1,5 @@
 """cv_and_memory_tools.py -- computer vision, autonomous chaining, multimodal
-and habit memory for MOON. Real implementations with safe fallbacks.
+and habit memory for MOON-AI. Real implementations with safe fallbacks.
 """
 
 from __future__ import annotations
@@ -124,7 +124,7 @@ class AutonomousChainTool(BaseTool):
 
 class MultimodalStoreTool(BaseTool):
     name = "multimodal_store"
-    description = "Store a file (image/audio/doc) into MOON's multimodal memory with a description."
+    description = "Store a file (image/audio/doc) into MOON-AI's multimodal memory with a description."
 
     async def execute(self, file_path: str = "", description: str = "", **_kw) -> str:
         if not file_path or not os.path.exists(file_path):
@@ -143,7 +143,7 @@ class MultimodalStoreTool(BaseTool):
 
 class MultimodalSearchTool(BaseTool):
     name = "multimodal_search"
-    description = "Search MOON's multimodal memory by description text."
+    description = "Search MOON-AI's multimodal memory by description text."
 
     async def execute(self, query: str = "", top_k: int = 3, **_kw) -> str:
         db = _load_multimodal()

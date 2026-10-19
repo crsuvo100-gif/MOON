@@ -19,4 +19,4 @@ class PromptManager:
             return default
 
     def system_prompt(self) -> str:
-        return self.get("moon_system", "You are MOON, a helpful autonomous AI assistant.")
+        return self.get("moon_system", "You are MOON-AI, a helpful autonomous AI assistant.")

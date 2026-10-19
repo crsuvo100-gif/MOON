@@ -1,4 +1,4 @@
-"""Terminal interface — unified API for the MOON terminal system.
+"""Terminal interface — unified API for the MOON-AI terminal system.
 
 This is the main entry point for UI, agent, and API consumers.
 It wires together all terminal subsystems:
@@ -32,7 +32,7 @@ from .state_machine import ExecutionState
 
 
 class TerminalInterface:
-    """Unified terminal API for MOON.
+    """Unified terminal API for MOON-AI.
 
     Usage:
         terminal = TerminalInterface()

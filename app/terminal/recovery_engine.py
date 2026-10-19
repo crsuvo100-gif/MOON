@@ -1,4 +1,4 @@
-"""Recovery engine for MOON terminal.
+"""Recovery engine for MOON-AI terminal.
 
 When execution fails, the recovery engine:
 1. Captures the failure

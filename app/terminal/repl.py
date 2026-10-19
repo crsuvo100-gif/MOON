@@ -1,11 +1,11 @@
-"""MOON Terminal REPL — interactive readline terminal wired to the main brain.
+"""MOON-AI Terminal REPL — interactive readline terminal wired to the main brain.
 
 Usage:
     python -m app.terminal.repl
-    moon terminal
+    MOON-AI terminal
 
 This is the single user-facing surface: a readline-driven interactive session
-with the full MOON brain (Orchestrator) behind it. Natural language is routed
+with the full MOON-AI brain (Orchestrator) behind it. Natural language is routed
 through the Orchestrator's cognition loop; shell commands are executed via
 the TerminalInterface's execution engine.
 
@@ -25,7 +25,7 @@ Shell execution:
     $<command>     Execute and show output inline
 
 Natural language:
-    Anything else is sent to MOON's brain for a response.
+    Anything else is sent to MOON-AI's brain for a response.
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ from app.terminal.history_manager import history_manager
 
 logger = get_logger(__name__)
 
-# ── ANSI color codes (MOON red/black HUD palette) ──
+# ── ANSI color codes (MOON-AI red/black HUD palette) ──
 
 _RESET = "\033[0m"
 _BOLD = "\033[1m"
@@ -63,12 +63,12 @@ _BG_BLACK = "\033[40m"
 
 # ── Prompt ──
 
-_PROMPT = f"{_BG_BLACK}{_BOLD}{_RED} MOON {_RESET} {_CYAN}❯{_RESET} "
-_PROMPT_BUSY = f"{_BG_BLACK}{_BOLD}{_RED} MOON {_RESET} {_YELLOW}◌{_RESET} "
+_PROMPT = f"{_BG_BLACK}{_BOLD}{_RED} MOON-AI {_RESET} {_CYAN}❯{_RESET} "
+_PROMPT_BUSY = f"{_BG_BLACK}{_BOLD}{_RED} MOON-AI {_RESET} {_YELLOW}◌{_RESET} "
 
 
 def _print_banner() -> None:
-    """Print the MOON terminal banner."""
+    """Print the MOON-AI terminal banner."""
     banner = f"""
 {_BOLD}{_RED}  ███╗   ███╗ ██████╗  ██████╗ ███╗   ██╗{_RESET}
 {_BOLD}{_RED}  ████╗ ████║██╔═══██╗██╔═══██╗████╗  ██║{_RESET}
@@ -77,7 +77,7 @@ def _print_banner() -> None:
 {_BOLD}{_RED}  ██║ ╚═╝ ██║╚██████╔╝╚██████╔╝██║ ╚████║{_RESET}
 {_BOLD}{_RED}  ╚═╝     ╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝{_RESET}
 
-{_BOLD}{_CYAN}  MOON Terminal — AI Agent Execution Platform{_RESET}
+{_BOLD}{_CYAN}  MOON-AI Terminal — AI Agent Execution Platform{_RESET}
 {_DIM}  Type /help for commands. Natural language goes to the brain.{_RESET}
 {_DIM}  Prefix with ! for shell, $ for inline shell, /exec for direct exec.{_RESET}
 """
@@ -87,7 +87,7 @@ def _print_banner() -> None:
 def _print_help() -> None:
     """Print help text."""
     help_text = f"""
-{_BOLD}{_CYAN}  MOON Terminal — Help{_RESET}
+{_BOLD}{_CYAN}  MOON-AI Terminal — Help{_RESET}
 
 {_BOLD}  Special Commands:{_RESET}
     /help          Show this help
@@ -105,7 +105,7 @@ def _print_help() -> None:
     $<command>     Execute and show output inline
 
 {_BOLD}  Natural Language:{_RESET}
-    Anything else is sent to MOON's brain for a response.
+    Anything else is sent to MOON-AI's brain for a response.
 
 {_BOLD}  Examples:{_RESET}
     > What is the capital of France?
@@ -248,7 +248,7 @@ async def _run_brain(orchestrator, prompt: str) -> str:
 
 
 class MoonTerminalREPL:
-    """Interactive readline REPL wired to MOON's main brain."""
+    """Interactive readline REPL wired to MOON-AI's main brain."""
 
     def __init__(self):
         self.orchestrator = None
@@ -345,10 +345,10 @@ class MoonTerminalREPL:
         elif command == "/help":
             _print_help()
         elif command == "/unlock":
-            if arg.strip().upper() == "MOON LOVE YOU 3000":
+            if arg.strip().upper() == "MOON-AI LOVE YOU 3000":
                 self._unlocked = True
                 self._unlock_ts = time.time()
-                print(f"{_GREEN}  [UNLOCKED] MOON love you 3000 — interface online.{_RESET}")
+                print(f"{_GREEN}  [UNLOCKED] MOON-AI love you 3000 — interface online.{_RESET}")
             else:
                 print(f"{_RED}  Wrong phrase.  Type /help for help.{_RESET}")
         elif command == "/status":
@@ -382,7 +382,7 @@ class MoonTerminalREPL:
         print(f"{_DIM}  Thinking...{_RESET}")
         try:
             response = await _run_brain(self.orchestrator, prompt)
-            print(f"\n{_BOLD}{_RED}  MOON:{_RESET} {response}\n")
+            print(f"\n{_BOLD}{_RED}  MOON-AI:{_RESET} {response}\n")
         except Exception as exc:
             print(f"{_RED}  Brain error: {exc}{_RESET}\n")
         finally:
@@ -390,7 +390,7 @@ class MoonTerminalREPL:
 
 
 def main() -> None:
-    """Entry point for the MOON Terminal REPL."""
+    """Entry point for the MOON-AI Terminal REPL."""
     repl = MoonTerminalREPL()
     try:
         asyncio.run(repl.start())

@@ -1,6 +1,6 @@
 """authorization.py -- authorization gate for active security operations.
 
-MOON is a capable defensive + offensive cyber agent. To stay legitimate, any
+MOON-AI is a capable defensive + offensive cyber agent. To stay legitimate, any
 ACTIVE operation (scanning, exploiting, probing) against a target REQUIRES that
 the target be authorized: either listed in AUTHORIZED_TARGETS (env) or
 explicitly confirmed by the operator at runtime. Passive/defensive analysis of

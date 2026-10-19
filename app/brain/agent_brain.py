@@ -1,4 +1,4 @@
-"""agent_brain.py -- each agent's OWN brain, connected to MOON's main brain.
+"""agent_brain.py -- each agent's OWN brain, connected to MOON-AI's main brain.
 
 Every agent gets an isolated WorkingMemory + ConversationHistory plus a
 durable per-agent episodic store (JSONL under app/logs/agent_brains/<agent>.jsonl)
@@ -70,11 +70,11 @@ class _AgentBrainStore:
 
 
 class AgentBrain:
-    """An agent's own brain, wired to MOON's main brain for validation.
+    """An agent's own brain, wired to MOON-AI's main brain for validation.
 
     Each agent can run on its OWN model (via AgentModelManager) so it generates
     a real, domain-suited first-pass answer before the result is sent up to the
-    main MOON brain for the two-phase accuracy gate. If per-agent models are
+    main MOON-AI brain for the two-phase accuracy gate. If per-agent models are
     disabled or unavailable, the agent falls back to a template draft that the
     main brain still validates -- graceful degradation, never a crash.
     """
@@ -119,7 +119,7 @@ class AgentBrain:
             try:
                 messages = [
                     ChatMessage(role="system", content=(
-                        f"You are the {self.agent_name} agent of MOON, an expert sub-agent. "
+                        f"You are the {self.agent_name} agent of MOON-AI, an expert sub-agent. "
                         f"Use your prior experience when relevant.\nPRIOR EXPERIENCE:\n{prior_txt}"
                     )),
                     ChatMessage(role="user", content=f"Task: {task}\nContext: {context}"),
@@ -132,7 +132,7 @@ class AgentBrain:
                 logger.info("Agent '%s' own-model draft failed; template fallback: %s", self.agent_name, exc)
         # Template fallback (no own model / call failed) -- main brain still validates.
         return (
-            f"You are the {self.agent_name} agent of MOON. Use your prior experience:\n"
+            f"You are the {self.agent_name} agent of MOON-AI. Use your prior experience:\n"
             f"{prior_txt}\n\nTask: {task}\nContext: {context}\nProduce a concise draft answer."
         )
 
@@ -150,7 +150,7 @@ class AgentBrain:
             return draft_text
         try:
             critique_prompt = (
-                f"You are MOON's MAIN BRAIN acting as a strict accuracy auditor for the "
+                f"You are MOON-AI's MAIN BRAIN acting as a strict accuracy auditor for the "
                 f"'{self.agent_name}' agent.\nTASK: {task}\n\nAGENT DRAFT:\n{draft_text}\n\n"
                 f"Check the draft for factual errors, logical errors, missing key "
                 f"requirements, unsafe/offensive content, and hallucination. "

@@ -7,11 +7,11 @@ returns 0 unless a genuine, unrecoverable failure occurs.
 
 Notes on this environment:
   * OLLAMA is installed via the host package (`/usr/local/bin/ollama`), owned by
-    the `ollama` system user / systemd unit.  MOON's OLLAMA integration shell-outs
+    the `ollama` system user / systemd unit.  MOON-AI's OLLAMA integration shell-outs
     to the `ollama` CLI (it does *not* call the HTTP API), so the model state the
-    CLI sees (`ollama list`) is the authoritative one for the MOON runtime.
+    CLI sees (`ollama list`) is the authoritative one for the MOON-AI runtime.
   * `sudo` is password-protected, so any "use sudo" attempt is best-effort at
-    most and is never required for MOON to run.
+    most and is never required for MOON-AI to run.
 
 Usage:
     make install          # runs: python3 scripts/install_ollama.py
@@ -24,7 +24,7 @@ import subprocess
 import sys
 
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "127.0.0.1:11434")
-# Default model shipped by MOON; override via .env OLLAMA_MODEL_DEFAULT or env.
+# Default model shipped by MOON-AI; override via .env OLLAMA_MODEL_DEFAULT or env.
 DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL_DEFAULT", "qwen2.5:1.5b")
 
 
@@ -111,7 +111,7 @@ def ensure_model(model=DEFAULT_MODEL):
 
 
 def main():
-    print("== MOON OLLAMA BACKEND SERVICE INSTALL ==")
+    print("== MOON-AI OLLAMA BACKEND SERVICE INSTALL ==")
     binary_ok = ensure_binary()
     running_ok = ensure_running()
     path_ok = ensure_on_path()

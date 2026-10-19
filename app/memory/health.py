@@ -2,7 +2,7 @@
 
 Spec 59 asks the terminal to be able to show:
 
-    MOON MEMORY
+    MOON-AI MEMORY
     Local DB       : ONLINE
     Vector Memory  : ONLINE
     Cloud Memory   : ONLINE
@@ -135,7 +135,7 @@ class MemoryHealthService:
             "embedding_provider": self._probe_embedding(),
             "storage": self._probe_storage(),
         }
-        # ok = the parts MOON cannot run without are healthy
+        # ok = the parts MOON-AI cannot run without are healthy
         ok = comps["local_db"].get("status") == "ONLINE"
         return HealthReport(ok=ok, components=comps)
 
@@ -147,7 +147,7 @@ class MemoryHealthService:
         last = sync.get("last_sync")
         last_s = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(last)) if last else "never"
         lines = [
-            "MOON MEMORY",
+            "MOON-AI MEMORY",
             f"Local DB       : {c['local_db'].get('status', '?')}",
             f"Vector Memory  : {c['vector_memory'].get('status', '?')}",
             f"Cloud Memory   : {c['cloud_memory'].get('status', '?')}",

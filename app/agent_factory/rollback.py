@@ -1,4 +1,4 @@
-"""Agent Factory: internal Rollback component (spec 45 + MOON Factory).
+"""Agent Factory: internal Rollback component (spec 45 + MOON-AI Factory).
 
 Thin wrapper over AgentLifecycle.rollback that also records the audit trail and
 returns a structured Registration. Separated per the spec directory layout

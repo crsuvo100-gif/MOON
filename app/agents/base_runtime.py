@@ -1,6 +1,6 @@
 """Base Agent runtime (spec section 7: common agent interface).
 
-This is the REAL base class every MOON agent conforms to. It implements the
+This is the REAL base class every MOON-AI agent conforms to. It implements the
 common interface:
 
     metadata()  capabilities()  permissions()  validate_input()
@@ -10,7 +10,7 @@ and returns a STRUCTURED result (spec 7) containing:
     success, status, result, evidence, errors, warnings, metrics,
     agent_id, agent_version, execution_id
 
-It is not a stub: ``execute`` runs the task through the live MOON orchestrator
+It is not a stub: ``execute`` runs the task through the live MOON-AI orchestrator
 (after capability-based agent selection via the structured registry), and
 ``verify``/``reflect`` hook into the real VerificationEngine / ReflectionEngine.
 
@@ -117,7 +117,7 @@ class BaseAgent:
 
 
 class OrchestratorAgent(BaseAgent):
-    """A BaseAgent that executes through the live MOON orchestrator using
+    """A BaseAgent that executes through the live MOON-AI orchestrator using
     capability-based agent selection (spec 9/12). Real execution path."""
 
     def __init__(self, agent_id: str = "master_orchestrator", version: str = "1.0.0") -> None:

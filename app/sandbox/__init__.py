@@ -1,4 +1,4 @@
-"""MOON Sandbox package (spec section 6: sandbox/, section 19).
+"""MOON-AI Sandbox package (spec section 6: sandbox/, section 19).
 
 Compatibility layer re-exporting the real SandboxExecutor from app.capability.sandbox.
 Non-destructive: implementation is not duplicated or replaced.

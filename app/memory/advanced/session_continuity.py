@@ -2,7 +2,7 @@
 
 Professional AI assistants remember what happened in previous sessions.
 This module persists key session state (recent tasks, lessons learned,
-active goals) to disk and restores it on startup, so MOON can maintain
+active goals) to disk and restores it on startup, so MOON-AI can maintain
 continuity across restarts.
 
 Stored in: app/logs/session_continuity.json

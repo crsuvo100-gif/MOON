@@ -44,7 +44,7 @@ class Settings(BaseSettings):
 
     # --- OpenAI-compatible FALLBACK backend ---------------------------------
     # When the primary local endpoint (Ollama) is unavailable OR a completion
-    # fails, MOON falls back to a hosted OpenAI-compatible API (e.g. OpenAI).
+    # fails, MOON-AI falls back to a hosted OpenAI-compatible API (e.g. OpenAI).
     # The key is read from OPENAI_API_KEY (kept in the gitignored .env, never
     # committed). Leave blank to disable the fallback (local-only operation).
     openai_api_key: str = Field(
@@ -116,24 +116,24 @@ class Settings(BaseSettings):
         description="Model id to request from Hugging Face (e.g. meta-llama/Llama-3.1-8B-Instruct).",
     )
 
-    # --- Hugging Face OAuth client (for MOON to act AS an HF OAuth app) ------
-    # The registration payload MOON presents to HF when you register her as an
+    # --- Hugging Face OAuth client (for MOON-AI to act AS an HF OAuth app) ------
+    # The registration payload MOON-AI presents to HF when you register her as an
     # OAuth application (Authorization Code + PKCE; token_endpoint_auth_method
     # "none"). Fill these with YOUR hosted URL. Left blank = no OAuth client.
     hf_oauth_client_id: str = Field(
         default="",
         description="HF OAuth client_id (your website's /.well-known/oauth-authorization-server or registration url).",
     )
-    hf_oauth_client_name: str = Field(default="MOON", description="Display name for the HF OAuth app.")
+    hf_oauth_client_name: str = Field(default="MOON-AI", description="Display name for the HF OAuth app.")
     hf_oauth_website: str = Field(
         default="",
         description="Your website base URL used for client_id, redirect_uris and client_uri (e.g. https://moon.example.com).",
     )
     hf_oauth_logo_uri: str = Field(default="", description="Optional logo URI for the HF OAuth app.")
-    # Namespace used when MOON deploys Hugging Face Inference Endpoints.
+    # Namespace used when MOON-AI deploys Hugging Face Inference Endpoints.
     hf_endpoint_namespace: str = Field(
         default="crsuvo",
-        description="HF namespace (org/user) under which MOON deploys Inference Endpoints.",
+        description="HF namespace (org/user) under which MOON-AI deploys Inference Endpoints.",
     )
 
     # Optional STRONG model for accuracy-critical work. When set, factual and
@@ -149,24 +149,24 @@ class Settings(BaseSettings):
         description="Endpoint for the strong model (defaults to model_base_url if blank).",
     )
 
-    # Connected GitHub repository MOON always pulls tools/assets from on demand.
+    # Connected GitHub repository MOON-AI always pulls tools/assets from on demand.
     github_repo: str = Field(
         default="",
-        description='GitHub repo URL MOON is connected to for autonomous tool/asset pull (e.g. https://github.com/crsuvo100-gif/MOON).',
+        description='GitHub repo URL MOON-AI is connected to for autonomous tool/asset pull (e.g. https://github.com/crsuvo100-gif/MOON-AI).',
     )
 
-    # Global Connector: MOON can connect to external services, other AI agents,
+    # Global Connector: MOON-AI can connect to external services, other AI agents,
     # MCP servers, and webhooks. Egress is ALWAYS permission-gated (see
     # app.connector.permission). allowlisted/private hosts are SAFE (auto);
     # everything else requires operator confirmation. Disable the whole layer here.
     enable_global_connector: bool = True
     allowed_egress_hosts: str = Field(
         default="",
-        description="Comma-separated hosts MOON may egress to WITHOUT confirmation "
+        description="Comma-separated hosts MOON-AI may egress to WITHOUT confirmation "
                     "(e.g. api.github.com,my-agent.example.com). Everything else is CONFIRMATION.",
     )
 
-    # --- Telegram channel (MOON as a Telegram bot, polling listener) ---------
+    # --- Telegram channel (MOON-AI as a Telegram bot, polling listener) ---------
     # Token + allowed chat id are read from the environment (TELEGRAM_BOT_TOKEN /
     # TELEGRAM_CHAT_ID) so they stay in the gitignored .env. See app/services/telegram_bot.py.
     telegram_bot_token: str = Field(default="", description="Telegram bot token (TELEGRAM_BOT_TOKEN). Blank = channel disabled.")
@@ -174,11 +174,11 @@ class Settings(BaseSettings):
 
     # --- Remote-access authorization gate for the Terminal interface ---------
     # When set, the Terminal WebSocket + /status require `Authorization: Bearer <token>`.
-    # MOON stays local-only (no token checked) when blank -- her safest default.
+    # MOON-AI stays local-only (no token checked) when blank -- her safest default.
     # The `tunnel` launcher mode generates/uses this so remote exposure is never open.
     terminal_access_token: str = Field(
         default="",
-        description="Token for MOON_TERMINAL_TOKEN. When set, the Terminal requires Bearer auth.",
+        description="Token for MOON-AI_TERMINAL_TOKEN. When set, the Terminal requires Bearer auth.",
     )
 
     # Per-agent models: each agent can pull/install and run on its OWN model
@@ -201,7 +201,7 @@ class Settings(BaseSettings):
     )
     memory_sync_enabled: bool = Field(
         default=True,
-        description="Enable cloud synchronization. When False, MOON operates local-only.",
+        description="Enable cloud synchronization. When False, MOON-AI operates local-only.",
     )
     memory_sync_interval: int = Field(
         default=300,
@@ -277,7 +277,7 @@ class Settings(BaseSettings):
     # Max sub-agents to run concurrently when a complex goal is fanned out.
     max_parallel_agents: int = 4
     # Spec 33: concurrency policy. Max specialist agents executing at once.
-    # Set to 1 on low-resource hosts (single GPU / <=8GB RAM) so MOON never
+    # Set to 1 on low-resource hosts (single GPU / <=8GB RAM) so MOON-AI never
     # spawns several heavyweight local models simultaneously (spec 32).
     max_concurrent_agents: int = 1
     # Spec 32: refuse to load more than this many local models at once.

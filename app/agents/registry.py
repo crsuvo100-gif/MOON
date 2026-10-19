@@ -1,4 +1,4 @@
-"""Structured Agent Registry (spec sections 7, 8, 12, 39 + MOON 40-agent spec).
+"""Structured Agent Registry (spec sections 7, 8, 12, 39 + MOON-AI 40-agent spec).
 
 This is ADDITIVE: it does NOT replace the existing 39 persona agents in
 ``app.brain.agent_registry.AGENT_DEFS``. Instead it reads those definitions and
@@ -56,7 +56,7 @@ class AgentMetadata:
     dependencies: list[str] = field(default_factory=list)
     status: str = "active"  # active|disabled|quarantined
     source: str = "builtin"  # builtin|generated|factory|spec40
-    role_group: str = ""  # core|advanced (MOON 40-agent spec)
+    role_group: str = ""  # core|advanced (MOON-AI 40-agent spec)
     success_criteria: str = ""
     created_at: str = ""
     updated_at: str = ""
@@ -233,7 +233,7 @@ def get_registry() -> AgentRegistry:
     global _REGISTRY
     if _REGISTRY is None:
         _REGISTRY = AgentRegistry()
-    # Idempotently register the 40 MOON spec agents (additive; skips if present).
+    # Idempotently register the 40 MOON-AI spec agents (additive; skips if present).
     try:
         from app.agents.spec_agents import register_spec_agents
         register_spec_agents()

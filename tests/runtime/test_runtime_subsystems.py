@@ -1,7 +1,7 @@
-"""Tests for the additive MOON runtime subsystems (spec 3,9,10,12,28,30,41,46,57).
+"""Tests for the additive MOON-AI runtime subsystems (spec 3,9,10,12,28,30,41,46,57).
 
 These verify the newly-added components are real and independently testable.
-No existing MOON behavior is modified by these tests.
+No existing MOON-AI behavior is modified by these tests.
 """
 
 from __future__ import annotations

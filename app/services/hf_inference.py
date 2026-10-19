@@ -1,12 +1,12 @@
-"""Hugging Face InferenceClient service for MOON.
+"""Hugging Face InferenceClient service for MOON-AI.
 
-Wraps `huggingface_hub.InferenceClient` so MOON can use HF's hosted inference --
+Wraps `huggingface_hub.InferenceClient` so MOON-AI can use HF's hosted inference --
 both chat completions (with explicit provider selection, e.g. "novita") and image
 generation (text_to_image via FLUX and friends) -- in addition to the
 OpenAI-compatible router already used by the fallback chain.
 
 The `huggingface_hub` package is an OPTIONAL dependency: if it is not installed,
-the service reports that clearly instead of crashing, and MOON keeps working via
+the service reports that clearly instead of crashing, and MOON-AI keeps working via
 its other backends. All network calls are real when the package + a token exist;
 tests mock the client so no network/token is required to validate the logic.
 """

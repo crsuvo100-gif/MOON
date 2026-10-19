@@ -38,7 +38,7 @@ class WebAgentConfig:
     max_pages_per_session: int = 50
     request_timeout: float = 30.0
     respect_robots_txt: bool = True
-    user_agent: str = "MOON-WebAgent/1.0"
+    user_agent: str = "MOON-AI-WebAgent/1.0"
     allowed_domains: list[str] = field(default_factory=list)
     blocked_domains: list[str] = field(default_factory=list)
     max_retries: int = 3

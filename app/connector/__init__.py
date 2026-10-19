@@ -1,10 +1,10 @@
-"""Global Connector -- MOON can connect to anything, with permission.
+"""Global Connector -- MOON-AI can connect to anything, with permission.
 
-ADDITIVE: MOON can now reach OUT to the world -- external services, other AI
+ADDITIVE: MOON-AI can now reach OUT to the world -- external services, other AI
 agents, MCP/tool servers, and webhooks -- under strict, least-privilege
 permission control. This package NEVER replaces existing networking tools
 (ApiRequestsTool, github_sync, telegram); it adds a permission-gated, persistent
-CONNECTION REGISTRY on top of them so MOON can "connect everything globally."
+CONNECTION REGISTRY on top of them so MOON-AI can "connect everything globally."
 
 Permission model (reuses app.capability.permission_manager.PermissionManager):
   - network.egress     -- any outbound internet call (CONFIRMATION by default;

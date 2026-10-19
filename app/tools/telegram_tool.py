@@ -1,7 +1,7 @@
-"""telegram_tool.py -- Telegram send + listen + webhook for MOON.
+"""telegram_tool.py -- Telegram send + listen + webhook for MOON-AI.
 
 Token is read from TELEGRAM_BOT_TOKEN env (never hardcoded). Falls back
-gracefully when the library/token is absent so it never crashes MOON.
+gracefully when the library/token is absent so it never crashes MOON-AI.
 """
 
 from __future__ import annotations

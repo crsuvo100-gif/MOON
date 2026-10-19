@@ -1,4 +1,4 @@
-"""MOON Terminal — AI-agent execution subsystem.
+"""MOON-AI Terminal — AI-agent execution subsystem.
 
 Public API:
     from app.terminal import (

@@ -1,6 +1,6 @@
 """Result aggregation + conflict resolution (spec sections 26, 27, 28, 39).
 
-MOON's orchestrator collects results from specialist agents. Before those
+MOON-AI's orchestrator collects results from specialist agents. Before those
 results reach the Main Brain for synthesis they must be NORMALIZED, DEDUPED,
 RANKED, and CHECKED FOR CONTRADICTIONS -- "never simply concatenate all agent
 responses" (spec 26). If two agents disagree, the system must NOT arbitrarily

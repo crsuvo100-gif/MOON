@@ -1,8 +1,8 @@
-# MOON Cognitive Memory Infrastructure — Deployment Guide
+# MOON-AI Cognitive Memory Infrastructure — Deployment Guide
 
 ## Executive Summary
 
-MOON already contains a comprehensive cognitive memory infrastructure (7,742 lines across 33 modules in `app/memory/`). All 196 memory tests pass. The system is fully integrated into the orchestrator and terminal.
+MOON-AI already contains a comprehensive cognitive memory infrastructure (7,742 lines across 33 modules in `app/memory/`). All 196 memory tests pass. The system is fully integrated into the orchestrator and terminal.
 
 This document covers:
 1. Free server deployment options for 24/7 uptime
@@ -128,11 +128,11 @@ This document covers:
 
 ```bash
 # Memory Storage
-MOON_MEMORY_PATH=/home/meow/.moon/memory
-MOON_MEMORY_BACKEND=local  # or 'cloud' for PostgreSQL
+MOON-AI_MEMORY_PATH=/home/meow/.moon/memory
+MOON-AI_MEMORY_BACKEND=local  # or 'cloud' for PostgreSQL
 
 # Cloud Database (optional)
-MOON_DATABASE_URL=postgres://user:pass@host:5432/moon_db
+MOON-AI_DATABASE_URL=postgres://user:pass@host:5432/moon_db
 
 # Embeddings
 EMBEDDING_BASE_URL=
@@ -140,22 +140,22 @@ EMBEDDING_MODEL=all-MiniLM-L6-v2
 EMBEDDING_DIM=384
 
 # Sync
-MOON_SYNC_ENABLED=true
-MOON_SYNC_INTERVAL=300
+MOON-AI_SYNC_ENABLED=true
+MOON-AI_SYNC_INTERVAL=300
 
 # Context
-MOON_CONTEXT_MEMORY_BUDGET=0.35
+MOON-AI_CONTEXT_MEMORY_BUDGET=0.35
 
 # Backup
-MOON_BACKUP_PATH=/home/meow/.moon/memory/backups
+MOON-AI_BACKUP_PATH=/home/meow/.moon/memory/backups
 ```
 
 ### Local-First Operation
 
-MOON operates local-first by default:
+MOON-AI operates local-first by default:
 - All writes go to SQLite immediately
 - Cloud sync is queued and background
-- If cloud is unavailable, MOON continues operating
+- If cloud is unavailable, MOON-AI continues operating
 - Sync resumes when connectivity returns
 
 ---
@@ -166,8 +166,8 @@ MOON operates local-first by default:
 
 ```bash
 # Clone repository
-git clone https://github.com/crsuvo100-gif/MOON.git
-cd MOON
+git clone https://github.com/crsuvo100-gif/MOON-AI.git
+cd MOON-AI
 
 # Create virtual environment
 python3 -m venv .venv
@@ -182,7 +182,7 @@ python -c "from app.memory.store import default_db_path; print(default_db_path()
 # Run tests
 python -m pytest tests/test_cognitive_memory.py -v
 
-# Start MOON
+# Start MOON-AI
 python main.py terminal
 ```
 
@@ -190,15 +190,15 @@ python main.py terminal
 
 ```bash
 # Build
-docker build -t moon-ai .
+docker build -t MOON-AI-ai .
 
 # Run
 docker run -d \
-  --name moon \
+  --name MOON-AI \
   -p 8777:8777 \
-  -v moon-memory:/home/meow/.moon/memory \
-  -e MOON_MEMORY_BACKEND=local \
-  moon-ai
+  -v MOON-AI-memory:/home/meow/.moon/memory \
+  -e MOON-AI_MEMORY_BACKEND=local \
+  MOON-AI-ai
 ```
 
 ### Render Deployment
@@ -230,7 +230,7 @@ python -m pytest tests/test_cognitive_memory.py tests/test_cognitive_memory_full
 ### Health Check
 
 ```bash
-# Start MOON
+# Start MOON-AI
 python main.py terminal
 
 # In another terminal, check health
@@ -245,7 +245,7 @@ from app.memory.cognitive import CognitiveMemoryManager
 mgr = CognitiveMemoryManager()
 
 # Store a memory
-mgr.store("MOON uses Python 3.14", source_type=SourceType.USER, explicit=True)
+mgr.store("MOON-AI uses Python 3.14", source_type=SourceType.USER, explicit=True)
 
 # Search
 results = mgr.search("Python version", top_k=5)

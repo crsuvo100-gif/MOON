@@ -1,8 +1,8 @@
-"""voice.py -- MOON's female voice (TTS) + speech-to-text (STT).
+"""voice.py -- MOON-AI's female voice (TTS) + speech-to-text (STT).
 
 Female voice design
 -------------------
-MOON speaks with a warm, clearly-FEMALE voice. The pipeline:
+MOON-AI speaks with a warm, clearly-FEMALE voice. The pipeline:
   1. espeak-ng synthesises with an explicit *female* voice (f5, raised pitch,
      softer intonation) -- espeak's voice 5 is its female preset.
   2. SoX reshapes the timbre into an attractive, intimate tone:
@@ -16,7 +16,7 @@ MOON speaks with a warm, clearly-FEMALE voice. The pipeline:
 Speech-to-text (dictation)
 --------------------------
 Optional `vosk` offline model. If unavailable, dictation simply reports it is
-disabled -- the rest of MOON keeps working.
+disabled -- the rest of MOON-AI keeps working.
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ FEMALE_PRESETS: dict[str, dict] = {
 
 
 class Voice:
-    """Female TTS + optional STT wrapper for MOON."""
+    """Female TTS + optional STT wrapper for MOON-AI."""
 
     def __init__(
         self,
@@ -68,7 +68,7 @@ class Voice:
 
     # -- TTS -----------------------------------------------------------------
     async def speak(self, text: str) -> str | None:
-        """Return a path to a WAV file with MOON's female voice, or None."""
+        """Return a path to a WAV file with MOON-AI's female voice, or None."""
         if not text:
             return None
         if not self._espeak:

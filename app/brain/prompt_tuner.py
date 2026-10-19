@@ -1,8 +1,8 @@
-"""prompt_tuner.py -- MOON's self-improvement loop for agent personas.
+"""prompt_tuner.py -- MOON-AI's self-improvement loop for agent personas.
 
 Lessons extracted from interactions (corrections, preferences, failures) are
 persisted to app/logs/lessons.jsonl. At startup the tuner loads them and
-appends a compact "learned guidance" block to each agent persona, so MOON
+appends a compact "learned guidance" block to each agent persona, so MOON-AI
 steadily improves without anyone editing code by hand.
 """
 

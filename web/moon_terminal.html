@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MOON — NEURAL CORE</title>
+<title>MOON-AI — NEURAL CORE</title>
 <link rel="stylesheet" href="/theme.json">
 <style>
 :root{
@@ -81,7 +81,7 @@ body{
 <div id="glow"></div>
 <div id="hdr">
   <div class="brand">
-    <div class="logo">MOON</div>
+    <div class="logo">MOON-AI</div>
     <span class="title">NEURAL CORE — HUD</span>
   </div>
   <div class="chips" id="chips">
@@ -131,7 +131,7 @@ body{
 <div id="darken">
   <div class="box">
     <h3 id="unlock-title">UNLOCK</h3>
-    <p id="unlock-body">Say "MOON love you 3000" to unlock terminal operations.</p>
+    <p id="unlock-body">Say "MOON-AI love you 3000" to unlock terminal operations.</p>
     <div style="display:flex;gap:8px;margin-top:10px">
       <button id="alright">ALRIGHT</button>
     </div>
@@ -149,7 +149,7 @@ let lead=null;
 async function refresh(){
   try{
     const d=await api('/api/v1/info');
-    if(d.schema_version && d.schema_version!=='n/a') document.title='MOON — '+d.schema_version;
+    if(d.schema_version && d.schema_version!=='n/a') document.title='MOON-AI — '+d.schema_version;
   }catch(e){}
   try{
     const [agents,stats]=await Promise.all([api('/api/agents'),api('/api/health')]);

@@ -1,11 +1,11 @@
 """Sync engine + conflict resolution + change log (spec 31-39, 57, 58).
 
-Local-first: MOON must keep working with no network (spec 31). Writes are
+Local-first: MOON-AI must keep working with no network (spec 31). Writes are
 recorded locally and queued; when a cloud provider is configured the queue is
 pushed. Every operation is idempotent (spec 34) so a retry cannot duplicate a
 memory, and conflicts are never resolved by blind overwrite (spec 36).
 
-Cloud providers implement ``CloudMemoryProvider`` (spec 27) so MOON is not
+Cloud providers implement ``CloudMemoryProvider`` (spec 27) so MOON-AI is not
 hard-coded to one vendor. When none is configured, the engine reports
 ``local_only`` and does nothing destructive.
 """
@@ -340,7 +340,7 @@ class SyncEngine:
                     "reason": "nothing pending", "local_only":
                         isinstance(self._provider, NullCloudProvider)}
 
-        # spec 58: cloud unavailable -> keep the queue, do not fail MOON
+        # spec 58: cloud unavailable -> keep the queue, do not fail MOON-AI
         h = self._provider.health()
         if h.get("status") != "ONLINE":
             self._backoff = min(300.0, (self._backoff or 1.0) * 2)
@@ -405,7 +405,7 @@ class SyncEngine:
                 "cloud": "ONLINE", "local_only": False}
 
     def _emit(self, event: str, extra: dict | None = None) -> None:
-        """spec 60: memory events on the existing MOON event bus."""
+        """spec 60: memory events on the existing MOON-AI event bus."""
         try:
             from app.runtime.event_bus import bus
             bus().publish(event, detail="sync", payload=extra or {})

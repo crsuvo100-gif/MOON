@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""MOON HUD window keeper.
+"""MOON-AI HUD window keeper.
 
 Opens the NEURAL CORE HUD window (web UI) in the system browser and keeps it
 open. If the user closes the window, the keeper reopens it. This script is the
-ExecStart of moon-hud.service so the visible NEURAL CORE window is always
+ExecStart of MOON-AI-hud.service so the visible NEURAL CORE window is always
 available at http://127.0.0.1:8777.
 
-Durable feature (MOON build):
+Durable feature (MOON-AI build):
   (2) red/black HUD CANONICAL palette -- the HUD window inherits the
       red/black theme defined in theme.json and referenced by hud.html.
 """
@@ -21,9 +21,9 @@ import webbrowser
 from pathlib import Path
 
 # ------------------------------------------------------------------ config
-HUD_URL = os.environ.get("MOON_HUD_URL", "http://127.0.0.1:8777")
+HUD_URL = os.environ.get("MOON-AI_HUD_URL", "http://127.0.0.1:8777")
 # The keeper reopens after this many seconds if the window was closed.
-REOPEN_DELAY = float(os.environ.get("MOON_HUD_REOPEN_DELAY", "6"))
+REOPEN_DELAY = float(os.environ.get("MOON-AI_HUD_REOPEN_DELAY", "6"))
 
 # Resolve the project root: the package layout is <repo>/app/... so the repo
 # root is the parent of the directory containing this script's parent dir
@@ -42,7 +42,7 @@ ROOT = _project_root()
 def _ensure_venv_python() -> None:
     venv = ROOT / ".venv" / "bin" / "python"
     if venv.exists():
-        os.environ["MOON_VENV_PYTHON"] = str(venv)
+        os.environ["MOON-AI_VENV_PYTHON"] = str(venv)
 
 
 _ensure_venv_python()

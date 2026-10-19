@@ -1,6 +1,6 @@
 """Brain provider abstraction + model health + brain fallback (spec 17, 19, 37).
 
-MOON's agents must not depend on one model vendor. A *Brain* is a configured,
+MOON-AI's agents must not depend on one model vendor. A *Brain* is a configured,
 health-checkable handle to a model endpoint; the *provider* is the thing that
 knows how to talk to that kind of endpoint. Swapping the provider must never
 require touching an Agent (spec 3: the Brain is replaceable, the Agent is
@@ -95,7 +95,7 @@ class BrainProvider(ABC):
     """Provider-independent interface (spec 17).
 
     A provider answers two questions: *is this brain alive?* and *what kind of
-    endpoint is it?* Inference itself stays in ``LLMService`` so MOON keeps one
+    endpoint is it?* Inference itself stays in ``LLMService`` so MOON-AI keeps one
     generation path; the provider only owns identity + liveness.
     """
 

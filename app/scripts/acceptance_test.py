@@ -1,5 +1,5 @@
 # Wrapper acceptance test script for CI when repository is copied from parent directory.
-# It forwards to the real script located in the MOON package.
+# It forwards to the real script located in the MOON-AI package.
 import subprocess, sys, pathlib
 
 def main():

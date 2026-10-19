@@ -2,7 +2,7 @@
 
 Pure-Python, ``pathlib``-based implementation that replaces the bash
 ``scripts/backup.sh`` wrapper with the same behaviour portable to Linux,
-macOS and Windows. It snapshots MOON's runtime data (agents, knowledge,
+macOS and Windows. It snapshots MOON-AI's runtime data (agents, knowledge,
 memory, skills, evaluations, logs, the agent_factory sqlite DB and the
 optional ``moon_settings.json``) into a timestamped archive directory.
 
@@ -39,7 +39,7 @@ def _snapshot_name() -> str:
 
 
 def backup(dest_root: Optional[Path] = None) -> Path:
-    """Create a timestamped backup of MOON runtime data. Returns the backup dir."""
+    """Create a timestamped backup of MOON-AI runtime data. Returns the backup dir."""
     root = _project_root()
     dest_root = dest_root or (root / "backups")
     dest = dest_root / _snapshot_name()
@@ -62,7 +62,7 @@ def backup(dest_root: Optional[Path] = None) -> Path:
     manifest = dest / "BACKUP_MANIFEST.txt"
     captured = sorted(str(p.relative_to(dest)) for p in dest.rglob("*") if p.is_file())
     manifest.write_text(
-        "MOON runtime backup\n"
+        "MOON-AI runtime backup\n"
         f"created: {datetime.now().isoformat()}\n"
         f"source_root: {root}\n"
         f"items: {len(captured)}\n"
@@ -94,7 +94,7 @@ def restore(snapshot: Path, root: Optional[Path] = None) -> list[str]:
 
 
 def _cli() -> int:
-    ap = argparse.ArgumentParser(description="MOON runtime backup/restore (Python, cross-platform)")
+    ap = argparse.ArgumentParser(description="MOON-AI runtime backup/restore (Python, cross-platform)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("backup", help="Snapshot runtime data into backups/")
     rp = sub.add_parser("restore", help="Restore a snapshot over live data")

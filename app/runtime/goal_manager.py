@@ -2,7 +2,7 @@
 
 Manages the lifecycle of a goal: create an execution id, capture the structured
 GoalSpec, check memory + knowledge for relevant prior context, and record the
-final outcome. Reuses MOON's existing memory/knowledge layers when available;
+final outcome. Reuses MOON-AI's existing memory/knowledge layers when available;
 degrades gracefully (reports missing context) instead of failing (spec 59).
 """
 

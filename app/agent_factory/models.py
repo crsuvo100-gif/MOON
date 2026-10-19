@@ -1,7 +1,7 @@
 """Agent Factory data models (spec sections 7, 8, 34, 39).
 
 Pure, dependency-light dataclasses so every generated component is
-independently testable and serialisable. No MOON core imports here.
+independently testable and serialisable. No MOON-AI core imports here.
 """
 
 from __future__ import annotations

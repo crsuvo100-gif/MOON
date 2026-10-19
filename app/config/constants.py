@@ -1,4 +1,4 @@
-"""Shared constants and enums for MOON."""
+"""Shared constants and enums for MOON-AI."""
 
 from __future__ import annotations
 
@@ -13,8 +13,8 @@ class MemoryScope(str, Enum):
     SEMANTIC = "semantic"
 
 
-# The phrase that unlocks MOON's Security Lock Mode.
-UNLOCK_PHRASE = "MOON love you 3000"
+# The phrase that unlocks MOON-AI's Security Lock Mode.
+UNLOCK_PHRASE = "MOON-AI love you 3000"
 
 # Semantic version (PEP 440). Accessible as app.config.constants.VERSION.
 VERSION = "0.1.0"

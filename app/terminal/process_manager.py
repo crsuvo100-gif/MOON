@@ -1,4 +1,4 @@
-"""Process manager for tracking background processes in MOON terminal.
+"""Process manager for tracking background processes in MOON-AI terminal.
 Provides an in‑memory registry of running / completed processes.
 """
 

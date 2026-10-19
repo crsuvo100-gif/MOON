@@ -1,7 +1,7 @@
-"""MOON runtime subsystems (spec sections 3, 9, 10, 12, 28, 30, 41, 46, 57).
+"""MOON-AI runtime subsystems (spec sections 3, 9, 10, 12, 28, 30, 41, 46, 57).
 
 Additive integration layer that fills the spec's named components which were
-not yet present in MOON:
+not yet present in MOON-AI:
 
   * TaskAnalyzer    (§10)  -- user request -> structured goal JSON
   * GoalManager     (§9)   -- goal lifecycle, memory/knowledge lookup
@@ -12,7 +12,7 @@ not yet present in MOON:
   * SkillSystem     (§24)  -- manage the existing skills/ corpus + scores
   * EventBus        (§3/41)-- internal event system -> terminal_interface._emit_event
 
-Every module reuses existing MOON components (AgentStore, ToolRegistry,
+Every module reuses existing MOON-AI components (AgentStore, ToolRegistry,
 settings, LLMService backends) and adds only what was missing. Nothing in the
 existing brain/capability/tools layers is modified.
 """

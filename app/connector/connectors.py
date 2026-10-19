@@ -32,7 +32,7 @@ class HTTPConnector:
     def __init__(self, base_url: str, headers: dict[str, str] | None = None,
                  timeout: float = 30.0) -> None:
         self._base = base_url.rstrip("/")
-        self._headers = {**(headers or {}), "User-Agent": "MOON-Connector/1.0"}
+        self._headers = {**(headers or {}), "User-Agent": "MOON-AI-Connector/1.0"}
         self._to = timeout
 
     async def call(self, method: str, path: str = "", *, json_body: Any = None,
@@ -57,7 +57,7 @@ class HTTPConnector:
 class AgentConnector:
     """Talk to ANOTHER AI agent via an OpenAI-compatible chat endpoint.
 
-    Lets MOON federate: send a prompt to a peer agent, get its answer back.
+    Lets MOON-AI federate: send a prompt to a peer agent, get its answer back.
     This is the "connect to any AI agent" path.
     """
 
@@ -123,7 +123,7 @@ class MCPConnector:
     full MCP protocol (tools / prompts / resources / roots). Supported
     transports:
 
-      - stdio       local subprocess server (command + args), spawned by MOON
+      - stdio       local subprocess server (command + args), spawned by MOON-AI
       - sse         Server-Sent Events HTTP endpoint
       - streamable  Streamable-HTTP endpoint (HTTP POST + SSE resumption)
 

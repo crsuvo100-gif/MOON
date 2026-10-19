@@ -1,4 +1,4 @@
-"""model_management_tool.py -- MOON's advanced model orchestration (ReAct tool).
+"""model_management_tool.py -- MOON-AI's advanced model orchestration (ReAct tool).
 
 Exposes the model-management surface from the upgraded system prompt:
   list_available_models, download_model, set_main_model, set_agent_model,

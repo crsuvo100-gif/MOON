@@ -7,8 +7,8 @@ Layout (under <repo>/capabilities/):
     installed/        -- local shims / generated plugins for acquired tools
     cache/            -- memoized GitHub search / inspection results
 
-The registry is the single source of truth for "what does MOON already have"
-so MOON never re-downloads or re-installs a verified capability.
+The registry is the single source of truth for "what does MOON-AI already have"
+so MOON-AI never re-downloads or re-installs a verified capability.
 """
 
 from __future__ import annotations

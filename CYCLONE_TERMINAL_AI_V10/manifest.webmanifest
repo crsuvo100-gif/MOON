@@ -1,9 +1,0 @@
-{
-  "name":"CYCLONE AI Terminal V7",
-  "short_name":"CYCLONE",
-  "start_url":"/",
-  "display":"standalone",
-  "background_color":"#02070b",
-  "theme_color":"#02070b",
-  "description":"Female holographic AI terminal with built-in utility skills"
-}

@@ -1,4 +1,4 @@
-"""Agent Factory: Capability Analyzer (spec 13 + MOON Factory design).
+"""Agent Factory: Capability Analyzer (spec 13 + MOON-AI Factory design).
 
 Analyzes a capability request, checks the live Agent Registry for an existing
 match, and decides REUSE vs NEEDS_NEW. Never invents capabilities that already

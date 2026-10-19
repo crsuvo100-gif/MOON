@@ -17,7 +17,7 @@ from app.brain.agent_registry import build_agents
 # ------------------------------------------------------- §7 agent roster
 def test_all_ten_spec7_specialists_exist() -> None:
     agents = build_agents([])
-    # the spec's 10 named specialists -> MOON agent ids
+    # the spec's 10 named specialists -> MOON-AI agent ids
     spec7 = {
         "Coding Agent": "coding",
         "Research Agent": "research",
@@ -125,7 +125,7 @@ def test_global_memory_retrieval_is_query_scoped() -> None:
     async def _run() -> None:
         ltm = EnhancedLongTermMemory()
         await ltm.setup()
-        await ltm.store({"content": "MOON uses qwen models for local inference"}, importance=0.9)
+        await ltm.store({"content": "MOON-AI uses qwen models for local inference"}, importance=0.9)
         await ltm.store({"content": "The cafeteria menu changes on Fridays"}, importance=0.9)
         mm = MemoryManager(long_term=ltm)
         hits = await mm.recall("qwen", limit=5)

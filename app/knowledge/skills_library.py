@@ -1,8 +1,8 @@
-"""skills_library.py -- index the bundled Hermes skill corpus into MOON's KB.
+"""skills_library.py -- index the bundled Hermes skill corpus into MOON-AI's KB.
 
 The corpus under skills/ (copied from the environment backup) contains 100+
 Hermes SKILL.md instruction sets. Indexing them makes that know-how
-retrievable via MOON's semantic recall, so the skills are functionally
+retrievable via MOON-AI's semantic recall, so the skills are functionally
 available to her (not just dead files on disk).
 """
 

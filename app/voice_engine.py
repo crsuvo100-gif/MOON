@@ -1,6 +1,6 @@
-"""voice_engine.py -- MOON's premium voice engine (female + voice cloning).
+"""voice_engine.py -- MOON-AI's premium voice engine (female + voice cloning).
 
-ADDITIVE: sits beside app.voice.Voice (espeak fallback) and upgrades MOON to a
+ADDITIVE: sits beside app.voice.Voice (espeak fallback) and upgrades MOON-AI to a
 high-quality, cloneable female voice. Pluggable backends, tried in order:
 
   1. kokoro -- Kokoro-ONNX (local, CPU). Natural, clearly FEMALE voices
@@ -65,7 +65,7 @@ FEMALE_VOICES: dict[str, dict] = {
 
 
 class VoiceEngine:
-    """Unified female TTS + voice cloning + MULTILINGUAL TTS for MOON.
+    """Unified female TTS + voice cloning + MULTILINGUAL TTS for MOON-AI.
 
     Speaks many languages by routing each reply through the right espeak
     voice (or OpenAI TTS / XTTS / F5 where available).  UK English is a first-
@@ -169,7 +169,7 @@ class VoiceEngine:
             return "en"
 
     def set_language(self, code: str) -> str:
-        """Set the language MOON will speak replies in (ISO-639, e.g. "en", "fr").
+        """Set the language MOON-AI will speak replies in (ISO-639, e.g. "en", "fr").
 
         Auto-detected from user input by default; call this to override.
         Unknown codes fall back to "en" (UK English).
@@ -179,7 +179,7 @@ class VoiceEngine:
             code = "en"
             return f"Unknown language '{code}'; using United Kingdom English (en-gb)."
         self._reply_lang = code
-        return f"Language set to {code}. MOON will speak in {'United Kingdom English' if code == 'en' else code}."
+        return f"Language set to {code}. MOON-AI will speak in {'United Kingdom English' if code == 'en' else code}."
 
     def language(self) -> str:
         """Current reply-language code (what Moon will speak next)."""
@@ -290,7 +290,7 @@ class VoiceEngine:
 
         UK English (en-gb) is the default locale and a first-class target.
         When a language has no working backend here, degrades to espeak "en"
-        so MOON always returns real audio rather than failing silently.
+        so MOON-AI always returns real audio rather than failing silently.
         """
         if not text:
             return None
@@ -383,7 +383,7 @@ class VoiceEngine:
 
     # -- TTS ----------------------------------------------------------------
     async def speak(self, text: str) -> str | None:
-        """Return a path to a WAV file with MOON's female voice, or None."""
+        """Return a path to a WAV file with MOON-AI's female voice, or None."""
         if not text:
             return None
         try:

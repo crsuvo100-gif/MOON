@@ -38,7 +38,7 @@ CONFIRMATION_ACTIONS = (
     "destructive.fs",
 )
 
-# Actions that MOON must never perform autonomously (security boundaries).
+# Actions that MOON-AI must never perform autonomously (security boundaries).
 NEVER_ACTIONS = (
     "security.bypass",
     "auth.bypass",

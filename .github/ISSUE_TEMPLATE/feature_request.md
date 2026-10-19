@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Request a new feature for MOON
+about: Request a new feature for MOON-AI
 title: '[FEATURE] '
 labels: enhancement
 ---

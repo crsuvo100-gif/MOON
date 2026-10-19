@@ -1,4 +1,4 @@
-"""MOON Terminal UI — dark-themed terminal log display.
+"""MOON-AI Terminal UI — dark-themed terminal log display.
 
 A single-user terminal that displays a log of automated tasks, rebuilt to
 match the Hermes terminal design:
@@ -74,7 +74,7 @@ class _Dim(Static):
 
 # ── the terminal window ─────────────────────────────────────────────────────
 class MoonTerminalApp(App):
-    """MOON terminal: a dark terminal log of automated tasks."""
+    """MOON-AI terminal: a dark terminal log of automated tasks."""
 
     CSS_PATH = "ui.css"
     BINDINGS = [

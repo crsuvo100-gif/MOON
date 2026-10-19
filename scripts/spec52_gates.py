@@ -213,7 +213,7 @@ except Exception as e:  # noqa: BLE001
 
 # ------------------------------------------------------------------- report
 print("=" * 72)
-print("MOON SPEC 52 — PHASE APPROVAL GATES")
+print("MOON-AI SPEC 52 — PHASE APPROVAL GATES")
 print("=" * 72)
 for n, name, state, detail in sorted(GATES):
     print(f"  [{state}] GATE {n:2d}: {name}")

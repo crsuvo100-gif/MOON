@@ -1,4 +1,4 @@
-"""Centralised logging configuration for MOON."""
+"""Centralised logging configuration for MOON-AI."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ _CONFIGURED = False
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Return a module logger with MOON's standard formatting."""
+    """Return a module logger with MOON-AI's standard formatting."""
     logger = logging.getLogger(name)
     if not logging.getLogger().handlers:
         _configure_root()

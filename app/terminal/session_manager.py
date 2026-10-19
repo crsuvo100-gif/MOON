@@ -1,4 +1,4 @@
-"""Session manager for MOON terminal.
+"""Session manager for MOON-AI terminal.
 
 Provides in‑memory tracking of terminal sessions and optional JSON persistence.
 """

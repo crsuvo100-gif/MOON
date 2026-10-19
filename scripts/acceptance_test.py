@@ -1,5 +1,5 @@
 # Acceptances test script – unchanged (already present)
-"""Acceptance test script for the MOON project.
+"""Acceptance test script for the MOON-AI project.
 
 Steps:
 1. Scan the repository (prints cwd).
